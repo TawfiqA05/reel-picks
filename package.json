@@ -1,0 +1,19 @@
+{
+  "name": "reel-picks",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Personal movie recommendation PWA that ranks what's playing at your AMC and tells you the 4 to see this week.",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "node --disable-warning=ExperimentalWarning --watch server/index.js",
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "share": "node scripts/share.mjs",
+    "gen-icons": "node scripts/gen-icons.mjs"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
