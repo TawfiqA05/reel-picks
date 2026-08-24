@@ -1,6 +1,9 @@
 // All JSON API routes for Reel Picks.
 import { Router } from 'express';
-import { get, all, run, getSettings, updateSettings, getSetting, setSetting } from './db.js';
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+import { get, all, run, getSettings, updateSettings, getSetting, setSetting, dataDir, dbPath } from './db.js';
+import { exportState, importState } from './lib/state.js';
 import { keyStatus } from './env.js';
 import {
   refreshAll, shouldAutoRefresh, state as refreshState, ingestOne, drainUnmatched, enrichMissingDetails,
@@ -64,10 +67,29 @@ router.get('/status', (req, res) => {
     });
   }
   const log = s.lastRefreshLog;
+  // Non-reversible key fingerprints (length + sha256 prefix): enough to tell
+  // whether two instances hold the SAME key value without exposing either.
+  const fp = (v) => (v ? { len: v.length, sha8: crypto.createHash('sha256').update(v).digest('hex').slice(0, 8) } : null);
+  // WAL mode: recent writes sit in -wal until a checkpoint, so count them too.
+  let dbBytes = null;
+  try {
+    dbBytes = fs.statSync(dbPath).size;
+    for (const ext of ['-wal', '-shm']) {
+      try { dbBytes += fs.statSync(dbPath + ext).size; } catch { /* absent is fine */ }
+    }
+  } catch { /* unreadable: leave null */ }
   res.json({
     guest: false,
     ownerName: ownerName(),
     keys: keyStatus(),
+    keyMeta: {
+      tmdb: fp(process.env.TMDB_API_KEY?.trim()),
+      omdb: fp(process.env.OMDB_API_KEY?.trim()),
+      amc: fp(process.env.AMC_API_KEY?.trim()),
+    },
+    // Deployment diagnostics: is the DB on the volume, and what clock does
+    // showtime math use? (Containers default to UTC unless TZ is set.)
+    data: { dir: dataDir, dbBytes, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || process.env.TZ || null },
     theatre: { ...theatres[0] },
     theatres,
     maxTheatres: MAX_THEATRES,
@@ -270,6 +292,32 @@ router.post('/theatres/primary', (req, res) => {
     // log and the primary-driven snapshot history line up with the new roles.
     refreshAll({ force: true }).catch((e) => console.error('[primary refresh]', e.message));
     res.json(settings);
+  } catch (e) {
+    res.status(e.status || 500).json({ error: e.message });
+  }
+});
+
+// ---- full-setup state (owner-only; not on the guest allowlist) ----------
+
+// Everything that makes this instance mine, as one JSON download — the way to
+// clone a local setup onto a deployment. See lib/state.js for what travels.
+router.get('/state', (req, res) => {
+  const doc = exportState();
+  res.setHeader('Content-Disposition', `attachment; filename="reelpicks-setup-${localYMD()}.json"`);
+  res.json(doc);
+});
+
+// Apply a full-setup document, then rebuild everything derived: a forced
+// refresh pulls this instance's own showtimes/scores for the imported
+// theatres, and detail enrichment fills in posters for imported ratings.
+router.post('/state', (req, res) => {
+  let doc = req.body;
+  if (typeof doc === 'string') { try { doc = JSON.parse(doc); } catch { doc = null; } }
+  try {
+    const counts = importState(doc);
+    refreshAll({ force: true }).catch((e) => console.error('[state refresh]', e.message));
+    enrichMissingDetails().catch((e) => console.error('[enrich]', e.message));
+    res.json({ imported: counts, refreshing: true });
   } catch (e) {
     res.status(e.status || 500).json({ error: e.message });
   }

@@ -126,6 +126,13 @@ happens in local time and containers default to UTC. Railway and Fly.io both wor
 person gets their own instance, own volume, own keys. There's no multi-tenancy and I'm
 not planning any.
 
+To make a fresh deployment an exact duplicate of a local instance, use **Settings →
+Export full setup** locally and **Import full setup** on the deployment: one JSON file
+carrying settings, theatres, home base, ratings, watchlist, watch history, and AMC match
+decisions. The import is additive and kicks off a refresh, so the new instance pulls its
+own showtimes. Caches and schedule history deliberately don't travel — each instance
+builds its own.
+
 ## Project layout
 
 ```

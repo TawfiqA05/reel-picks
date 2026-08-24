@@ -549,12 +549,36 @@ export async function render(root, params, ctx) {
   }
 
   // ---- Data
+  // Full setup = settings + theatres + home + ratings + watchlist + watch log
+  // + match decisions, as one JSON file. The way to make another instance (a
+  // deployment, a new machine) an exact duplicate of this one.
+  const stateFile = h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' } });
+  stateFile.addEventListener('change', async () => {
+    const f = stateFile.files[0];
+    stateFile.value = '';
+    if (!f) return;
+    try {
+      const doc = JSON.parse(await f.text());
+      const r = await api.importState(doc);
+      const c = r.imported || {};
+      toast(`Setup imported — ${c.ratings || 0} ratings, ${c.watchlist || 0} watchlist, ${c.watched || 0} watched, ${c.matches || 0} match decisions, ${c.settings || 0} settings. Refreshing showtimes…`, 'success');
+      ctx.triggerRefresh?.();
+      ctx.refreshStatus();
+    } catch (e) {
+      toast(e instanceof SyntaxError ? 'That file isn\'t valid JSON — use the file from "Export full setup".' : e.message, 'error');
+    }
+  });
   page.appendChild(card('Data',
     h('div', { class: 'row-gap wrap' },
+      h('a', { class: 'btn ghost', href: api.stateUrl() }, '⬇ Export full setup'),
+      h('button', { class: 'btn ghost', onClick: () => stateFile.click() }, '⬆ Import full setup'),
+      stateFile,
       h('a', { class: 'btn ghost', href: api.exportUrl() }, '⬇ Export backup CSV'),
       h('button', { class: 'btn ghost', onClick: () => ctx.triggerRefresh() }, '↻ Refresh now'),
       h('a', { class: 'btn ghost', href: '#/onboarding' }, '⭐ Re-run quick rate'),
     ),
+    h('p', { class: 'muted small' },
+      'Full setup carries settings, theatres, home base, ratings, watchlist, watch history, and AMC match decisions — everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'),
     status?.lastRefreshLog?.errors?.length
       ? h('details', { class: 'log' }, h('summary', {}, `Last refresh: ${status.lastRefreshLog.errors.length} warning(s)`),
         ...status.lastRefreshLog.errors.map((e) => h('div', { class: 'muted small' }, `• ${e}`)))

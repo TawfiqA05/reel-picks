@@ -11,6 +11,9 @@ const dataDir = process.env.DATA_DIR
   : fileURLToPath(new URL('../data/', import.meta.url));
 fs.mkdirSync(dataDir, { recursive: true });
 const dbPath = path.join(dataDir, 'reelpicks.db');
+// Exported for the status diagnostics: "where is my data actually living?" is
+// the first question on a deployment whose volume may not be mounted.
+export { dataDir, dbPath };
 
 export const db = new DatabaseSync(dbPath);
 db.exec('PRAGMA journal_mode = WAL;');

@@ -56,4 +56,6 @@ export const api = {
   unignoreMatch: (amc_movie_id) => req('DELETE', '/match/ignore/' + encodeURIComponent(amc_movie_id)),
   keepMatch: (amc_movie_id) => req('POST', '/match/keep', { amc_movie_id }),
   exportUrl: () => '/api/export',
+  stateUrl: () => '/api/state',
+  importState: (doc) => req('POST', '/state', doc),
 };
