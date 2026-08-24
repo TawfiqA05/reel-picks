@@ -267,9 +267,12 @@ export function daySlots(entry, day) {
   return (day ? days.find((d) => d.date === day)?.showtimes : null) || [];
 }
 
-// "No showtimes today" / "No showtimes on Fri" for the selected day.
+// "No showtimes today" / "No showtimes on Fri" for the selected day — or,
+// with no day selected at all (TMDB fallback: no published schedule), a
+// complete sentence instead of a truncated "No showtimes on ".
 export function noTimesLine(day) {
   const when = dayLabel(day);
+  if (!when) return h('div', { class: 'muted small row-none' }, 'No showtimes available');
   return h('div', { class: 'muted small row-none' },
     `No showtimes ${/^(Today|Tomorrow)$/.test(when) ? when.toLowerCase() : `on ${when}`}`);
 }
