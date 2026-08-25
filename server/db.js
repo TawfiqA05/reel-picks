@@ -110,11 +110,17 @@ CREATE TABLE IF NOT EXISTS watchlist (
 );
 
 -- A-List / watch log. Powers usage counter, savings, and hit-rate.
+-- watched_date is the LOCAL calendar day of watched_at; together with tmdb_id
+-- it carries a unique index (idx_watched_movie_day, created in the migration
+-- below for old and new databases alike) so the same movie logs at most once
+-- per day no matter which write path inserts it. A rewatch on another date is
+-- a new row as before.
 CREATE TABLE IF NOT EXISTS watched (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   tmdb_id       INTEGER,
   title         TEXT,
   watched_at    TEXT,
+  watched_date  TEXT NOT NULL,   -- local YYYY-MM-DD of watched_at
   week_start    TEXT,      -- Friday that begins the A-List week (YYYY-MM-DD)
   in_weekly4    INTEGER DEFAULT 0,
   ticket_price  REAL
@@ -256,6 +262,73 @@ function migrateShowtimeCacheKeys() {
 }
 
 migrateShowtimeCacheKeys();
+
+// "Mark seen" idempotency: at most one watched row per movie per LOCAL
+// calendar day, enforced at the write by a unique index over
+// (tmdb_id, watched_date). Older databases are rebuilt rather than ALTERed,
+// because watched_date has to be NOT NULL for the index to mean anything —
+// SQLite treats NULLs as distinct, so a nullable column would let a writer
+// that forgot it insert unlimited duplicates. The rebuild backfills the date
+// with SQLite's 'localtime' (the process TZ, the same clock weekStartFriday
+// reads), keeps the EARLIEST row of each same-day group, and carries a
+// weekly-4 flag from any of its duplicates onto the survivor. A copy of the
+// database is written next to it before anything is altered. Fresh databases
+// already have the column from the schema and only need the index.
+function migrateWatchedDaily() {
+  const needRebuild = !hasColumn('watched', 'watched_date');
+  const needIndex = !db.prepare(
+    "SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'idx_watched_movie_day'",
+  ).get();
+  if (!needRebuild && !needIndex) return;
+
+  if (needRebuild) {
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backup = path.join(dataDir, `reelpicks.pre-watched-daily-${stamp}.db`);
+    db.exec(`VACUUM INTO '${backup.replace(/'/g, "''")}'`);
+
+    const before = db.prepare('SELECT COUNT(*) AS n FROM watched').get().n;
+    db.exec('BEGIN');
+    try {
+      db.exec(`CREATE TABLE watched_v2 (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        tmdb_id       INTEGER,
+        title         TEXT,
+        watched_at    TEXT,
+        watched_date  TEXT NOT NULL,
+        week_start    TEXT,
+        in_weekly4    INTEGER DEFAULT 0,
+        ticket_price  REAL
+      )`);
+      // Carry a weekly-4 flag from any duplicate onto the row that will
+      // survive, before the group is collapsed.
+      db.exec(`UPDATE watched SET in_weekly4 = 1 WHERE in_weekly4 = 0 AND EXISTS (
+        SELECT 1 FROM watched d
+         WHERE d.tmdb_id IS watched.tmdb_id AND d.in_weekly4 = 1
+           AND date(d.watched_at, 'localtime') IS date(watched.watched_at, 'localtime'))`);
+      // A row with no timestamp at all is dated today so it survives the
+      // NOT NULL rebuild rather than being silently dropped.
+      db.exec(`INSERT INTO watched_v2(id, tmdb_id, title, watched_at, watched_date, week_start, in_weekly4, ticket_price)
+        SELECT id, tmdb_id, title, watched_at,
+               COALESCE(date(watched_at, 'localtime'), date('now', 'localtime')),
+               week_start, in_weekly4, ticket_price
+          FROM watched
+         WHERE id IN (SELECT MIN(id) FROM watched
+                       GROUP BY tmdb_id, COALESCE(date(watched_at, 'localtime'), date('now', 'localtime')))`);
+      const kept = db.prepare('SELECT COUNT(*) AS n FROM watched_v2').get().n;
+      db.exec('DROP TABLE watched');
+      db.exec('ALTER TABLE watched_v2 RENAME TO watched');
+      db.exec('COMMIT');
+      const gone = before - kept;
+      console.log(`[db] watched: added per-day key${gone ? `, collapsed ${gone} same-day duplicate row(s)` : ''} (backup: ${backup})`);
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
+    }
+  }
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_watched_movie_day ON watched(tmdb_id, watched_date)');
+}
+
+migrateWatchedDaily();
 
 // ---- low-level helpers -------------------------------------------------
 
