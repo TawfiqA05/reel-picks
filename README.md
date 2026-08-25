@@ -1,6 +1,6 @@
 # Reel Picks
 
-I have an AMC A-List membership and a recurring problem: three movies a week is a lot of
+I have an AMC A-List membership and a recurring problem: four movies a week is a lot of
 decisions, and I kept either wasting a slot on something mediocre or finding out too late
 that the one I actually wanted to see had left the theatre on Wednesday. Reel Picks is my
 answer. It pulls what's playing at my AMC, scores every film by blending public reviews
