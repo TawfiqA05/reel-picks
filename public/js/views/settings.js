@@ -460,15 +460,18 @@ export async function render(root, params, ctx) {
     h('p', { class: 'muted small' }, 'Picks with a showing inside your windows get a boost, and that showtime is surfaced.')));
 
   // ---- Pricing
-  const fee = h('input', { class: 'input num', type: 'number', step: '0.01', value: String(s.alistMonthlyFee ?? 24.95) });
+  const perWeek = h('input', { class: 'input num', type: 'number', step: '1', min: '1', value: String(s.alistWeeklyLimit ?? 4) });
+  const fee = h('input', { class: 'input num', type: 'number', step: '0.01', value: String(s.alistMonthlyFee ?? 25.99) });
   const ticket = h('input', { class: 'input num', type: 'number', step: '0.01', value: String(s.avgTicketPrice ?? 14.5) });
   const previews = h('input', { class: 'input num', type: 'number', step: '1', value: String(s.previewsMinutes ?? 20) });
   page.appendChild(card('A-List & pricing',
     h('div', { class: 'grid-3' },
+      labeled('Reservations / week', perWeek),
       labeled('Monthly fee ($)', fee),
       labeled('Avg ticket ($)', ticket),
       labeled('Previews (min)', previews),
-    )));
+    ),
+    h('p', { class: 'muted small' }, 'Your plan\'s terms. AMC varies the allowance by region and raises the fee from time to time — change them here when it does.')));
 
   // ---- Advanced boosts
   const wlB = h('input', { class: 'input num', type: 'number', value: String(s.watchlistBoost ?? 8) });
@@ -600,6 +603,7 @@ export async function render(root, params, ctx) {
         excludedGenres: [...exG],
         excludedMpaa: [...exM],
         showtimeWindows: { weekday: weekday.read(), weekend: weekend.read() },
+        alistWeeklyLimit: Math.max(1, Math.round(Number(perWeek.value) || 4)),
         alistMonthlyFee: Number(fee.value) || 0,
         avgTicketPrice: Number(ticket.value) || 0,
         previewsMinutes: Number(previews.value) || 0,

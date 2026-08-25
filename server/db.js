@@ -414,7 +414,12 @@ export const DEFAULT_SETTINGS = {
   lastChanceMinGapDays: 3,
   lastChanceMaxEntries: 3,
   lastChanceDensity: 0.5,
-  alistMonthlyFee: 24.95,
+  // A-List plan terms. AMC varies the reservation allowance and the fee by
+  // region and raises the price periodically, so both are settings rather
+  // than constants — the usage counter, "remaining", and the savings figure
+  // all read them.
+  alistWeeklyLimit: 4,
+  alistMonthlyFee: 25.99,
   avgTicketPrice: 14.5,
   previewsMinutes: 20,      // added to runtime for end-time calc
   onboardingDone: false,

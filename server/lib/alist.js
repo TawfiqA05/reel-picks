@@ -57,7 +57,7 @@ export function getWeek() {
       WHERE w.week_start = ? ORDER BY w.watched_at DESC`,
     week,
   );
-  const limit = 3;
+  const limit = Number(settings.alistWeeklyLimit) || 4;
   return {
     weekStart: week,
     used: rows.length,
