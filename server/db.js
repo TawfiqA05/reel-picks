@@ -126,6 +126,20 @@ CREATE TABLE IF NOT EXISTS watched (
   ticket_price  REAL
 );
 
+-- The weekly 4 as it was actually offered: one row per pick per A-List week,
+-- written the first time a movie appears in that week's four. The live four
+-- drifts during the week (refreshes re-rank; rating a pick removes it), so
+-- "was this one of my picks this week" must read this log, never the
+-- instantaneous ranking. Mark-seen's in_weekly4 stamp — and therefore the
+-- Stats hit-rate — depends on it.
+CREATE TABLE IF NOT EXISTS weekly4_log (
+  week_start    TEXT,      -- Friday that begins the A-List week (YYYY-MM-DD)
+  tmdb_id       INTEGER,
+  rank          INTEGER,   -- 1-4 position when first seen that week
+  first_seen_at TEXT,
+  PRIMARY KEY (week_start, tmdb_id)
+);
+
 -- One row per movie per theatre per refresh: the shape of that theatre's lineup
 -- at that moment. Lets the app observe departures and shrinking schedules across
 -- refreshes instead of guessing from a single snapshot.

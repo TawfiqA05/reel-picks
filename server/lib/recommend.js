@@ -6,7 +6,7 @@
 // movie is playing at, with per-theatre showtimes and runway, (b) the "Also
 // nearby" section for movies the primary doesn't have, and (c) the hand-off
 // line when a movie is leaving the primary but still on elsewhere.
-import { all, getSettings } from '../db.js';
+import { all, get, run, getSettings } from '../db.js';
 import { getMovie, hydrate } from './movies.js';
 import { profileRows, ratedIds, getRating } from './ratings.js';
 import { getMatch } from './match.js';
@@ -18,7 +18,7 @@ import {
 import { getLastChance, dailyBreadth, computeHorizon, lineupExodus } from './leaving.js';
 import { followedTheatres, homeBase, readDistance } from './theatres.js';
 import { computeRunway, runwayDates, handoffLine, goneAfterPhrase } from './runway.js';
-import { localYMD, addDays, timeLabel } from './util.js';
+import { localYMD, addDays, timeLabel, weekStartFriday } from './util.js';
 import { ownerName } from './guest.js';
 
 function watchlistSet() {
@@ -357,6 +357,27 @@ export function theatreList(ctx) {
   }));
 }
 
+// Pin down this week's four as they are offered: each pick is written to
+// weekly4_log the first time it shows up in the week's four. The live four
+// drifts during the week — a refresh re-ranks the lineup, and rating a pick
+// removes it (flags.seen) — so any question about what the picks WERE has to
+// read this log, not a recomputation. Guest views never write.
+function recordWeekly4(weekly4) {
+  const week = weekStartFriday();
+  weekly4.forEach((e, i) => {
+    run(
+      `INSERT INTO weekly4_log(week_start, tmdb_id, rank, first_seen_at)
+        VALUES(?,?,?,?) ON CONFLICT(week_start, tmdb_id) DO NOTHING`,
+      week, e.tmdb_id, i + 1, new Date().toISOString(),
+    );
+  });
+}
+
+// Was this movie among the weekly 4 at any point in the given A-List week?
+export function wasWeekly4Pick(tmdbId, week = weekStartFriday()) {
+  return Boolean(get('SELECT 1 AS x FROM weekly4_log WHERE week_start = ? AND tmdb_id = ?', week, tmdbId));
+}
+
 export function getRecommendations({ guest = false } = {}) {
   const ctx = buildCtx({ guest });
   const playing = all('SELECT * FROM movies WHERE playing = 1').map(hydrate);
@@ -378,6 +399,7 @@ export function getRecommendations({ guest = false } = {}) {
   const list = evaluated.sort(byScore);
   const eligible = list.filter((e) => !e.flags.seen && !e.flags.excluded);
   const weekly4 = eligible.slice(0, 4);
+  if (!guest) recordWeekly4(weekly4);
   // Everything else that still clears the "good match" bar, so the picks page
   // isn't capped at four. Already-in-weekly4 movies are excluded, not repeated;
   // so are movies with no public score — their `final` rests on a default 50.

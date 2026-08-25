@@ -9,7 +9,7 @@ import {
   refreshAll, shouldAutoRefresh, state as refreshState, ingestOne, drainUnmatched, enrichMissingDetails,
 } from './lib/refresh.js';
 import {
-  getRecommendations, getComingSoon, getMovieDetail, getProfileSummary,
+  getRecommendations, getComingSoon, getMovieDetail, getProfileSummary, wasWeekly4Pick,
 } from './lib/recommend.js';
 import {
   upsertRating, addUnmatched, deleteRating, listRatings, ratedIds,
@@ -508,14 +508,24 @@ router.post('/watchlist/toggle', (req, res) => {
 router.get('/alist', (req, res) => res.json(getWeek()));
 
 router.post('/watched', (req, res) => {
-  const { tmdb_id, title } = req.body || {};
-  if (!tmdb_id) return res.status(400).json({ error: 'tmdb_id required.' });
+  const tmdb_id = Number(req.body?.tmdb_id);
+  const title = req.body?.title;
+  if (!Number.isInteger(tmdb_id) || tmdb_id <= 0) return res.status(400).json({ error: 'tmdb_id required.' });
   let inWeekly4 = req.body?.in_weekly4;
   if (inWeekly4 == null) {
-    try {
-      inWeekly4 = getRecommendations().weekly4.some((e) => e.tmdb_id === tmdb_id);
-    } catch {
-      inWeekly4 = false;
+    // Membership means "was in the weekly 4 at any point this A-List week",
+    // read from weekly4_log. It must NOT be recomputed here: by the time a
+    // movie is marked seen the live four has usually moved on — above all
+    // because rating it sets flags.seen, which drops it out of the very four
+    // a recompute would consult, so the movies most likely to be marked seen
+    // are exactly the ones a recompute denies.
+    inWeekly4 = wasWeekly4Pick(tmdb_id);
+    if (!inWeekly4) {
+      // Nothing recorded for this movie yet — generate this week's four (which
+      // records them) in case the Picks page simply hasn't been opened, then
+      // look again. Still a log read, never the instantaneous ranking.
+      try { getRecommendations(); } catch { /* the first lookup already answered */ }
+      inWeekly4 = wasWeekly4Pick(tmdb_id);
     }
   }
   res.json(logWatched({ tmdb_id, title, in_weekly4: inWeekly4 }));
