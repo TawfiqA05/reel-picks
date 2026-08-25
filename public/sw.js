@@ -1,5 +1,5 @@
 // Reel Picks service worker: offline app shell + stale-while-revalidate statics.
-const CACHE = 'reelpicks-v16';
+const CACHE = 'reelpicks-v17';
 const CORE = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
   '/js/app.js', '/js/api.js', '/js/ui.js',
