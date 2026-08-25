@@ -13,7 +13,7 @@ import { getMatch } from './match.js';
 import { buildProfile, confidence, tasteMatch, topTasteFactor } from './taste.js';
 import { publicScoreForMovie, isSettling } from './scoring.js';
 import {
-  finalScore, buildReason, bestShowtime, showtimeFits, endTimeLabel, urgencyBoost,
+  finalScore, buildReason, bestShowtime, showtimeFits, endTimeLabel, beThereByLabel, urgencyBoost,
 } from './ranking.js';
 import { getLastChance, dailyBreadth, computeHorizon, lineupExodus } from './leaving.js';
 import { followedTheatres, homeBase, readDistance } from './theatres.js';
@@ -144,6 +144,11 @@ function summarizeShowtime(s, movie, settings) {
     start_local: s.start_local,
     start_epoch: s.start_epoch,
     end: endTimeLabel(s.start_local, runtime, settings.previewsMinutes),
+    // Display only: when the feature starts, and the padding it was derived
+    // from so the UI can explain itself. Nothing here feeds scoring, the
+    // window-fit test, or the runway — those all key off the listed time.
+    be_there_by: beThereByLabel(s.start_local, settings.previewsMinutes),
+    previews_min: Number(settings.previewsMinutes) || 0,
     format: s.format,
     is_imax: Boolean(s.is_imax),
     is_advance: Boolean(s.is_advance),

@@ -469,9 +469,10 @@ export async function render(root, params, ctx) {
       labeled('Reservations / week', perWeek),
       labeled('Monthly fee ($)', fee),
       labeled('Avg ticket ($)', ticket),
-      labeled('Previews (min)', previews),
+      labeled('Preview length (min)', previews),
     ),
-    h('p', { class: 'muted small' }, 'Your plan\'s terms. AMC varies the allowance by region and raises the fee from time to time — change them here when it does.')));
+    h('p', { class: 'muted small' }, 'Your plan\'s terms. AMC varies the allowance by region and raises the fee from time to time — change them here when it does.'),
+    h('p', { class: 'muted small' }, 'AMC\'s listed showtime is when previews start. Preview length sets the "be there by" time on every showtime (when the film itself begins) and is included in the end time. AMC publishes no preview or program length of its own, so this number is the only source for it.')));
 
   // ---- Advanced boosts
   const wlB = h('input', { class: 'input num', type: 'number', value: String(s.watchlistBoost ?? 8) });

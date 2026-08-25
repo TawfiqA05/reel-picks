@@ -185,7 +185,8 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .showtime-chip { display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; font-size: 13px; width: fit-content; }
 .showtime-chip:hover { border-color: var(--accent); }
 .st-time { font-weight: 600; }
-.st-end { color: var(--muted); font-size: 12px; }
+.st-seat { color: var(--ok); font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.st-end { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .st-fit { color: var(--good); font-size: 11.5px; font-weight: 700; }
 .st-book { color: var(--accent); font-weight: 700; font-size: 12px; margin-left: auto; }
 

@@ -85,6 +85,18 @@ export function endTimeLabel(startLocal, runtimeMin, previewsMin = 20) {
   return clockLabel(end);
 }
 
+// AMC's listed time is when the PROGRAM starts — previews first, feature after.
+// This is when the feature itself begins, i.e. the latest you can be in the seat
+// without missing the opening. Null when no padding is configured, because then
+// it would just restate the listed time.
+export function beThereByLabel(startLocal, previewsMin = 20) {
+  const mins = Number(previewsMin) || 0;
+  if (mins <= 0) return null;
+  const t = parseLocalDate(startLocal);
+  if (!t) return null;
+  return clockLabel(new Date(t.getTime() + mins * 60000));
+}
+
 // From a list of showtime rows, pick the best one: prefer window-fit, then IMAX
 // (if the user prefers it), then soonest.
 export function bestShowtime(showtimes, { windows, preferImax } = {}) {

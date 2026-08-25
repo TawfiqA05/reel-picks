@@ -37,17 +37,34 @@ export function formatBadge(st) {
 export function showtimeChip(st, { showDay = true } = {}) {
   if (!st) return null;
   const label = showDay ? `${dayLabel(st.date)} ${st.time}` : st.time;
+  // Three different times can appear here, so each is named rather than left to
+  // be inferred from position: the listed time is when previews roll, "be there
+  // by" is when the feature itself starts, "→" is when it lets out.
   const kids = [
     formatBadge(st),
     h('span', { class: 'st-time' }, label),
-    st.end ? h('span', { class: 'st-end' }, `→ ${st.end}`) : null,
+    st.be_there_by ? h('span', { class: 'st-seat' }, `be there by ${st.be_there_by}`) : null,
+    st.end ? h('span', { class: 'st-end' }, `→ ends ${st.end}`) : null,
     st.fits_window ? h('span', { class: 'st-fit' }, '✓ fits') : null,
   ];
+  const attrs = { class: 'showtime-chip', title: showtimeTitle(st) };
   if (st.past) {
-    return h('div', { class: 'showtime-chip past' }, ...kids, h('span', { class: 'st-past' }, 'started'));
+    return h('div', { ...attrs, class: 'showtime-chip past' }, ...kids, h('span', { class: 'st-past' }, 'started'));
   }
-  return h('a', { class: 'showtime-chip', href: st.purchase_url || '#', target: '_blank', rel: 'noopener' },
+  return h('a', { ...attrs, href: st.purchase_url || '#', target: '_blank', rel: 'noopener' },
     ...kids, h('span', { class: 'st-book' }, 'Book ↗'));
+}
+
+// Spells the three times out in full on hover, so the compact chip never has to
+// carry the whole explanation.
+function showtimeTitle(st) {
+  const parts = [`AMC lists ${st.time} — previews start then.`];
+  if (st.be_there_by) {
+    const mins = Number(st.previews_min) > 0 ? ` (${st.previews_min} min of previews, set in Settings)` : '';
+    parts.push(`The film itself starts around ${st.be_there_by}, so that is the latest you want to be in your seat${mins}.`);
+  }
+  if (st.end) parts.push(`Ends around ${st.end}.`);
+  return parts.join(' ');
 }
 
 // Runway: how much longer a movie is on at one theatre. Loud only when the run
