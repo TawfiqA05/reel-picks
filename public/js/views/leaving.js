@@ -40,7 +40,10 @@ export async function render(root, params, ctx) {
     'Films whose run at your primary theatre is confirmed to end. Only a run that stops before the published schedule does counts as a deadline — everything still running at the edge of what AMC has posted is listed underneath, not on a day.'));
 
   // ---- the week ---------------------------------------------------------
-  const today = data.days?.[0]?.date || null;
+  // Falls back to the local clock: with no schedule at all there are no
+  // published days to read "today" from, and without it every heading would
+  // print its own date twice instead of "Today" / "Tomorrow".
+  const today = data.days?.[0]?.date || ymd(new Date());
   const week = weekDates(today, DAYS_AHEAD);
   const byDay = new Map(week.map((d) => [d, []]));
   const later = [];
@@ -97,14 +100,16 @@ export async function render(root, params, ctx) {
   root.appendChild(page);
 }
 
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 // Seven dates starting today, as YYYY-MM-DD.
 function weekDates(today, n) {
-  const start = today ? new Date(`${today}T00:00:00`) : new Date();
+  const start = new Date(`${today}T00:00:00`);
   const out = [];
   for (let i = 0; i < n; i++) {
     const d = new Date(start);
     d.setDate(d.getDate() + i);
-    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+    out.push(ymd(d));
   }
   return out;
 }
