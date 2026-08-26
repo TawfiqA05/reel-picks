@@ -57,9 +57,16 @@ export async function render(root, params, ctx) {
   ));
 
   if (!total) {
+    // Two different nothings: a theatre schedule that shows no confirmed
+    // endings, versus no schedule at all (no AMC showtimes, so no runway on
+    // anything). Claiming films "run to the edge of the published schedule"
+    // when nothing is published would be its own small lie.
+    const noSchedule = !withRunway.length || !horizon;
     page.appendChild(h('div', { class: 'alert tip lv-none' },
-      h('span', { class: 'alert-icon' }, '🎬'),
-      h('span', {}, 'Nothing has a confirmed last day this week. Every film is still running to the edge of the published schedule.'),
+      h('span', { class: 'alert-icon' }, noSchedule ? '🗓️' : '🎬'),
+      h('span', {}, noSchedule
+        ? 'No showtimes are loaded for this theatre, so there are no departure dates to work from yet.'
+        : 'Nothing has a confirmed last day this week. Every film is still running to the edge of the published schedule.'),
     ));
   }
 
