@@ -4,6 +4,7 @@ import { h, clear, toast, spinner, emptyState } from './ui.js';
 import * as home from './views/home.js';
 import * as detail from './views/detail.js';
 import * as coming from './views/coming.js';
+import * as leaving from './views/leaving.js';
 import * as rate from './views/rate.js';
 import * as watchlist from './views/watchlist.js';
 import * as stats from './views/stats.js';
@@ -14,6 +15,7 @@ const routes = {
   home: home.render,
   movie: detail.render,
   coming: coming.render,
+  leaving: leaving.render,
   rate: rate.render,
   watchlist: watchlist.render,
   stats: stats.render,
@@ -24,6 +26,7 @@ const routes = {
 const NAV = [
   { name: 'home', label: 'Picks', icon: '🎬' },
   { name: 'coming', label: 'Coming', icon: '🗓️' },
+  { name: 'leaving', label: 'Leaving', icon: '⏳' },
   { name: 'rate', label: 'Rate', icon: '⭐' },
   { name: 'watchlist', label: 'Watchlist', icon: '🔖' },
   { name: 'stats', label: 'Stats', icon: '📊' },
@@ -41,7 +44,9 @@ const ctx = {
   triggerRefresh: doRefresh,
 };
 
-const GUEST_ROUTES = new Set(['home', 'coming', 'movie']);
+// Leaving reads only /api/recommendations, which is already on the guest
+// allowlist and already strips drive times and home coordinates for guests.
+const GUEST_ROUTES = new Set(['home', 'coming', 'leaving', 'movie']);
 
 async function refreshStatus() {
   try {

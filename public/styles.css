@@ -431,6 +431,64 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 }
 
 /* ---- last chance (leaving the theatre soon) ---- */
+/* ---- Leaving: a week of departure deadlines ---- */
+.lv-intro { margin: -4px 0 12px; line-height: 1.45; }
+/* One column per day on a phone; the week fans out side by side once there's
+   room. minmax(0, …) from the start — a plain 1fr track cannot shrink below
+   its content, which is how a single wide film row would distort the week. */
+.lv-week { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-bottom: 18px; }
+.lv-day { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 10px; min-width: 0; }
+.lv-day.empty { background: transparent; border-style: dashed; opacity: 0.55; }
+.lv-day-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.lv-day-name { font-weight: 700; font-size: 14px; }
+.lv-day-num { color: var(--muted); font-size: 11.5px; }
+.lv-day-count { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+/* Soonest = loudest. Same tier colours the Last chance cards use. */
+.lv-day.urgent { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2) inset; }
+.lv-day.urgent .lv-day-name, .lv-day.urgent .lv-day-count { color: var(--accent-2); }
+.lv-day.soon { border-color: var(--accent); }
+.lv-day.soon .lv-day-name, .lv-day.soon .lv-day-count { color: var(--accent); }
+.lv-day.near .lv-day-name { color: var(--text); }
+.lv-day-body { display: flex; flex-direction: column; gap: 10px; }
+
+.lv-film { display: flex; gap: 10px; min-width: 0; }
+.lv-poster { position: relative; width: 58px; flex: 0 0 58px; }
+.lv-score { position: absolute; bottom: 4px; right: 4px; z-index: 1; transform: scale(0.82); transform-origin: bottom right; }
+.lv-star { position: absolute; top: 4px; left: 4px; z-index: 1; color: var(--accent); font-size: 13px; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+.lv-film-body { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.lv-film-title { font-size: 13.5px; font-weight: 700; line-height: 1.25; }
+.lv-when { font-size: 12px; font-weight: 700; color: var(--text); }
+.lv-when.urgent { color: var(--accent-2); }
+.lv-when.soon { color: var(--accent); }
+.lv-when.near { color: var(--ok); }
+/* A hedge must never read like a deadline: quiet, italic, never coloured. */
+.lv-when.hedge { color: var(--muted); font-weight: 600; font-style: italic; }
+.lv-sub { font-size: 11.5px; color: var(--muted); line-height: 1.35; }
+.lv-handoff { font-size: 11.5px; color: var(--accent); line-height: 1.35; }
+.lv-slots { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.lv-slot { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 7px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text); white-space: nowrap; }
+.lv-slot.more { color: var(--muted); font-weight: 500; }
+
+.lv-none { margin-bottom: 18px; }
+.lv-later, .lv-hedged { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.lv-film.hedged { opacity: 0.82; }
+
+/* Must follow the base .lv-* rules above, not sit in the earlier responsive
+   block — same specificity, so whichever comes last wins. */
+@media (min-width: 720px) {
+  /* The week fans out: seven day columns side by side. */
+  .lv-week { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+  .lv-day { padding: 8px; }
+  /* Poster on top but small: this view is scanned, so the title, the label and
+     the showtimes matter more than the artwork. A full-width poster per film
+     would push a five-film day well past a screen. */
+  .lv-film { flex-direction: column; gap: 6px; }
+  .lv-poster { width: 62px; flex-basis: auto; }
+  .lv-film-title { font-size: 12.5px; }
+  .lv-when, .lv-sub, .lv-handoff { font-size: 11px; }
+  .lv-later, .lv-hedged { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 .lc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px; }
 .lc-card { display: flex; flex-direction: column; gap: 6px; }
 .lc-poster { position: relative; }
