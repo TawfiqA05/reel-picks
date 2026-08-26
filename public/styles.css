@@ -422,7 +422,9 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
      squeezes the other. Equal columns keep every poster the same share of the
      card and stop the text column collapsing. */
   .pick-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .cards-2 { grid-template-columns: 1fr 1fr; }
+  /* Same guard as .pick-grid above: content that can't wrap must not be able
+     to widen its own column at the other's expense. */
+  .cards-2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .poster-lg { width: 140px; flex-basis: 140px; }
   .hero { border-radius: 0 0 16px 16px; }
   .nav-label { font-size: 12px; }
