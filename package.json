@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Personal movie recommendation PWA that ranks what's playing at your AMC and tells you the 4 to see this week.",
+  "license": "MIT",
   "engines": {
     "node": ">=24"
   },

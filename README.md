@@ -156,3 +156,7 @@ data/                 SQLite db + backups (git-ignored)
 
 Deleting `data/` resets everything: ratings, watch history, caches. Keys in `.env`
 survive.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
