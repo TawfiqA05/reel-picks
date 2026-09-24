@@ -549,8 +549,8 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .lv-day.empty { background: transparent; border-style: dashed; }
 .lv-day.empty .lv-day-name { color: var(--muted); font-weight: 600; }
 .lv-day-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
-.lv-day-name { font-weight: 700; font-size: var(--fs-base); }
-.lv-day-num { color: var(--muted); font-size: var(--fs-xs); }
+.lv-day-name { font-weight: 700; font-size: var(--fs-base); white-space: nowrap; }
+.lv-day-num { color: var(--muted); font-size: var(--fs-xs); white-space: nowrap; }
 .lv-day-count { margin-left: auto; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 /* Soonest = loudest. Same tier colours the Last chance cards use. */
 .lv-day.urgent { border-color: var(--urgent); box-shadow: 0 0 0 1px var(--urgent) inset; }
@@ -821,5 +821,15 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 @media (min-width: 720px) {
   .lv-week { align-items: start; }
   .lv-day.empty .lv-day-head { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  /* A seventh of the row is too narrow for "Tomorrow", the date and a count on
+     one line, and the count is what used to push the head onto two. Days with
+     films give the count its own line; an empty day's dashed border already
+     says "none", so its count is kept for screen readers only. */
+  .lv-day-head { flex-wrap: nowrap; }
+  .lv-day:not(.empty) .lv-day-head { flex-wrap: wrap; }
+  .lv-day:not(.empty) .lv-day-count { margin-left: 0; flex-basis: 100%; }
+  .lv-day.empty .lv-day-count {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
   .lv-day.empty .lv-day-body { display: none; }
 }
