@@ -815,6 +815,7 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
   .chip { display: inline-flex; align-items: center; }
   .link-btn, .rater-clear { display: inline-flex; align-items: center; }
   .stars.interactive { font-size: calc(var(--fs-lg) + 4px) !important; padding: 9px 0; }
+  .stars.interactive .stars-fill { top: 9px; }
 }
 
 /* ---- dialog focus ---- */
