@@ -1,7 +1,7 @@
 // Home: "Your 4 this week" + leaving-soon alerts + the full ranked lineup.
 import { api } from '../api.js';
 import { h, clear, spinner, emptyState, badge, sectionTitle, icon } from '../ui.js';
-import { weeklyCard, movieRow, posterTile, lastChanceCard, dayPicker } from './components.js';
+import { weeklyCard, heroPick, movieRow, posterTile, lastChanceCard, dayPicker } from './components.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -40,6 +40,24 @@ export async function render(root, params, ctx) {
   const days = data.days || [];
   let day = days[0]?.date || null;
 
+  // Weekly 4: the first pick is the hero, the day picker sits under it and
+  // drives every showtime on the page, and the other three follow as cards.
+  const guest = Boolean(ctx.isGuest?.());
+  const owner = status?.ownerName || 'Owner';
+  const heroSlot = h('div', { class: 'hero-slot' });
+  const pickGrid = h('div', { class: 'pick-grid' });
+  if (data.weekly4.length) page.appendChild(heroSlot);
+  if (days.length) page.appendChild(dayPicker(days, day, (d) => { day = d; paint(); }));
+  if (data.weekly4.length > 1) {
+    page.appendChild(sectionTitle(guest ? `The rest of ${owner}'s four` : 'The rest of your four',
+      data.profile.lowData && !guest ? 'Leaning on public scores — rate more to personalize' : `${data.theatre?.name || ''}`));
+  }
+  if (data.weekly4.length) {
+    page.appendChild(pickGrid);
+  } else {
+    page.appendChild(h('div', { class: 'muted pad' }, 'Nothing to recommend — you may have rated or filtered everything playing.'));
+  }
+
   // Last chance — only rendered when something genuinely qualifies, so it isn't
   // sitting empty on the weeks when nothing is leaving.
   const lastChance = data.lastChance || [];
@@ -49,21 +67,6 @@ export async function render(root, params, ctx) {
     const lcGrid = h('div', { class: 'lc-grid' });
     lastChance.forEach((e) => lcGrid.appendChild(lastChanceCard(e, ctx)));
     page.appendChild(lcGrid);
-  }
-
-  if (days.length) page.appendChild(dayPicker(days, day, (d) => { day = d; paint(); }));
-
-  // Weekly 4.
-  const guest = Boolean(ctx.isGuest?.());
-  const owner = status?.ownerName || 'Owner';
-  page.appendChild(sectionTitle(guest ? `${owner}'s 4 this week` : 'Your 4 this week',
-    data.profile.lowData && !guest ? 'Leaning on public scores — rate more to personalize' : `${data.theatre?.name || ''}`));
-
-  const pickGrid = h('div', { class: 'pick-grid' });
-  if (data.weekly4.length) {
-    page.appendChild(pickGrid);
-  } else {
-    page.appendChild(h('div', { class: 'muted pad' }, 'Nothing to recommend — you may have rated or filtered everything playing.'));
   }
 
   if (data.playingSource === 'tmdb') {
@@ -123,8 +126,10 @@ export async function render(root, params, ctx) {
 
   // Re-render just the rows when the selected day changes.
   function paint() {
+    clear(heroSlot);
+    if (data.weekly4[0]) heroSlot.appendChild(heroPick(data.weekly4[0], ctx, { day, multi }));
     clear(pickGrid);
-    data.weekly4.forEach((e, i) => pickGrid.appendChild(weeklyCard(e, ctx, i + 1, { day, multi })));
+    data.weekly4.slice(1).forEach((e, i) => pickGrid.appendChild(weeklyCard(e, ctx, i + 2, { day, multi })));
     clear(worthList);
     worth.forEach((e) => worthList.appendChild(movieRow(e, ctx, { day, multi })));
     clear(nearbyList);

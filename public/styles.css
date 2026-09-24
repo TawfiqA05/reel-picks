@@ -688,3 +688,55 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .review-why { font-size: var(--fs-xs); color: var(--accent); }
 .confirm { display: flex; flex-direction: column; gap: 10px; }
 .confirm p { margin: 0; }
+
+/* ---- hero (Picks #1 and the movie page) ---- */
+/* Phone: the art sits on top and the text runs underneath on the page
+   background. Wide screens: the art fills the frame and a left-to-right scrim
+   keeps the text column readable over any image. */
+.hero-pick, .detail-hero { position: relative; margin: calc(-1 * var(--sp-4)) calc(-1 * var(--sp-4)) 0; isolation: isolate; }
+.hero-media { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: var(--surface); }
+.hero-media.plain { aspect-ratio: 16 / 6; background: linear-gradient(160deg, var(--surface-2), var(--surface)); }
+.hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; }
+.hero-media.from-poster .hero-img { filter: blur(28px) saturate(1.2) brightness(.7); transform: scale(1.25); }
+.hero-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, var(--bg) 100%); }
+.hero-content { position: relative; display: flex; flex-direction: column; gap: var(--sp-3); padding: 0 var(--sp-4) var(--sp-5); margin-top: calc(-1 * var(--sp-7)); }
+.eyebrow { font-size: var(--fs-xs); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); }
+.eyebrow-dot { color: var(--muted); }
+.eyebrow-score.good { color: var(--good); }
+.eyebrow-score.ok { color: var(--ok); }
+.eyebrow-score.low { color: var(--low); }
+.eyebrow-score.na { color: var(--muted); }
+.hero-title { font-size: var(--fs-hero-sm); line-height: .98; text-wrap: balance; }
+.hero-title a:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .12em; }
+.hero-facts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); color: var(--text-2); font-size: var(--fs-sm); }
+.hero-reason { margin: 0; color: var(--text-2); font-size: var(--fs-base); line-height: 1.5; max-width: 52ch; }
+.hero-content .runway-line { margin: 0; }
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-1); }
+.hero-actions .btn { min-height: 44px; }
+.btn.book { font-size: var(--fs-base); padding: 0 var(--sp-5); }
+.btn.book .badge { background: color-mix(in srgb, var(--on-accent) 16%, transparent); color: var(--on-accent); }
+.btn.book.none { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); cursor: default; font-weight: 600; }
+.btn.book.none:hover { filter: none; }
+.seat-line { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
+.hero-pick .hero-actions .btn.book { flex: 1 1 100%; }
+
+@media (min-width: 900px) {
+  .hero-pick, .detail-hero {
+    margin: 0 0 var(--sp-4); min-height: 520px; border-radius: var(--r-lg); overflow: hidden;
+    display: flex; align-items: flex-end; border: 1px solid var(--line);
+  }
+  .hero-pick .hero-media, .detail-hero .hero-media { position: absolute; inset: 0; aspect-ratio: auto; }
+  .hero-pick .hero-media.plain, .detail-hero .hero-media.plain { aspect-ratio: auto; }
+  .hero-pick .hero-scrim, .detail-hero .hero-scrim {
+    background:
+      linear-gradient(180deg, transparent 55%, var(--bg) 100%),
+      linear-gradient(90deg,
+        color-mix(in srgb, var(--bg) 97%, transparent) 0%,
+        color-mix(in srgb, var(--bg) 86%, transparent) 34%,
+        color-mix(in srgb, var(--bg) 25%, transparent) 68%,
+        color-mix(in srgb, var(--bg) 10%, transparent) 100%);
+  }
+  .hero-pick .hero-content, .detail-hero .hero-content { max-width: 600px; margin: 0; padding: var(--sp-9) var(--sp-9) var(--sp-8); gap: var(--sp-3); }
+  .hero-title { font-size: var(--fs-hero); }
+  .hero-pick .hero-actions .btn.book { flex: 0 0 auto; }
+}

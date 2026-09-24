@@ -1,6 +1,6 @@
 // Reusable movie cards shared across Home / Coming Soon / Watchlist.
 import { api } from '../api.js';
-import { h, clear, poster, scorePill, badge, makeStars, toast, icon } from '../ui.js';
+import { h, clear, poster, scorePill, badge, makeStars, toast, icon, scoreColor } from '../ui.js';
 
 export function fmtRuntime(min) {
   if (!min) return null;
@@ -266,6 +266,110 @@ export function weeklyCard(entry, ctx, rank, { day = null, multi = false } = {})
       ),
     ),
   );
+}
+
+// "tonight" / "today" / "tomorrow" / "Fri", for the Book button. Evening
+// listings read as tonight; a matinee today is just today.
+function whenWord(st, day) {
+  const when = dayLabel(day || st?.date);
+  if (when === 'Today') return Number(String(st?.start_local || '').slice(11, 13)) >= 17 ? 'tonight' : 'today';
+  if (when === 'Tomorrow') return 'tomorrow';
+  return when;
+}
+
+// The day's best showtime as the page's one primary action. With nothing left
+// that day, the same slot says so instead of disappearing.
+export function bookButton(st, day, { wide = false } = {}) {
+  if (!st) {
+    const when = dayLabel(day);
+    const text = !when ? 'No showtimes available' : `No showtimes ${/^(Today|Tomorrow)$/.test(when) ? when.toLowerCase() : when}`;
+    return h('span', { class: `btn book none${wide ? ' wide' : ''}`, 'aria-disabled': 'true' }, text);
+  }
+  return h('a', {
+    class: `btn book${wide ? ' wide' : ''}`, href: st.purchase_url || '#', target: '_blank', rel: 'noopener',
+    title: showtimeTitle(st),
+  }, formatBadge(st), `Book ${st.time} ${whenWord(st, day)}`);
+}
+
+// "Be in your seat by 7:50 PM. Ends around 10:51 PM." Same two times the
+// showtime chip names (be there by / ends), spelled out as a sentence.
+export function seatLine(st) {
+  if (!st) return null;
+  const bits = [];
+  if (st.be_there_by) bits.push(`Be in your seat by ${st.be_there_by}.`);
+  if (st.end) bits.push(`Ends around ${st.end}.`);
+  if (st.fits_window) bits.push('Fits your window.');
+  return bits.length ? h('p', { class: 'seat-line' }, bits.join(' ')) : null;
+}
+
+// Backdrop art with a graceful fall-through: the backdrop, then the poster
+// blurred up to fill the frame, then a plain surface.
+export function heroMedia(m, { cls = 'hero-media' } = {}) {
+  const wrap = h('div', { class: cls });
+  const usePoster = () => {
+    if (!m.poster) { wrap.classList.add('plain'); return; }
+    wrap.classList.add('from-poster');
+    const img = h('img', { class: 'hero-img', src: m.poster, alt: '', 'aria-hidden': 'true' });
+    img.addEventListener('error', () => { img.remove(); wrap.classList.remove('from-poster'); wrap.classList.add('plain'); });
+    wrap.appendChild(img);
+  };
+  if (m.backdrop) {
+    const big = m.backdrop.replace('/w780/', '/w1280/');
+    const img = h('img', {
+      class: 'hero-img', src: m.backdrop, alt: '', 'aria-hidden': 'true', fetchpriority: 'high',
+      srcset: big !== m.backdrop ? `${m.backdrop} 780w, ${big} 1280w` : null, sizes: '(min-width: 900px) 1200px, 100vw',
+    });
+    img.addEventListener('error', () => { img.remove(); usePoster(); }, { once: true });
+    wrap.appendChild(img);
+  } else usePoster();
+  wrap.appendChild(h('div', { class: 'hero-scrim' }));
+  return wrap;
+}
+
+// The #1 pick of the week, full width over its own backdrop.
+export function heroPick(entry, ctx, { day = null, multi = false, extraActions = [] } = {}) {
+  const best = pickBest(daySlots(entry, day));
+  const guest = ctx.isGuest?.();
+  const meta = [entry.year, fmtRuntime(entry.runtime), entry.mpaa].filter(Boolean);
+  return h('section', { class: 'hero-pick', 'aria-labelledby': `hero-${entry.tmdb_id}` },
+    heroMedia(entry),
+    h('div', { class: 'hero-content' },
+      h('div', { class: 'eyebrow' },
+        'No. 1 this week',
+        h('span', { class: 'eyebrow-dot', 'aria-hidden': 'true' }, ' · '),
+        h('span', { class: `eyebrow-score ${scoreColor(entry.final)}`, title: entry.flags?.noScores ? 'No public scores yet. This number uses a neutral 50 for reviews.' : 'Match score' },
+          `${entry.final ?? '-'} match`),
+      ),
+      h('h2', { class: 'hero-title', id: `hero-${entry.tmdb_id}` },
+        h('a', { href: `#/movie/${entry.tmdb_id}` }, entry.title)),
+      h('div', { class: 'hero-facts' },
+        meta.length ? h('span', {}, meta.join(' · ')) : null,
+        entry.flags?.imax ? badge('IMAX', 'imax') : null,
+        ...heroFlags(entry),
+      ),
+      entry.reason ? h('p', { class: 'hero-reason' }, entry.reason) : null,
+      runwayLine(entry.runway),
+      h('div', { class: 'row-sub' }, theatreChips(entry, { multi })),
+      handoffLine(entry),
+      h('div', { class: 'hero-actions' },
+        bookButton(best, day),
+        h('a', { class: 'btn ghost', href: `#/movie/${entry.tmdb_id}` }, 'Details'),
+        guest ? null : watchlistButton(entry, ctx, { compact: true }),
+        ...extraActions,
+      ),
+      seatLine(best),
+    ),
+  );
+}
+
+// The flags worth a word on the hero (IMAX has its own badge beside the meta).
+function heroFlags(entry) {
+  const f = entry.flags || {};
+  return [
+    f.noScores ? badge('No scores yet', 'noscore') : null,
+    entry.watchlisted || f.watchlisted ? badge('On watchlist', 'watch') : null,
+    f.settling ? badge('Scores settling', 'settling') : null,
+  ];
 }
 
 // Premium formats first, plain screenings last.
