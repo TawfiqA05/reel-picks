@@ -68,7 +68,7 @@ export function showtimeChip(st, { showDay = true } = {}) {
 // Spells the three times out in full on hover, so the compact chip never has to
 // carry the whole explanation.
 function showtimeTitle(st) {
-  const parts = [`AMC lists ${st.time} — previews start then.`];
+  const parts = [`AMC lists ${st.time}. Previews start then.`];
   if (st.be_there_by) {
     const mins = Number(st.previews_min) > 0 ? ` (${st.previews_min} min of previews, set in Settings)` : '';
     parts.push(`The film itself starts around ${st.be_there_by}, so that is the latest you want to be in your seat${mins}.`);
@@ -120,7 +120,7 @@ export function runwayLine(runway, { theatre = null, compact = false } = {}) {
     || (runway.urgent && runway.detail ? `${runway.label} · ${runway.detail}` : runway.label);
   return h('div', {
     class: `runway-line ${runway.kind}${committed ? ' committed' : ''}${runway.urgent ? ' urgent' : ''}${lastDay ? ' lastday' : ''}${compact ? ' compact' : ''}`,
-    title: runway.detail || (committed ? `${runway.label} — the schedule is posted well past this, so the run ends here` : runway.label),
+    title: runway.detail || (committed ? `${runway.label}. The schedule runs well past this, so the run ends here.` : runway.label),
   },
     calendarIcon(),
     h('span', { class: 'runway-text' },

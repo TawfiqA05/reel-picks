@@ -8,10 +8,13 @@ export async function render(root, params, ctx) {
   root.appendChild(skeleton());
   const status = ctx.getStatus() || (await ctx.refreshStatus());
 
-  // No TMDB key yet → nothing to rank. Guide setup.
-  if (status && !status.keys.tmdb) {
+  // No TMDB key yet → nothing to rank. Guide setup (the owner only: a guest
+  // gets a plain "check back" instead of instructions about .env files).
+  if (status && !status.keys?.tmdb) {
     clear(root);
-    root.appendChild(setupCard(ctx));
+    root.appendChild(ctx.isGuest?.()
+      ? emptyState('film', 'Nothing loaded yet', 'Check back after the next refresh.')
+      : setupCard(ctx));
     return;
   }
 
@@ -89,7 +92,7 @@ function buildPage(data, status, ctx, state, actions) {
   const onUnhide = guest ? null : (e) => actions.unhide(e);
 
   // Onboarding nudge when the taste profile is thin.
-  if (status && !status.onboardingDone && data.profile.count < 10) {
+  if (!guest && status && !status.onboardingDone && data.profile.count < 10) {
     page.appendChild(onboardingBanner(ctx));
   }
 
@@ -117,12 +120,12 @@ function buildPage(data, status, ctx, state, actions) {
   if (days.length) page.appendChild(dayPicker(days, state.day, (d) => { state.day = d; paint(); }));
   if (data.weekly4.length > 1) {
     page.appendChild(sectionTitle(guest ? `The rest of ${owner}'s four` : 'The rest of your four',
-      data.profile.lowData && !guest ? 'Leaning on public scores — rate more to personalize' : `${data.theatre?.name || ''}`));
+      data.profile.lowData && !guest ? 'Leaning on public scores. Rate more to make it yours.' : `${data.theatre?.name || ''}`));
   }
   if (data.weekly4.length) {
     page.appendChild(pickGrid);
   } else {
-    page.appendChild(h('div', { class: 'muted pad' }, 'Nothing to recommend — you may have rated or filtered everything playing.'));
+    page.appendChild(h('div', { class: 'muted pad' }, 'Nothing to recommend. You may have rated or filtered everything playing.'));
   }
 
   // Last chance — only rendered when something genuinely qualifies, so it isn't
@@ -139,8 +142,9 @@ function buildPage(data, status, ctx, state, actions) {
   }
 
   if (data.playingSource === 'tmdb') {
-    page.appendChild(h('div', { class: 'note' },
-      'Showtimes unavailable (no AMC data) — ranking TMDB\'s current US releases instead.'));
+    page.appendChild(h('div', { class: 'note' }, guest
+      ? 'Showtimes aren\'t available right now. These are this week\'s US releases.'
+      : 'No AMC showtimes, so this ranks TMDB\'s current US releases instead.'));
   }
 
   // Everything else clearing the good-match bar, so the page isn't capped at four.
@@ -196,8 +200,8 @@ function buildPage(data, status, ctx, state, actions) {
   const unmatched = guest ? 0 : (status?.counts?.unmatchedAmc || 0);
   if (unmatched) {
     page.appendChild(h('div', { class: 'note' },
-      `${unmatched} AMC title${unmatched > 1 ? 's' : ''} ${unmatched > 1 ? 'are' : 'is'} missing from this list — couldn't be matched to TMDB. `,
-      h('a', { class: 'note-link', href: '#/settings' }, 'Match them in Settings →')));
+      `${unmatched} AMC title${unmatched > 1 ? 's' : ''} ${unmatched > 1 ? 'are' : 'is'} missing from this list. ${unmatched > 1 ? 'They' : 'It'} couldn't be matched to TMDB. `,
+      h('a', { class: 'note-link', href: '#/settings' }, 'Match in Settings')));
   }
   page.appendChild(listWrap);
 
@@ -281,7 +285,7 @@ function onboardingBanner(ctx) {
   return h('div', { class: 'banner' },
     h('div', {},
       h('div', { class: 'banner-title' }, 'Build your taste profile'),
-      h('div', { class: 'banner-sub' }, 'Rate ~20 movies in a quick flow so your picks get personal.'),
+      h('div', { class: 'banner-sub' }, 'Rate about 20 movies so your picks get personal.'),
     ),
     h('a', { class: 'btn', href: '#/onboarding' }, 'Start'),
   );
@@ -290,14 +294,14 @@ function onboardingBanner(ctx) {
 function setupCard(ctx) {
   return h('div', { class: 'page' },
     emptyState('key', 'Welcome to Reel Picks',
-      'Add your TMDB (and optionally OMDb + AMC) API keys to start ranking what\'s playing.',
+      'Add a TMDB key to start ranking what\'s playing. OMDb and AMC keys are optional.',
       h('div', { class: 'row-gap' },
         h('a', { class: 'btn', href: '#/settings' }, 'Open Settings'),
         h('button', { class: 'btn ghost', onClick: () => ctx.triggerRefresh() }, 'Try refresh'),
       )),
     h('div', { class: 'help-card' },
       h('h3', {}, 'Where keys go'),
-      h('p', {}, 'Paste them into the ', h('code', {}, '.env'), ' file in the project root, then restart or hit refresh:'),
+      h('p', {}, 'Paste them into the ', h('code', {}, '.env'), ' file in the project root, then restart or refresh:'),
       h('pre', {}, 'TMDB_API_KEY=...\nOMDB_API_KEY=...\nAMC_API_KEY=...'),
     ),
   );

@@ -34,7 +34,7 @@ app.use((req, res, next) => {
 // reads BEFORE any body is parsed, so the shared link can never touch the DB.
 app.use('/api', (req, res, next) => {
   if (!isGuest(req) || guestAllowed(req)) return next();
-  res.status(403).json({ error: 'Read-only guest mode — this action is disabled on the shared link.' });
+  res.status(403).json({ error: 'This shared link is read only.' });
 });
 
 app.use(express.json({ limit: '20mb' })); // large enough for CSV ratings uploads

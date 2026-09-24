@@ -78,7 +78,7 @@ export async function render(root, params, ctx) {
     const f = fileInput.files[0];
     fileInput.value = '';
     if (!f) return;
-    if (importBusy) { toast('An import is already running — wait for it to finish.', 'error'); return; }
+    if (importBusy) { toast('An import is already running. Wait for it to finish.', 'error'); return; }
     importBusy = true;
     try {
       // The most common mistake, caught before upload: the ZIP itself. Only the
@@ -124,8 +124,8 @@ export async function render(root, params, ctx) {
       // No TMDB key: nothing will match now, so don't pretend to watch it.
       showResult('warn',
         h('strong', {}, `${r.received} rating${r.received === 1 ? '' : 's'} saved to the matching queue.`),
-        h('div', {}, 'No TMDB key is connected, so titles can\'t be matched to movies yet — add TMDB_API_KEY to .env and they\'ll match automatically.'),
-        r.skipped ? h('div', {}, `${r.skipped} row${r.skipped > 1 ? 's' : ''} skipped — ${r.skippedWhy}.`) : null);
+        h('div', {}, 'No TMDB key is connected, so titles can\'t be matched yet. Add TMDB_API_KEY to .env and they\'ll match on their own.'),
+        r.skipped ? h('div', {}, `${r.skipped} row${r.skipped > 1 ? 's' : ''} skipped: ${r.skippedWhy}.`) : null);
       return;
     }
     const src = r.format === 'letterboxd' ? 'Letterboxd' : 'IMDb';
@@ -136,7 +136,7 @@ export async function render(root, params, ctx) {
       const pending = s?.counts?.unmatched ?? 0;
       if (s && !s.matching && (drainMoved(s) || !pending)) break;
       showResult('warn',
-        h('strong', {}, `Found ${r.received} ${src} rating${r.received === 1 ? '' : 's'} — matching titles to TMDB…`),
+        h('strong', {}, `Found ${r.received} ${src} rating${r.received === 1 ? '' : 's'}. Matching titles to TMDB…`),
         h('div', {}, r.pendingBefore
           ? `${pending} in the matching queue (includes ${r.pendingBefore} queued earlier)`
           : `${pending} left to match`),
@@ -154,9 +154,9 @@ export async function render(root, params, ctx) {
       h('strong', {}, `✓ ${importedLine}`),
       ratingsNow != null ? h('div', {}, `Your ratings: ${r.ratingsBefore} → ${ratingsNow}.`) : null,
       r.skipped ? h('div', {},
-        `${r.skipped} row${r.skipped > 1 ? 's' : ''} skipped — ${r.skippedWhy}`,
+        `${r.skipped} row${r.skipped > 1 ? 's' : ''} skipped: ${r.skippedWhy}`,
         r.skippedSamples?.length ? ` (e.g. ${r.skippedSamples.join(', ')})` : '', '.') : null,
-      leftover ? h('div', {}, `${leftover} title${leftover > 1 ? 's' : ''} couldn't be matched to TMDB yet — kept, and retried automatically on the next refresh.`) : null,
+      leftover ? h('div', {}, `${leftover} title${leftover > 1 ? 's' : ''} couldn't be matched to TMDB yet. They're kept and retried on the next refresh.`) : null,
     );
     ctx.refreshStatus();
     loadRecent();
@@ -169,17 +169,17 @@ export async function render(root, params, ctx) {
       computer: {
         steps: [
           ['On ', h('strong', {}, 'letterboxd.com'), ' (signed in), open your account menu → ', h('strong', {}, 'Settings'), ' → the ', h('strong', {}, 'Data'), ' tab.'],
-          ['Click ', h('strong', {}, 'Export your data'), '. You get a ', h('strong', {}, 'ZIP file containing several CSVs'), ' — export is free, no Pro needed.'],
-          ['Unzip it. The file you want is ', h('strong', {}, 'ratings.csv'), ' — not watched.csv, not the ZIP itself.'],
+          ['Click ', h('strong', {}, 'Export your data'), '. You get a ', h('strong', {}, 'ZIP file containing several CSVs'), '. The export is free, no Pro needed.'],
+          ['Unzip it. The file you want is ', h('strong', {}, 'ratings.csv'), '. Not watched.csv, and not the ZIP itself.'],
           ['Upload ratings.csv here.'],
         ],
-        warn: ['On Letterboxd, marking a film watched (the eye icon) is ', h('strong', {}, 'not'), ' the same as rating it. Only films you gave a star rating appear in ratings.csv — if you\'ve starred nothing, the export has no ratings to bring.'],
+        warn: ['On Letterboxd, marking a film watched (the eye icon) is ', h('strong', {}, 'not'), ' the same as rating it. Only films you gave a star rating appear in ratings.csv. If you\'ve starred nothing, the export has no ratings to bring.'],
       },
       phone: {
         steps: [
-          ['The Letterboxd ', h('strong', {}, 'app has no export'), ' — it lives on the letterboxd.com website, and the download is a ZIP you\'d have to unzip on the phone. In practice, do it on a computer.'],
+          ['The Letterboxd ', h('strong', {}, 'app has no export'), '. It lives on the letterboxd.com website, and the download is a ZIP you\'d have to unzip on the phone. In practice, do it on a computer.'],
           ['Easiest: run the export on a computer (steps under "On a computer"), unzip it there, then ', h('strong', {}, 'AirDrop or email yourself just ratings.csv'), ' and upload it here from the phone.'],
-          ['No computer handy? Just rate films right here instead — the search box above, or the quick 20-film rater.'],
+          ['No computer handy? Rate films right here instead, with the search box above or the quick 20-film rater.'],
         ],
         warn: ['Watched ≠ rated on Letterboxd: only star ratings export. Films you only marked with the eye icon won\'t come across.'],
       },
@@ -189,16 +189,16 @@ export async function render(root, params, ctx) {
         steps: [
           ['On ', h('strong', {}, 'imdb.com'), ' (signed in), open your profile menu → ', h('strong', {}, 'Your Ratings'), '.'],
           ['Click the ', h('strong', {}, '⋮ menu'), ' (top right) → ', h('strong', {}, 'Export ratings'), '. IMDb queues the export instead of downloading right away.'],
-          ['Go to ', h('strong', {}, 'imdb.com/exports'), ' ("Your exports") and wait for the status to turn ', h('strong', {}, 'Ready'), ' — it can take a few minutes and IMDb won\'t email you.'],
-          ['Download it — a single CSV, no unzipping — and upload it here. Don\'t sit on it: ready exports expire after a while.'],
+          ['Go to ', h('strong', {}, 'imdb.com/exports'), ' ("Your exports") and wait for the status to turn ', h('strong', {}, 'Ready'), '. It can take a few minutes and IMDb won\'t email you.'],
+          ['Download it (a single CSV, no unzipping) and upload it here. Don\'t sit on it: ready exports expire after a while.'],
         ],
         warn: ['Your ', h('strong', {}, 'watchlist is not your ratings'), ': only titles you explicitly starred (1–10) are in the ratings export. A watchlist or list export has no "Your Rating" column and will be turned away here with an explanation. 1–10 scores become 0.5–5 stars.'],
       },
       phone: {
         steps: [
-          ['IMDb\'s export lives on the ', h('strong', {}, 'desktop website'), ' — the app doesn\'t offer it.'],
+          ['IMDb\'s export lives on the ', h('strong', {}, 'desktop website'), '. The app doesn\'t offer it.'],
           ['Reliable path: export on a computer (steps under "On a computer"), then email or AirDrop the CSV to your phone and upload it here.'],
-          ['Or skip the export and rate films right here — search above, or quick-rate 20.'],
+          ['Or skip the export and rate films right here: search above, or quick-rate 20.'],
         ],
         warn: ['Watchlist ≠ ratings: only explicitly starred titles export.'],
       },
@@ -249,7 +249,7 @@ export async function render(root, params, ctx) {
   page.appendChild(results);
 
   page.appendChild(sectionTitle('Bring your ratings from Letterboxd or IMDb',
-    'A one-time file upload — nothing connects to your account'));
+    'A one-time file upload. Nothing connects to your account.'));
   page.appendChild(h('div', { class: 'import-split' },
     h('div', { class: 'import-box' },
       h('h4', {}, 'Rate right here'),

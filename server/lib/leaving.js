@@ -295,7 +295,7 @@ export function getLastChance(entries, ctx) {
   // it's leaving, the schedule just isn't published yet.
   if (sched.size && flagged.length / sched.size > MASS_EXODUS) {
     diagnostics.suppressed =
-      `${flagged.length}/${sched.size} of the lineup flagged — reading this as an unpublished schedule, not departures`;
+      `${flagged.length}/${sched.size} of the lineup flagged. Reading this as an unpublished schedule, not departures.`;
     return { items: [], all: [], diagnostics };
   }
 

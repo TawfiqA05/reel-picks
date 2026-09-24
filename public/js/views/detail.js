@@ -83,7 +83,7 @@ function ratingRow(d, m, ctx) {
   seenBtn.addEventListener('click', async () => {
     try {
       const wk = await api.markWatched({ tmdb_id: m.tmdb_id, title: m.title });
-      toast(`Logged — ${wk.used} of ${wk.limit} A-List this week`, 'success');
+      toast(`Logged. ${wk.used} of ${wk.limit} A-List this week.`, 'success');
       ctx.refreshStatus();
     } catch (e) { toast(e.message, 'error'); }
   });
@@ -110,7 +110,7 @@ function publicCard(d) {
     p.divergence ? h('div', { class: 'diverge-note' }, icon('alert', { size: 14 }), ` ${p.divergence.label} (${p.divergence.gap} pts apart)`) : null,
     rows.length ? h('div', { class: 'sources' }, ...rows) : h('div', { class: 'muted small' }, 'No public scores found yet.'),
     p.noOmdbRecord
-      ? h('div', { class: 'muted small' }, `OMDb has no record for this title${checked ? ` (checked ${checked})` : ''} — IMDb / RT / Metacritic are unavailable; ${rows.length ? 'TMDB is the only source' : 'the match score uses a neutral 50 for reviews'}.`)
+      ? h('div', { class: 'muted small' }, `No IMDb, Rotten Tomatoes or Metacritic scores for this title${checked ? ` (checked ${checked})` : ''}. ${rows.length ? 'TMDB is the only source.' : 'The match score uses a neutral 50 for reviews.'}`)
       : null,
     p.critic != null && p.audience != null
       ? h('div', { class: 'muted small' }, `Critics ${p.critic} · Audience ${p.audience}`) : null,
@@ -135,7 +135,7 @@ function tasteCard(d, owner = null) {
 
   const n = d.profile?.count ?? 0;
   const lowData = d.profile?.lowData
-    ? (owner ? `Based on ${n} of ${owner}'s rating${n === 1 ? '' : 's'}.` : `Based on ${n} rating${n === 1 ? '' : 's'} — add more to sharpen this.`)
+    ? (owner ? `Based on ${n} of ${owner}'s rating${n === 1 ? '' : 's'}.` : `Based on ${n} rating${n === 1 ? '' : 's'}. Add more to sharpen this.`)
     : null;
   return h('div', { class: 'stat-card' },
     h('div', { class: 'stat-head' }, h('h3', {}, 'Taste match'), scorePill(t.score)),
@@ -169,14 +169,14 @@ function showtimesSection(d, ctx) {
   if (!groups.length) {
     const guest = ctx.isGuest?.();
     wrap.appendChild(h('div', { class: 'muted' },
-      d.playing ? 'No individual showtimes available (AMC data not connected).'
+      d.playing ? (guest ? 'No showtimes listed.' : 'No showtimes listed. AMC isn\'t connected.')
         : guest ? 'Not in the current lineup.'
         : `Not currently playing at your theatre${d.multiTheatre ? 's' : ''}.`));
   } else if (!d.multiTheatre) {
     const g = groups[0];
     if (g.runway) {
       wrap.appendChild(h('div', { class: 'runway-head' }, runwayBadge(g.runway),
-        g.runway.detail && !g.runway.urgent ? h('span', { class: 'muted small' }, ` — ${g.runway.detail}`) : null));
+        g.runway.detail && !g.runway.urgent ? h('span', { class: 'muted small' }, `. ${g.runway.detail}`) : null));
     }
     wrap.append(...dayBlocks(g.showtimesByDay));
   } else {
@@ -197,8 +197,8 @@ function showtimesSection(d, ctx) {
   if (d.match && !ctx.isGuest?.()) {
     wrap.appendChild(h('button', { class: 'link-btn', onClick: () => openFixMatch(d, ctx) },
       d.match.low
-        ? `Wrong movie? Matched AMC's "${d.match.amc_title}" (low confidence) — fix it`
-        : `Matched AMC's "${d.match.amc_title}" — wrong movie? Fix it`));
+        ? `Wrong movie? Matched to AMC's "${d.match.amc_title}" with low confidence. Fix it`
+        : `Matched to AMC's "${d.match.amc_title}". Wrong movie? Fix it`));
   }
   return wrap;
 }

@@ -146,7 +146,7 @@ async function ingestMovie(tmdbId, log, opts = {}) {
           setScores(tmdbId, { imdb: null, rt: null, metacritic: null, rated: null, noRecord: true, checkedAt: new Date().toISOString() });
           if (first) {
             const how = movie.imdb_id ? `IMDb id ${movie.imdb_id} rejected ("${idRejected || 'not found'}"), title search "${s.error || 'empty'}"` : `title search "${s.error || 'empty'}"`;
-            log.errors.push(`No OMDb record for "${movie.title}" (${how}) — public score uses TMDB only.`);
+            log.errors.push(`No OMDb record for "${movie.title}" (${how}). The public score uses TMDB only.`);
           }
         }
       } catch (e) {
@@ -208,7 +208,7 @@ async function ensureMatch(amcId, info, log) {
       if (gap > REVIEW_YEAR_GAP && !rerelease) {
         const reason = `AMC lists it as a ${m.amc_year} release; it matched ${mv.title} (${mv.year}), ${gap} years older`;
         setReview(amcId, reason);
-        log.errors.push(`Match needs review: "${info.title}" → ${mv.title} (${mv.year}) — ${reason}. Keep or fix it in Settings → AMC title matching.`);
+        log.errors.push(`Match needs review: "${info.title}" → ${mv.title} (${mv.year}): ${reason}. Keep or fix it in Settings, AMC title matching.`);
       }
     }
   }
@@ -273,7 +273,7 @@ async function resolveTheatres(log) {
   } catch (e) {
     const unauthorized = e.status === 403 || /unauthorized vendorkey/i.test(e.body?.errors?.[0]?.exceptionMessage || '');
     log.errors.push(unauthorized
-      ? 'AMC key rejected ("Unauthorized VendorKey") — AMC\'s developer API is gated and this key is not authorized for showtimes. Ranking TMDB\'s current releases instead. Remove AMC_API_KEY from .env to hide this warning.'
+      ? 'AMC key rejected ("Unauthorized VendorKey"). AMC\'s developer API is gated and this key is not authorized for showtimes. Ranking TMDB\'s current releases instead. Remove AMC_API_KEY from .env to hide this warning.'
       : `AMC theatre lookup: ${e.message}`);
     return [];
   }
@@ -297,7 +297,7 @@ export async function refreshAll({ force = false, days = 14 } = {}) {
   const log = { startedAt: start.toISOString(), finishedAt: null, sources: {}, counts: {}, errors: [] };
   try {
     const settings = getSettings();
-    if (!tmdb.tmdbConfigured()) log.errors.push('TMDB_API_KEY not set — posters, metadata and matching are disabled.');
+    if (!tmdb.tmdbConfigured()) log.errors.push('TMDB_API_KEY not set. Posters, metadata and matching are off.');
 
     // 1. Resolve the followed theatres (primary first).
     const theatres = await resolveTheatres(log);
@@ -363,7 +363,7 @@ export async function refreshAll({ force = false, days = 14 } = {}) {
           const oldest = staleDays.map((d) => d.fetchedAt).sort()[0];
           const ageH = oldest ? Math.round((Date.now() - Date.parse(oldest)) / 3600000) : null;
           log.errors.push(
-            `${t.short}: AMC failed for ${staleDays.length} day(s) (${staleDays.map((d) => d.date.slice(5)).join(', ')}) — served the cached copy instead${ageH != null ? ` (oldest ${ageH}h old)` : ''}. Error: ${staleError}`,
+            `${t.short}: AMC failed for ${staleDays.length} day(s) (${staleDays.map((d) => d.date.slice(5)).join(', ')}). Served the cached copy instead${ageH != null ? ` (oldest ${ageH}h old)` : ''}. Error: ${staleError}`,
           );
         }
         // The ranking is driven by the primary; fall back to TMDB only if IT is empty.
@@ -387,7 +387,7 @@ export async function refreshAll({ force = false, days = 14 } = {}) {
       src.review = reviewTitles(localYMD(start)).map((r) => `${r.amc_title} → ${r.matched.title} (${r.matched.year})`);
       if (src.unmatched.length) {
         log.errors.push(
-          `${src.unmatched.length} AMC title(s) couldn't be matched to TMDB and aren't ranked: ${src.unmatched.join('; ')} — match them in Settings → Unmatched AMC titles.`,
+          `${src.unmatched.length} AMC title(s) couldn't be matched to TMDB and aren't ranked: ${src.unmatched.join('; ')}. Match them in Settings, Unmatched AMC titles.`,
         );
       }
 
@@ -397,7 +397,7 @@ export async function refreshAll({ force = false, days = 14 } = {}) {
         await safe(theatreDistance(t.id, home), (e) => log.errors.push(`Drive time ${t.short}: ${e.message}`));
       }
     } else if (amc.amcConfigured()) {
-      log.errors.push('AMC key set but no theatre resolved — set your theatre in Settings.');
+      log.errors.push('AMC key set but no theatre found. Set your theatre in Settings.');
     }
 
     // 3. Fallback: TMDB Now Playing so the app still ranks something. That list
@@ -443,7 +443,7 @@ export async function refreshAll({ force = false, days = 14 } = {}) {
         filteredOld: filtered.old.length, filteredJunk: filtered.junk.length, recencyWeeks: weeks,
       };
       for (const j of filtered.junk) {
-        log.errors.push(`Dropped placeholder "${j.title}" (${j.year || '?'}) — ${j.reasons.join('; ')}`);
+        log.errors.push(`Dropped placeholder "${j.title}" (${j.year || '?'}): ${j.reasons.join('; ')}`);
       }
       if (filtered.old.length) {
         const sample = filtered.old.slice(0, 15).map((m) => `${m.title} (${(m.release_date || '').slice(0, 10) || m.year || '?'})`).join(', ');
@@ -538,7 +538,7 @@ export async function refreshAll({ force = false, days = 14 } = {}) {
     if (log.omdb) {
       log.sources.omdb = { paused: log.omdb.reason, skipped: log.omdb.skipped };
       log.errors.push(
-        `OMDb unavailable (${log.omdb.reason}) — scores for ${log.omdb.skipped} movie(s) were not updated this refresh; lookups pause for an hour, then retry on the next refresh.`,
+        `OMDb unavailable (${log.omdb.reason}). Scores for ${log.omdb.skipped} movie(s) were not updated this refresh; lookups pause for an hour, then retry on the next refresh.`,
       );
     }
 

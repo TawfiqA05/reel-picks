@@ -40,8 +40,8 @@ export function clear(node) {
 
 // ---- formatting --------------------------------------------------------
 
-export const money = (n) => (n == null ? '—' : `${n < 0 ? '-' : ''}$${Math.abs(n).toFixed(2)}`);
-export const pct = (n) => (n == null ? '—' : `${Math.round(n * 100)}%`);
+export const money = (n) => (n == null ? '–' : `${n < 0 ? '-' : ''}$${Math.abs(n).toFixed(2)}`);
+export const pct = (n) => (n == null ? '–' : `${Math.round(n * 100)}%`);
 export const scoreColor = (v) => (v == null ? 'na' : v >= 75 ? 'good' : v >= 55 ? 'ok' : 'low');
 
 // ---- components --------------------------------------------------------
@@ -71,9 +71,9 @@ export function poster(movie, { size = 'md', link = true } = {}) {
 export function scorePill(value, { label, big = false, unscored = false } = {}) {
   return h('div', {
     class: `score-pill ${scoreColor(value)}${big ? ' big' : ''}${unscored ? ' unscored' : ''}`,
-    title: unscored ? 'No public scores yet — this number uses a neutral 50 for reviews' : (label || 'Score'),
+    title: unscored ? 'No public scores yet. This number uses a neutral 50 for reviews.' : (label || 'Score'),
   },
-    h('span', { class: 'score-num' }, value == null ? '—' : value),
+    h('span', { class: 'score-num' }, value == null ? '–' : value),
     label ? h('span', { class: 'score-label' }, label) : null,
   );
 }

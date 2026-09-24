@@ -72,7 +72,7 @@ export async function render(root, params, ctx) {
       h('button', { class: 'link-btn', onClick: async () => { await api.onboardingDone(); await ctx.refreshStatus(); ctx.navigate('#/home'); } }, 'Skip'),
     ),
     bar, counter, stage,
-    h('button', { class: 'btn wide', onClick: finish }, 'Done — build my profile'),
+    h('button', { class: 'btn wide', onClick: finish }, 'Done, build my profile'),
   );
   root.appendChild(page);
   show();

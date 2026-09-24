@@ -50,11 +50,11 @@ export function exportState() {
 // local is deleted, and re-importing the same file is a no-op. Returns counts.
 export function importState(doc) {
   if (!doc || doc.kind !== 'reelpicks-state' || !doc.profile) {
-    throw Object.assign(new Error('Not a Reel Picks full-setup file — expected the JSON from Settings → Export full setup.'), { status: 400 });
+    throw Object.assign(new Error('Not a Reel Picks full-setup file. Use the JSON from Settings, Export full setup.'), { status: 400 });
   }
   const ver = Number(doc.version);
   if (!Number.isInteger(ver) || ver < 1) {
-    throw Object.assign(new Error('This file has no valid version stamp — re-export it from Settings → Export full setup.'), { status: 400 });
+    throw Object.assign(new Error('This file has no valid version stamp. Export it again from Settings, Export full setup.'), { status: 400 });
   }
   if (ver > STATE_VERSION) {
     throw Object.assign(new Error(`This file is from a newer Reel Picks (state v${ver}; this instance reads v${STATE_VERSION}). Update the deployment first.`), { status: 400 });

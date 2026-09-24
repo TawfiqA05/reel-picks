@@ -80,7 +80,7 @@ function renderChrome() {
   document.querySelector('.shell')?.classList.toggle('guest', guest);
 
   const banner = document.querySelector('#guest-banner');
-  if (banner) banner.textContent = guest ? `${status?.ownerName || 'Owner'}'s picks — read only` : '';
+  if (banner) banner.textContent = guest ? `${status?.ownerName || 'Owner'}'s picks, read only` : '';
 
   const extra = Math.max(0, (status?.theatres?.length || 1) - 1);
   const primary = status?.theatre;
@@ -138,7 +138,7 @@ async function pollUntilDone(maxMs = 20 * 60000) {
     const min = Math.floor((Date.now() - start) / 60000);
     if (min >= 1 && min > nudgedMin) {
       nudgedMin = min;
-      toast(`Still refreshing… (${min} min — first runs with several theatres take a while)`);
+      toast(`Still refreshing (${min} min). First runs with several theatres take a while.`);
     }
   }
   return false;
@@ -153,7 +153,7 @@ async function doRefresh() {
     toast(r?.queued ? 'Refresh queued behind the one in progress…' : 'Refreshing showtimes & scores…');
     const done = await pollUntilDone();
     if (done) toast('Up to date', 'success');
-    else toast('Refresh is still running after 20 minutes — check Settings → Data for warnings', 'error');
+    else toast('Refresh is still running after 20 minutes. Check Settings, then Data, for warnings.', 'error');
     await refreshStatus();
     route();
   } catch (e) {

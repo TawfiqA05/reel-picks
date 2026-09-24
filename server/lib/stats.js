@@ -41,7 +41,7 @@ export function getStats() {
         weightTaste: 0.65,
       };
     } else if (pickAvg >= avgRating) {
-      suggestion = { text: 'Your picks are landing at or above your average — the current balance is working well.' };
+      suggestion = { text: 'Your picks are landing at or above your average. The current balance is working well.' };
     }
   }
 

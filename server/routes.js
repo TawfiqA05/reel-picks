@@ -156,7 +156,7 @@ router.get('/movies/:id', h(async (req, res) => {
       const log = await ingestOne(id); // cached: TMDB details 7d, OMDb per its own TTL
       if (!getMovie(id)) {
         return log.errors.length
-          ? res.status(502).json({ error: `Couldn't load this movie from TMDB — ${log.errors[0]}` })
+          ? res.status(502).json({ error: `Couldn't load this movie from TMDB: ${log.errors[0]}` })
           : res.status(404).json({ error: tmdb.tmdbConfigured() ? 'Movie not found' : 'Movie not found locally and TMDB_API_KEY is not set.' });
       }
     }
@@ -221,7 +221,7 @@ router.get('/geocode', h(async (req, res) => {
     res.json({ results: await geocode(q) });
   } catch (e) {
     console.error('[geocode]', e.message);
-    res.status(502).json({ error: 'Couldn\'t reach the geocoder (nominatim.openstreetmap.org) — check the connection and try again.' });
+    res.status(502).json({ error: 'Couldn\'t reach the place lookup (nominatim.openstreetmap.org). Check the connection and try again.' });
   }
 }));
 
@@ -233,7 +233,7 @@ router.get('/geocode/reverse', h(async (req, res) => {
     res.json({ result: await reverseGeocode(req.query.lat, req.query.lng) });
   } catch (e) {
     console.error('[geocode]', e.message);
-    res.status(502).json({ error: 'Couldn\'t reach the geocoder — keep the coordinates and type a label instead.' });
+    res.status(502).json({ error: 'Couldn\'t reach the place lookup. Keep the coordinates and type a label instead.' });
   }
 }));
 
@@ -248,7 +248,7 @@ router.delete('/home', h(async (req, res) => {
 }));
 
 router.get('/theatres', h(async (req, res) => {
-  if (!amc.amcConfigured()) return res.status(400).json({ error: 'AMC_API_KEY is not set — add it to .env to search theatres.' });
+  if (!amc.amcConfigured()) return res.status(400).json({ error: 'AMC_API_KEY is not set. Add it to .env to search theatres.' });
   res.json({ theatres: await amc.searchTheatres(req.query.query || '') });
 }));
 
@@ -367,7 +367,7 @@ router.post('/ratings/import', (req, res) => {
   // Right service, wrong file: watched.csv / watchlist.csv (Letterboxd) or a
   // list export (IMDb) — files that genuinely contain no star ratings.
   if (format === 'letterboxd-no-ratings') {
-    return res.status(400).json({ error: 'This looks like Letterboxd\'s watched.csv or watchlist.csv — those files never contain star ratings. Upload ratings.csv from the same export ZIP instead.' });
+    return res.status(400).json({ error: 'This looks like Letterboxd\'s watched.csv or watchlist.csv. Those files never contain star ratings. Upload ratings.csv from the same export ZIP instead.' });
   }
   if (format === 'imdb-no-ratings') {
     return res.status(400).json({ error: 'This looks like an IMDb list or watchlist export, which has no "Your Rating" column. Export from "Your ratings" instead.' });
@@ -409,8 +409,8 @@ router.post('/ratings/import', (req, res) => {
       emptyExport: true,
       note: parsed.format === 'letterboxd'
         ? (parsed.skipped
-          ? `This is a valid Letterboxd export, but none of its ${parsed.skipped} film row(s) carry a star rating — on Letterboxd, marking a film watched is not the same as rating it, and only star ratings export. Rate some films there and re-export, or rate here in the app instead.`
-          : 'This is a valid Letterboxd export, but it contains no film rows at all — the account looks like it has no star ratings yet. Rate some films there and re-export, or rate here in the app instead.')
+          ? `This is a valid Letterboxd export, but none of its ${parsed.skipped} film row(s) carry a star rating. On Letterboxd, marking a film watched is not the same as rating it, and only star ratings export. Rate some films there and re-export, or rate here in the app instead.`
+          : 'This is a valid Letterboxd export, but it contains no film rows at all. The account looks like it has no star ratings yet. Rate some films there and re-export, or rate here in the app instead.')
         : `This is a valid IMDb export, but no row has a value in the "Your Rating" column. Rate some titles on IMDb and re-export, or rate here in the app instead.`,
     });
   }
@@ -425,7 +425,7 @@ router.post('/ratings/import', (req, res) => {
     skipped: parsed.skipped,
     skippedSamples: parsed.skippedSamples,
     skippedWhy: parsed.format === 'letterboxd'
-      ? 'no star rating on those rows — on Letterboxd, watched \u2260 rated'
+      ? 'no star rating on those rows (on Letterboxd, watched is not rated)'
       : 'no value in the "Your Rating" column on those rows',
     ratingsBefore,
     pendingBefore,

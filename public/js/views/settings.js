@@ -85,7 +85,7 @@ export async function render(root, params, ctx) {
     const extras = theatres.length - 1;
     followedNote.textContent = extras
       ? `Following ${extras} more theatre${extras > 1 ? 's' : ''} (up to ${maxTheatres - 1}). Ranking and runway badges use the primary; movies only playing elsewhere appear under "Also nearby".`
-      : `Follow more theatres to see where else a movie is playing. Up to ${maxTheatres - 1} extra — each adds ~14 AMC calls per daily refresh. Drive times are never shown on the shared guest link.`;
+      : `Follow more theatres to see where else a movie is playing. Up to ${maxTheatres - 1} extra. Each adds about 14 AMC calls to the daily refresh. Drive times are never shown on the shared guest link.`;
   };
   paintTheatres();
 
@@ -108,10 +108,10 @@ export async function render(root, params, ctx) {
             followed
               ? h('span', { class: 'muted small' }, followed.isPrimary ? 'Primary' : 'Following')
               : h('button', { class: 'btn ghost small', disabled: full, title: full ? `Already following ${maxTheatres}` : 'Pull this theatre\'s showtimes too', onClick: () =>
-                act(() => api.followTheatre({ id: t.id, name: t.name, slug: t.slug }), `Following ${t.name} — refreshing showtimes`) }, 'Follow'),
+                act(() => api.followTheatre({ id: t.id, name: t.name, slug: t.slug }), `Following ${t.name}. Refreshing showtimes.`) }, 'Follow'),
             followed?.isPrimary ? null : h('button', { class: 'btn small', title: 'Rank by this theatre; your current primary stays followed', onClick: () =>
               act(() => (followed ? api.setPrimaryTheatre(t.id) : api.setTheatre({ id: t.id, name: t.name, slug: t.slug })),
-                `${t.name} is now your primary theatre — ${theatres[0]?.short || 'the old primary'} stays followed`) }, 'Set primary'),
+                `${t.name} is now your primary theatre. ${theatres[0]?.short || 'The old primary'} stays followed.`) }, 'Set primary'),
           ),
         ));
       });
@@ -144,7 +144,7 @@ export async function render(root, params, ctx) {
       try {
         const { results: found } = await api.searchRatings(q);
         clear(results);
-        if (!found.length) results.appendChild(h('div', { class: 'muted small' }, 'No TMDB results — try a shorter title.'));
+        if (!found.length) results.appendChild(h('div', { class: 'muted small' }, 'No TMDB results. Try a shorter title.'));
         found.slice(0, 8).forEach((r) => results.appendChild(h('div', { class: 'fix-item static' },
           r.poster ? h('img', { src: r.poster, alt: '' }) : h('div', { class: 'fix-noposter' }),
           h('span', { class: 'fix-name' }, `${r.title}${r.year ? ` (${r.year})` : ''}`),
@@ -186,7 +186,7 @@ export async function render(root, params, ctx) {
       try {
         const { results: found } = await api.searchRatings(q);
         clear(results);
-        if (!found.length) results.appendChild(h('div', { class: 'muted small' }, 'No TMDB results — try a shorter title.'));
+        if (!found.length) results.appendChild(h('div', { class: 'muted small' }, 'No TMDB results. Try a shorter title.'));
         found.slice(0, 8).forEach((r) => results.appendChild(h('div', { class: 'fix-item static' },
           r.poster ? h('img', { src: r.poster, alt: '' }) : h('div', { class: 'fix-noposter' }),
           h('span', { class: 'fix-name' }, `${r.title}${r.year ? ` (${r.year})` : ''}`),
@@ -209,7 +209,7 @@ export async function render(root, params, ctx) {
       h('div', { class: 'row-gap' },
         input,
         h('button', { class: 'btn small', onClick: search }, 'Search'),
-        h('button', { class: 'btn ghost small', title: 'The match is right — stop flagging it', onClick: async () => {
+        h('button', { class: 'btn ghost small', title: 'The match is right. Stop flagging it.', onClick: async () => {
           try { await api.keepMatch(u.amc_movie_id); toast(`Kept "${u.amc_title}" → ${u.matched.title}`); afterChange(); } catch (e) { toast(e.message, 'error'); }
         } }, 'Keep'),
       ),
@@ -246,7 +246,7 @@ export async function render(root, params, ctx) {
     h('p', { class: 'muted small' },
       'AMC titles are matched to TMDB records automatically, using AMC\'s release year to tell a new film from an older one with the same name. '
       + 'A match to a film years older than AMC\'s release date is flagged here for review (Keep it, or search and re-point it). '
-      + 'Titles that couldn\'t be matched at all aren\'t ranked, have no runway badge and never show as leaving — search and pick the right movie, or Ignore one-offs like "AMC Screen Unseen".'),
+      + 'Titles that couldn\'t be matched at all aren\'t ranked, have no runway badge and never show as leaving. Search and pick the right movie, or Ignore one-offs like "AMC Screen Unseen".'),
     unmatchedWrap, ignoredWrap,
   ));
   loadUnmatched();
@@ -276,10 +276,10 @@ export async function render(root, params, ctx) {
     if (r.label) homeLabelIn.value = r.label;
     if (r.lat != null) homeLat.value = String(r.lat);
     if (r.lng != null) homeLng.value = String(r.lng);
-    setGeoStatus(`→ ${r.label} (${r.lat}, ${r.lng}) — hit Save settings to keep it.`);
+    setGeoStatus(`Found ${r.label} (${r.lat}, ${r.lng}). Save settings to keep it.`);
   };
 
-  const placeIn = h('input', { class: 'input', type: 'search', placeholder: 'City & state, ZIP, or address — e.g. "Fishers IN"' });
+  const placeIn = h('input', { class: 'input', type: 'search', placeholder: 'City and state, ZIP, or address, like "Fishers IN"' });
   const lookupBtn = h('button', { class: 'btn' }, 'Look up');
   const lookup = async () => {
     const q = placeIn.value.trim();
@@ -292,11 +292,11 @@ export async function render(root, params, ctx) {
       const { results } = await api.geocode(q);
       if (seq !== geoSeq) return; // a newer look-up / locate / clear won
       if (!results.length) {
-        setGeoStatus(`Nothing found for "${q}" — try adding a city, state, or ZIP. Your saved home base is unchanged.`);
+        setGeoStatus(`Nothing found for "${q}". Try adding a city, state, or ZIP. Your saved home base is unchanged.`);
       } else if (results.length === 1) {
         applyPlace(results[0]);
       } else {
-        setGeoStatus('More than one match — pick the right one:');
+        setGeoStatus('More than one match. Pick the right one:');
         results.forEach((r) => geoResults.appendChild(h('div', { class: 'theatre-row' },
           h('div', {}, h('div', {}, r.label), h('div', { class: 'muted small' }, r.place)),
           h('button', { class: 'btn small', onClick: () => applyPlace(r) }, 'Use'),
@@ -315,8 +315,8 @@ export async function render(root, params, ctx) {
   // to ~1 km before the reverse-geocode call and before it lands in the fields.
   const locBtn = h('button', { class: 'btn ghost' }, icon('pin', { size: 16 }), 'Use my location');
   locBtn.addEventListener('click', () => {
-    if (!('geolocation' in navigator)) { setGeoStatus('This browser has no location support — type a place above instead.'); return; }
-    if (!window.isSecureContext) { setGeoStatus('Location needs HTTPS or localhost — type a place above instead.'); return; }
+    if (!('geolocation' in navigator)) { setGeoStatus('This browser can\'t share a location. Type a place above instead.'); return; }
+    if (!window.isSecureContext) { setGeoStatus('Location needs HTTPS or localhost. Type a place above instead.'); return; }
     clear(geoResults); // candidate rows from a text search no longer match the status line
     const seq = ++geoSeq;
     setGeoStatus('Asking the browser for your location…');
@@ -326,7 +326,7 @@ export async function render(root, params, ctx) {
     // label — saving then still stores something truthful.
     const unnamed = (lat, lng) => {
       homeLabelIn.value = `${lat}, ${lng}`;
-      setGeoStatus(`Coordinates set (${lat}, ${lng}) — couldn't name the place; edit the label if you like, then Save settings.`);
+      setGeoStatus(`Coordinates set (${lat}, ${lng}). Couldn't name the place, so edit the label if you like, then Save settings.`);
     };
     navigator.geolocation.getCurrentPosition(async (pos) => {
       if (seq !== geoSeq) { locBtn.disabled = false; return; }
@@ -334,7 +334,7 @@ export async function render(root, params, ctx) {
       const lng = Math.round(pos.coords.longitude * 100) / 100;
       homeLat.value = String(lat);
       homeLng.value = String(lng);
-      setGeoStatus(`Got it (${lat}, ${lng}) — naming the place…`);
+      setGeoStatus(`Got it (${lat}, ${lng}). Naming the place…`);
       try {
         const { result } = await api.reverseGeocode(lat, lng);
         if (seq !== geoSeq) return;
@@ -349,8 +349,8 @@ export async function render(root, params, ctx) {
       locBtn.disabled = false;
       if (seq !== geoSeq) return;
       setGeoStatus(err.code === 1
-        ? 'Location permission denied — type a place above instead. Nothing was changed.'
-        : 'Couldn\'t get a location fix — type a place above instead. Nothing was changed.');
+        ? 'Location permission denied. Type a place above instead. Nothing was changed.'
+        : 'Couldn\'t get a location fix. Type a place above instead. Nothing was changed.');
     }, { timeout: 10000, maximumAge: 600000 });
   });
 
@@ -361,7 +361,7 @@ export async function render(root, params, ctx) {
       if (seq !== geoSeq) return;
       homeLabelIn.value = ''; homeLat.value = ''; homeLng.value = ''; placeIn.value = '';
       clear(geoResults);
-      setGeoStatus(`Cleared — stored location, cached lookups, and cached drive times are gone. Drive times now measure from the app default (${r.home?.label || 'app default'}).`);
+      setGeoStatus(`Cleared. The stored location, cached lookups, and cached drive times are gone. Drive times now measure from the app default (${r.home?.label || 'app default'}).`);
       toast('Home base cleared');
       ctx.refreshStatus();
     } catch (e) { toast(e.message, 'error'); }
@@ -373,12 +373,12 @@ export async function render(root, params, ctx) {
     geoResults,
     h('div', { class: 'grid-3' }, labeled('Label', homeLabelIn), labeled('Latitude', homeLat), labeled('Longitude', homeLng)),
     h('p', { class: 'muted small' },
-      'Drive times next to each theatre are measured from here — re-measured within seconds of saving a change.'),
+      'Drive times next to each theatre are measured from here, and re-measured within seconds of saving a change.'),
     h('p', { class: 'muted small' },
       h('strong', {}, 'Where your location data goes: '),
       'it\'s stored only in this app\'s local database. Two keyless OpenStreetMap services see location data: '
       + 'OSRM gets your coordinates rounded to ~1 km (never street-level) to measure drive times, and Nominatim gets '
-      + 'what you type in the look-up box — sent as typed, so an exact address goes out as one — or your rounded '
+      + 'what you type in the look-up box (sent as typed, so an exact address goes out as one) or your rounded '
       + 'coordinates, to turn them into a place. Answers are cached for months, so repeats send nothing. Your location '
       + 'is never sent to TMDB, OMDb, or AMC, and the shared guest link never includes it. '
       + '"Clear home base" removes the stored location and all of those caches.'),
@@ -401,7 +401,7 @@ export async function render(root, params, ctx) {
     const m = Math.max(1, Number(uMult.value) || 1);
     uLabel.textContent = n
       ? `Urgency up to +${n}  ·  ★ watchlisted up to +${Math.round(n * m * 10) / 10}`
-      : 'Urgency off — a confirmed end date adds nothing';
+      : 'Urgency off. A confirmed end date adds nothing.';
   };
   uRange.addEventListener('input', paintU); uMult.addEventListener('input', paintU); paintU();
 
@@ -410,7 +410,7 @@ export async function render(root, params, ctx) {
     uLabel, uRange,
     h('p', { class: 'muted small' },
       'How much a confirmed end date pulls a movie up, so the weekly 4 answers "what should I see this week". '
-      + 'Full on a movie\'s last day, fading to nothing a week out — and only when the run is confirmed ending (filled calendar), never a hedged "through at least". '
+      + 'Full on a movie\'s last day, fading to nothing a week out, and only when the run is confirmed ending (filled calendar), never a hedged "through at least". '
       + 'A few points breaks ties and nudges a good movie that\'s leaving ahead of a slightly better one that isn\'t; 15+ (about 10 for starred films) starts overriding quality.'),
   ));
 
@@ -439,7 +439,7 @@ export async function render(root, params, ctx) {
   const recencyInput = h('input', { class: 'input num', type: 'number', min: '1', step: '1', value: String(s.fallbackRecencyWeeks ?? 8) });
   page.appendChild(card('Now-playing fallback',
     labeled('Only show films released in the last N weeks', recencyInput),
-    h('p', { class: 'muted small' }, 'Applies only when no AMC key is connected (Reel Picks ranks TMDB\'s current US releases). Widen this if the list gets thin. With an AMC key, your theatre\'s actual lineup — re-releases and special screenings included — is used as-is.'),
+    h('p', { class: 'muted small' }, 'Applies only when no AMC key is connected (Reel Picks ranks TMDB\'s current US releases). Widen this if the list gets thin. With an AMC key, your theatre\'s actual lineup (re-releases and special screenings included) is used as-is.'),
   ));
 
   // ---- Showtime windows
@@ -471,7 +471,7 @@ export async function render(root, params, ctx) {
       labeled('Avg ticket ($)', ticket),
       labeled('Preview length (min)', previews),
     ),
-    h('p', { class: 'muted small' }, 'Your plan\'s terms. AMC varies the allowance by region and raises the fee from time to time — change them here when it does.'),
+    h('p', { class: 'muted small' }, 'Your plan\'s terms. AMC varies the allowance by region and raises the fee from time to time. Change them here when it does.'),
     h('p', { class: 'muted small' }, 'AMC\'s listed showtime is when previews start. Preview length sets the "be there by" time on every showtime (when the film itself begins) and is included in the end time. AMC publishes no preview or program length of its own, so this number is the only source for it.')));
 
   // ---- Advanced boosts
@@ -486,7 +486,7 @@ export async function render(root, params, ctx) {
       labeled('Watchlist urgency ×', uMult),
     ),
     h('p', { class: 'muted small' },
-      'Watchlist urgency × scales the urgency boost (Ranking balance) for starred movies — you\'ve already said you want to see them, so "it\'s leaving" counts for more.'),
+      'Watchlist urgency × scales the urgency boost (Ranking balance) for starred movies. You\'ve already said you want to see them, so "it\'s leaving" counts for more.'),
   ));
 
   // ---- Picks sections
@@ -518,21 +518,21 @@ export async function render(root, params, ctx) {
   const horizons = status?.lastRefreshLog?.horizons || [];
   if (horizons.length) {
     const amcByTheatre = new Map((status?.lastRefreshLog?.sources?.amc?.theatres || []).map((t) => [t.id, t]));
-    const fmtDate = (d) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : '—');
+    const fmtDate = (d) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : '–');
     const th = (t, num) => h('th', { class: num ? 'num' : '' }, t);
     const td = (t, num) => h('td', { class: num ? 'num' : '' }, t);
     const rows = horizons.map((hz) => {
       const src = amcByTheatre.get(hz.theatre?.id) || {};
       return h('tr', {},
-        td(h('span', {}, hz.theatre?.short || hz.theatre?.name || '—', hz.theatre?.isPrimary ? h('span', { class: 'muted small' }, ' · primary') : null)),
+        td(h('span', {}, hz.theatre?.short || hz.theatre?.name || '–', hz.theatre?.isPrimary ? h('span', { class: 'muted small' }, ' · primary') : null)),
         td(fmtDate(hz.publishedThrough)),
-        td(String(hz.publishedDays ?? '—'), true),
-        td(`${hz.typicalDailyLineup ?? '—'} / ${hz.typicalDailyShowtimes ?? '—'}`, true),
-        td(`${hz.breadthThreshold ?? '—'} / ${hz.showtimeThreshold ?? '—'}`, true),
+        td(String(hz.publishedDays ?? '–'), true),
+        td(`${hz.typicalDailyLineup ?? '–'} / ${hz.typicalDailyShowtimes ?? '–'}`, true),
+        td(`${hz.breadthThreshold ?? '–'} / ${hz.showtimeThreshold ?? '–'}`, true),
         td(fmtDate(hz.furthestShowtime)),
-        td(String(hz.lineup ?? '—'), true),
-        td(String(src.showtimes ?? '—'), true),
-        td(String(src.calls ?? '—'), true),
+        td(String(hz.lineup ?? '–'), true),
+        td(String(src.showtimes ?? '–'), true),
+        td(String(src.calls ?? '–'), true),
         h('td', { class: `num${src.staleDays ? ' warn' : ''}`, title: src.staleError || '' }, src.staleDays ? [`${src.staleDays} `, icon('alert', { size: 13, label: 'stale' })] : '0'),
       );
     });
@@ -548,7 +548,7 @@ export async function render(root, params, ctx) {
         + 'otherwise it says "through at least". Typical values are medians over the nearest 3 days at that theatre; '
         + 'a day below either threshold (half of typical) is treated as the unpublished advance-sale tail. '
         + 'AMC calls are real HTTP requests on the last refresh: per-day responses are cached 24h, and a manual Refresh always re-pulls today and tomorrow (2 calls per theatre) so same-day schedule changes show up. '
-        + '"Stale days" counts days whose live AMC call failed and an older cached copy was used instead — the schedule shown for those days may be out of date.'),
+        + '"Stale days" counts days whose live AMC call failed and an older cached copy was used instead. The schedule shown for those days may be out of date.'),
     ));
   }
 
@@ -565,11 +565,11 @@ export async function render(root, params, ctx) {
       const doc = JSON.parse(await f.text());
       const r = await api.importState(doc);
       const c = r.imported || {};
-      toast(`Setup imported — ${c.ratings || 0} ratings, ${c.watchlist || 0} watchlist, ${c.watched || 0} watched, ${c.matches || 0} match decisions, ${c.settings || 0} settings. Refreshing showtimes…`, 'success');
+      toast(`Setup imported: ${c.ratings || 0} ratings, ${c.watchlist || 0} watchlist, ${c.watched || 0} watched, ${c.matches || 0} match decisions, ${c.settings || 0} settings. Refreshing showtimes…`, 'success');
       ctx.triggerRefresh?.();
       ctx.refreshStatus();
     } catch (e) {
-      toast(e instanceof SyntaxError ? 'That file isn\'t valid JSON — use the file from "Export full setup".' : e.message, 'error');
+      toast(e instanceof SyntaxError ? 'That file isn\'t valid JSON. Use the file from "Export full setup".' : e.message, 'error');
     }
   });
   page.appendChild(card('Data',
@@ -582,7 +582,7 @@ export async function render(root, params, ctx) {
       h('a', { class: 'btn ghost', href: '#/onboarding' }, icon('zap', { size: 16 }), 'Re-run quick rate'),
     ),
     h('p', { class: 'muted small' },
-      'Full setup carries settings, theatres, home base, ratings, watchlist, watch history, and AMC match decisions — everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'),
+      'Full setup carries settings, theatres, home base, ratings, watchlist, watch history, and AMC match decisions. Everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'),
     status?.lastRefreshLog?.errors?.length
       ? h('details', { class: 'log' }, h('summary', {}, `Last refresh: ${status.lastRefreshLog.errors.length} warning(s)`),
         ...status.lastRefreshLog.errors.map((e) => h('div', { class: 'muted small' }, `• ${e}`)))

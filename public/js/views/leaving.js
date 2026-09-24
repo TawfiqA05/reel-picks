@@ -37,7 +37,7 @@ export async function render(root, params, ctx) {
 
   page.appendChild(sectionTitle('Leaving', theatre.name || ''));
   page.appendChild(h('p', { class: 'muted small lv-intro' },
-    'Films whose run at your primary theatre is confirmed to end. Only a run that stops before the published schedule does counts as a deadline — everything still running at the edge of what AMC has posted is listed underneath, not on a day.'));
+    'Films whose run at your primary theatre is confirmed to end. Only a run that stops before the published schedule does counts as a deadline. Everything still running at the edge of what AMC has posted is listed underneath, not on a day.'));
 
   // ---- the week ---------------------------------------------------------
   // Falls back to the local clock: with no schedule at all there are no
@@ -85,11 +85,11 @@ export async function render(root, params, ctx) {
   // ---- the horizon ------------------------------------------------------
   // Deliberately not a day on the calendar: these are not departures.
   if (hedged.length) {
-    page.appendChild(sectionTitle('Not a deadline — schedule just stops here',
+    page.appendChild(sectionTitle('Not a deadline: the schedule stops here',
       horizon ? `${hedged.length} still running at the published edge` : `${hedged.length} with no end date yet`));
     page.appendChild(h('p', { class: 'muted small lv-intro' },
       horizon
-        ? `AMC has published through ${friendly(horizon, today)} at ${theatre.short || 'this theatre'}. These films have no showtimes past that point, which means the schedule stops — not that they leave. They may well still be playing after.`
+        ? `AMC has published through ${friendly(horizon, today)} at ${theatre.short || 'this theatre'}. These films have no showtimes past that point, which means the schedule stops, not that they leave. They may well still be playing after.`
         : 'These films have no confirmed end date.'));
     const grid = h('div', { class: 'lv-hedged' });
     hedged.sort((a, b) => a.runway.lastDate.localeCompare(b.runway.lastDate) || b.final - a.final)
@@ -148,7 +148,7 @@ function dayColumn(date, films, today, ctx) {
       h('span', { class: 'lv-day-num' }, dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
       films.length
         ? h('span', { class: 'lv-day-count' }, `${films.length} leaving`)
-        : h('span', { class: 'lv-day-count muted' }, '—'),
+        : h('span', { class: 'lv-day-count muted' }, 'None'),
     ),
     h('div', { class: 'lv-day-body' }, ...films.map((e) => filmRow(e, ctx, { date }))),
   );

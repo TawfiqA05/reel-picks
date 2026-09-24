@@ -22,8 +22,8 @@ export async function render(root, params, ctx) {
   page.appendChild(h('div', { class: 'stat-grid' },
     bigStat(s.seenThisYear, 'movies seen', 'logged this year'),
     bigStat(s.totalRatings, 'ratings', 'in your profile'),
-    bigStat(s.avgRating != null ? `${s.avgRating}★` : '—', 'average rating', ''),
-    bigStat(s.hitRate != null ? pct(s.hitRate) : '—', 'pick hit-rate', s.ratedPicks ? `of ${s.ratedPicks} picks watched` : 'rate your picks'),
+    bigStat(s.avgRating != null ? `${s.avgRating}★` : '–', 'average rating', ''),
+    bigStat(s.hitRate != null ? pct(s.hitRate) : '–', 'pick hit-rate', s.ratedPicks ? `of ${s.ratedPicks} picks watched` : 'rate your picks'),
   ));
 
   if (s.suggestion) {

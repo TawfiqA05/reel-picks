@@ -150,7 +150,7 @@ export function buildReason({ pub, topTaste, conf, flags = {}, owner = null }) {
   if (extra.length) s += ` · ${extra.join(' · ')}`;
 
   // Urgency lifted the score: say so, and when ("…and it's gone after Thursday").
-  if (flags.goneAfter) s += ` — and ${flags.goneAfter}`;
+  if (flags.goneAfter) s += `, and ${flags.goneAfter}`;
 
   return s || 'Add API keys and ratings to personalize this.';
 }
