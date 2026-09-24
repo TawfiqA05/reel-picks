@@ -222,47 +222,33 @@ export function starRater(entry, ctx, { value = 0, onRated, size = 20 } = {}) {
   return h('div', { class: 'rater' }, stars, clearBtn);
 }
 
-// Rating control for a pick card. Deliberately does NOT re-render the page on
-// change: rating a movie marks it seen, which would drop the card out of the
-// weekly 4 instantly and take the Clear button with it before you could undo a
-// misclick. The list picks up the change on the next load or refresh.
-function rateInline(entry, ctx) {
-  const label = h('span', { class: 'muted small' }, entry.myRating ? 'Your rating' : 'Rate');
-  return h('div', { class: 'rate-inline' },
-    label,
-    starRater(entry, ctx, {
-      value: entry.myRating || 0,
-      onRated: (v) => { label.textContent = v ? 'Your rating' : 'Rate'; },
-    }),
-  );
-}
-
-// Big "Your 4 this week" pick card.
-export function weeklyCard(entry, ctx, rank, { day = null, multi = false } = {}) {
+// Picks 2-4: poster left, the facts in reading order on the right, and the
+// day's showtime with its Book link pinned to the bottom row.
+export function weeklyCard(entry, ctx, rank, { day = null, multi = false, extraActions = [] } = {}) {
   const dayBest = pickBest(daySlots(entry, day));
-  return h('div', { class: 'pick-card' },
-    h('div', { class: 'pick-poster' },
-      rank ? h('div', { class: 'pick-rank' }, rank) : null,
-      poster(entry, { size: 'lg' }),
+  const meta = metaLine(entry) || (entry.genres || []).slice(0, 3).join(' · ');
+  return h('article', { class: 'pick-card', 'data-id': entry.tmdb_id },
+    h('a', { class: 'pick-poster', href: `#/movie/${entry.tmdb_id}`, tabindex: '-1', 'aria-hidden': 'true' },
+      poster(entry, { size: 'card', link: false }),
+      rank ? h('span', { class: 'pick-rank' }, rank) : null,
     ),
     h('div', { class: 'pick-body' },
       h('div', { class: 'pick-head' },
-        scorePill(entry.final, { label: 'match', big: true, unscored: Boolean(entry.flags?.noScores) }),
-        h('div', { class: 'pick-titles' },
-          h('a', { class: 'pick-title', href: `#/movie/${entry.tmdb_id}` }, entry.title),
-          h('div', { class: 'pick-meta' }, metaLine(entry) || (entry.genres || []).slice(0, 3).join(' · ')),
-        ),
+        h('a', { class: 'pick-title', href: `#/movie/${entry.tmdb_id}` }, entry.title),
+        scorePill(entry.final, { unscored: Boolean(entry.flags?.noScores) }),
       ),
-      runwayLine(entry.runway),
-      h('p', { class: 'pick-reason' }, entry.reason),
-      flagBadges(entry),
+      h('div', { class: 'pick-meta' },
+        meta ? h('span', {}, meta) : null,
+        entry.flags?.imax ? badge('IMAX', 'imax') : null,
+        entry.flags?.noScores ? badge('No scores yet', 'noscore') : null,
+      ),
+      entry.reason ? h('p', { class: 'pick-reason' }, entry.reason) : null,
+      runwayLine(entry.runway, { compact: true }),
       h('div', { class: 'row-sub' }, theatreChips(entry, { multi })),
       handoffLine(entry),
-      dayBest ? showtimeChip(dayBest, { showDay: false }) : noTimesLine(day),
-      h('div', { class: 'pick-actions' },
-        ctx.isGuest?.() ? null : rateInline(entry, ctx),
-        ctx.isGuest?.() ? null : watchlistButton(entry, ctx, { compact: true }),
-        h('a', { class: 'chip-btn', href: `#/movie/${entry.tmdb_id}` }, 'Details'),
+      h('div', { class: 'pick-foot' },
+        dayBest ? showtimeChip(dayBest, { showDay: false }) : noTimesLine(day),
+        ...extraActions,
       ),
     ),
   );

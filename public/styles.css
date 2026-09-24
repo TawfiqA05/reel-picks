@@ -265,25 +265,27 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .spinner { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px 0; color: var(--muted); }
 .spinner-ring { width: 32px; height: 32px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 
-/* ---- home: picks ---- */
-.pick-grid { display: grid; gap: 14px; }
-.pick-card { display: flex; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px; }
-.pick-poster { position: relative; }
-.pick-rank { position: absolute; top: -6px; left: -6px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-weight: 800; display: grid; place-items: center; font-size: var(--fs-base); z-index: 2; box-shadow: var(--shadow); }
-/* Cards in a row stretch to equal height. Any leftover height is shared out
-   between the body's rows (gap stays the minimum) instead of collecting in one
-   gap above the actions, which made a card with no showtime chip look broken
-   next to one that has it. */
-.pick-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; justify-content: space-between; }
-.pick-head { display: flex; gap: 12px; align-items: flex-start; }
-.pick-titles { min-width: 0; }
-.pick-title { font-size: var(--fs-md); font-weight: 700; display: block; }
-.pick-meta { color: var(--muted); font-size: var(--fs-xs); }
-.pick-reason { font-size: var(--fs-sm); color: var(--text-2); margin: 0; }
-/* No margin-top:auto — an auto margin would swallow the free space before
-   the body could distribute it. space-between already pins this row last. */
-.pick-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.rate-inline { display: flex; align-items: center; gap: 6px; }
+/* ---- home: picks 2-4 ---- */
+.pick-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
+.pick-card { display: flex; gap: var(--sp-3); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--sp-3); min-width: 0; }
+.pick-poster { position: relative; flex: 0 0 auto; align-self: flex-start; }
+.poster-card { width: 92px; height: 138px; flex: 0 0 92px; }
+.pick-rank {
+  position: absolute; top: 6px; left: 6px; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 78%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  color: var(--text); font-weight: 700; display: grid; place-items: center; font-size: var(--fs-sm); z-index: 2;
+  border: 1px solid var(--line-strong);
+}
+/* Cards in a row stretch to equal height; the foot row is pushed to the
+   bottom so the showtimes line up across the three cards. */
+.pick-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.pick-head { display: flex; gap: var(--sp-3); align-items: flex-start; justify-content: space-between; }
+.pick-title { font-size: var(--fs-lg); line-height: 1.1; min-width: 0; overflow-wrap: anywhere; }
+.pick-title:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .12em; }
+.pick-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-2); color: var(--muted); font-size: var(--fs-xs); }
+.pick-reason { font-size: var(--fs-sm); color: var(--text-2); margin: 0; line-height: 1.45; }
+.pick-foot { display: flex; align-items: center; gap: var(--sp-2); margin-top: auto; padding-top: var(--sp-1); min-width: 0; }
+.pick-foot .showtime-chip, .pick-foot .row-none { flex: 1 1 auto; min-width: 0; }
 
 /* Wraps rather than overflowing: the times inside stay unbreakable, so in a
    narrow card the chip needs to fold onto a second line instead of pushing
@@ -517,13 +519,9 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 
 /* ---- responsive ---- */
 @media (min-width: 720px) {
-  /* minmax(0, …) not plain 1fr: a 1fr track keeps min-width:auto, so one card
-     whose content can't wrap (a wide showtime chip) widens its own column and
-     squeezes the other. Equal columns keep every poster the same share of the
-     card and stop the text column collapsing. */
-  .pick-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  /* Same guard as .pick-grid above: content that can't wrap must not be able
-     to widen its own column at the other's expense. */
+  /* minmax(0, …) not plain 1fr: a 1fr track keeps min-width:auto, so content
+     that can't wrap (a wide showtime chip) would widen its own column at the
+     other's expense. Same guard as .pick-grid. */
   .cards-2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .poster-lg { width: 140px; flex-basis: 140px; }
   .hero { border-radius: 0 0 16px 16px; }
@@ -739,4 +737,11 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
   .hero-pick .hero-content, .detail-hero .hero-content { max-width: 600px; margin: 0; padding: var(--sp-9) var(--sp-9) var(--sp-8); gap: var(--sp-3); }
   .hero-title { font-size: var(--fs-hero); }
   .hero-pick .hero-actions .btn.book { flex: 0 0 auto; }
+}
+
+@media (min-width: 900px) {
+  /* minmax(0, ...) so no card's content can widen its own column. */
+  .pick-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4); }
+  .pick-card { padding: var(--sp-4); gap: var(--sp-4); }
+  .poster-card { width: 124px; height: 186px; flex-basis: 124px; }
 }
