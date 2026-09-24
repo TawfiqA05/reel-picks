@@ -769,7 +769,10 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .not-for-me.icon-btn { color: var(--muted); }
 .not-for-me.icon-btn:hover { color: var(--text); }
 .row-head .not-for-me { margin: -6px -4px -6px 0; }
-.pick-foot .not-for-me { flex: 0 0 44px; }
+.owner-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2); width: 100%; min-width: 0; }
+.owner-tools .rate-inline { display: flex; align-items: center; gap: var(--sp-2); flex: 1 1 auto; min-width: 0; flex-wrap: wrap; }
+.owner-buttons { display: flex; align-items: center; gap: var(--sp-2); margin-left: auto; flex: 0 0 auto; }
+.pick-card .owner-tools { padding-top: var(--sp-2); border-top: 1px solid var(--line); }
 .is-leaving { opacity: 0; transform: scale(.98); transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out); pointer-events: none; }
 .badge.moved { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
 .badge.hidden { background: var(--surface-3); color: var(--text-2); }

@@ -149,7 +149,7 @@ function buildPage(data, status, ctx, state, actions) {
 
   // Everything else clearing the good-match bar, so the page isn't capped at four.
   const worth = data.worthSeeing || [];
-  const worthList = h('div', { class: 'list' });
+  const worthList = h('div', { class: 'list worth-list' });
   if (worth.length) {
     page.appendChild(sectionTitle('Also worth seeing',
       `${worth.length} more scoring ${data.goodMatchMinScore}+`));
@@ -214,7 +214,7 @@ function buildPage(data, status, ctx, state, actions) {
     clear(pickGrid);
     data.weekly4.slice(1).forEach((e, i) => pickGrid.appendChild(weeklyCard(e, ctx, i + 2, { day, multi, onHide, movedUp: moved(e) })));
     clear(worthList);
-    worth.forEach((e) => worthList.appendChild(movieRow(e, ctx, { day, multi, onHide })));
+    worth.forEach((e) => worthList.appendChild(movieRow(e, ctx, { day, multi, onHide, tools: true })));
     clear(nearbyList);
     nearby.forEach((e) => nearbyList.appendChild(movieRow(e, ctx, { day, multi, nearby: true, onHide })));
     clear(listWrap);
