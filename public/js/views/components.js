@@ -404,20 +404,31 @@ export function pickBest(list) {
     || (a.start_epoch ?? 0) - (b.start_epoch ?? 0))[0];
 }
 
-// Day selector for the whole page. Counts show how many movies play that day.
+// Day selector for the whole page: weekday over the date number, like a
+// calendar strip. How many films play that day is on the tooltip.
 export function dayPicker(days, selected, onSelect) {
-  const bar = h('div', { class: 'day-picker' });
+  const bar = h('div', { class: 'day-picker', role: 'group', 'aria-label': 'Choose a day' });
+  const paint = (date) => [...bar.children].forEach((b) => {
+    const on = b.dataset.date === date;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
   for (const d of days) {
-    const btn = h('button', { class: `day-btn${d.date === selected ? ' active' : ''}`, type: 'button', dataset: { date: d.date } },
-      h('span', { class: 'day-name' }, dayLabel(d.date)),
-      h('span', { class: 'day-n' }, String(d.movies)),
+    const t = new Date(`${d.date}T00:00:00`);
+    const name = dayLabel(d.date) === 'Today' ? 'Today' : t.toLocaleDateString(undefined, { weekday: 'short' });
+    const full = t.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    const btn = h('button', {
+      class: 'day-btn', type: 'button', dataset: { date: d.date },
+      title: `${d.movies} film${d.movies === 1 ? '' : 's'} playing`,
+      'aria-label': `${full}, ${d.movies} film${d.movies === 1 ? '' : 's'}`,
+    },
+      h('span', { class: 'day-name' }, name),
+      h('span', { class: 'day-num' }, String(t.getDate())),
     );
-    btn.addEventListener('click', () => {
-      [...bar.children].forEach((b) => b.classList.toggle('active', b.dataset.date === d.date));
-      onSelect(d.date);
-    });
+    btn.addEventListener('click', () => { paint(d.date); onSelect(d.date); });
     bar.appendChild(btn);
   }
+  paint(selected);
   return bar;
 }
 

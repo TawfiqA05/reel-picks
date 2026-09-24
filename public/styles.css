@@ -322,18 +322,21 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .fmt-slots .showtime-chip { font-size: var(--fs-xs); padding: 5px 9px; }
 
 /* page-level day picker */
-.day-picker { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 8px; scrollbar-width: none; }
+.day-picker { display: flex; gap: var(--sp-2); overflow-x: auto; padding: var(--sp-2) 0 var(--sp-3); margin: var(--sp-2) 0 0; scrollbar-width: none; scroll-snap-type: x proximity; }
 .day-picker::-webkit-scrollbar { display: none; }
 .day-btn {
-  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 8px 12px; border-radius: var(--r-sm); cursor: pointer;
-  background: var(--surface); border: 1px solid var(--line); color: var(--text);
-  font-size: var(--fs-sm); font-weight: 600;
+  flex: 0 0 60px; width: 60px; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border-radius: var(--r-md); cursor: pointer; scroll-snap-align: start;
+  background: var(--surface); border: 1px solid var(--line); color: var(--text); padding: 0;
 }
-.day-btn.active { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
-.day-name { line-height: 1.1; }
-.day-n { font-size: var(--fs-xs); font-weight: 500; color: var(--muted); }
-.day-btn.active .day-n { color: var(--accent); }
+.day-btn:hover { border-color: var(--line-strong); }
+.day-name { font-size: var(--fs-xs); font-weight: 500; color: var(--muted); line-height: 1.1; }
+.day-num { font-size: var(--fs-lg); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.day-btn.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.day-btn.active .day-name, .day-btn.active .day-num { color: var(--accent); }
+@media (min-width: 900px) {
+  .day-btn { flex-basis: 76px; width: 76px; height: 64px; }
+}
 
 /* collapsible section header */
 .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
