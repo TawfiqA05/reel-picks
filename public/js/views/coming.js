@@ -14,7 +14,7 @@ export async function render(root, params, ctx) {
     data.profile.lowData ? 'Predicted from public taste — rate more to personalize' : 'Ranked by your predicted taste match'));
 
   if (!data.list.length) {
-    page.appendChild(emptyState('🗓️', 'Nothing upcoming yet',
+    page.appendChild(emptyState('calendar', 'Nothing upcoming yet',
       'Refresh with a TMDB key to load upcoming releases and advance screenings.'));
     root.appendChild(page);
     return;

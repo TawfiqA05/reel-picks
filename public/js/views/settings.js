@@ -1,6 +1,6 @@
 // Settings: keys status, theatre, weights, filters, showtime windows, pricing, data.
 import { api } from '../api.js';
-import { h, clear, spinner, toast, chip, labeled, sectionTitle, badge, openModal } from '../ui.js';
+import { h, clear, spinner, toast, chip, labeled, sectionTitle, badge, openModal, icon } from '../ui.js';
 
 const GENRES = ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama',
   'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance',
@@ -204,7 +204,7 @@ export async function render(root, params, ctx) {
     return h('div', { class: 'unmatched-row review' },
       h('div', { class: 'um-title' }, `AMC "${u.amc_title}"`, u.amc_year ? h('span', { class: 'muted' }, ` ${u.amc_year}`) : null,
         h('span', { class: 'muted' }, ' → '), `${u.matched.title}${u.matched.year ? ` (${u.matched.year})` : ''}`),
-      h('div', { class: 'review-why' }, `⚠︎ ${u.review}`),
+      h('div', { class: 'review-why' }, icon('alert', { size: 14 }), ` ${u.review}`),
       whereWhen(u),
       h('div', { class: 'row-gap' },
         input,
@@ -313,7 +313,7 @@ export async function render(root, params, ctx) {
 
   // Browser geolocation. The precise fix never leaves this page: it is rounded
   // to ~1 km before the reverse-geocode call and before it lands in the fields.
-  const locBtn = h('button', { class: 'btn ghost' }, '📍 Use my location');
+  const locBtn = h('button', { class: 'btn ghost' }, icon('pin', { size: 16 }), 'Use my location');
   locBtn.addEventListener('click', () => {
     if (!('geolocation' in navigator)) { setGeoStatus('This browser has no location support — type a place above instead.'); return; }
     if (!window.isSecureContext) { setGeoStatus('Location needs HTTPS or localhost — type a place above instead.'); return; }
@@ -533,7 +533,7 @@ export async function render(root, params, ctx) {
         td(String(hz.lineup ?? '—'), true),
         td(String(src.showtimes ?? '—'), true),
         td(String(src.calls ?? '—'), true),
-        h('td', { class: `num${src.staleDays ? ' warn' : ''}`, title: src.staleError || '' }, src.staleDays ? `${src.staleDays} ⚠︎` : '0'),
+        h('td', { class: `num${src.staleDays ? ' warn' : ''}`, title: src.staleError || '' }, src.staleDays ? [`${src.staleDays} `, icon('alert', { size: 13, label: 'stale' })] : '0'),
       );
     });
     page.appendChild(card('Schedule diagnostics',
@@ -578,8 +578,8 @@ export async function render(root, params, ctx) {
       h('button', { class: 'btn ghost', onClick: () => stateFile.click() }, '⬆ Import full setup'),
       stateFile,
       h('a', { class: 'btn ghost', href: api.exportUrl() }, '⬇ Export backup CSV'),
-      h('button', { class: 'btn ghost', onClick: () => ctx.triggerRefresh() }, '↻ Refresh now'),
-      h('a', { class: 'btn ghost', href: '#/onboarding' }, '⭐ Re-run quick rate'),
+      h('button', { class: 'btn ghost', onClick: () => ctx.triggerRefresh() }, icon('refresh', { size: 16 }), 'Refresh now'),
+      h('a', { class: 'btn ghost', href: '#/onboarding' }, icon('zap', { size: 16 }), 'Re-run quick rate'),
     ),
     h('p', { class: 'muted small' },
       'Full setup carries settings, theatres, home base, ratings, watchlist, watch history, and AMC match decisions — everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'),

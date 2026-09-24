@@ -10,13 +10,13 @@ export async function render(root, params, ctx) {
     ({ movies } = await api.onboardingMovies());
   } catch (e) {
     clear(root);
-    root.appendChild(emptyState('🔑', 'TMDB key needed', e.message, h('a', { class: 'btn', href: '#/settings' }, 'Settings')));
+    root.appendChild(emptyState('key', 'TMDB key needed', e.message, h('a', { class: 'btn', href: '#/settings' }, 'Settings')));
     return;
   }
   clear(root);
 
   if (!movies.length) {
-    root.appendChild(emptyState('✓', 'All set', 'No new movies to rate right now.', h('a', { class: 'btn', href: '#/home' }, 'Go to picks')));
+    root.appendChild(emptyState('check', 'All set', 'No new movies to rate right now.', h('a', { class: 'btn', href: '#/home' }, 'Go to picks')));
     return;
   }
 

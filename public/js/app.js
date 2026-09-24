@@ -1,6 +1,6 @@
 // App shell, hash router, chrome (header + bottom nav), and refresh polling.
 import { api } from './api.js';
-import { h, clear, toast, spinner, emptyState } from './ui.js';
+import { h, clear, toast, spinner, emptyState, icon } from './ui.js';
 import * as home from './views/home.js';
 import * as detail from './views/detail.js';
 import * as coming from './views/coming.js';
@@ -24,12 +24,12 @@ const routes = {
 };
 
 const NAV = [
-  { name: 'home', label: 'Picks', icon: '🎬' },
-  { name: 'coming', label: 'Coming', icon: '🗓️' },
-  { name: 'leaving', label: 'Leaving', icon: '⏳' },
-  { name: 'rate', label: 'Rate', icon: '⭐' },
-  { name: 'watchlist', label: 'Watchlist', icon: '🔖' },
-  { name: 'stats', label: 'Stats', icon: '📊' },
+  { name: 'home', label: 'Picks', icon: 'film' },
+  { name: 'coming', label: 'Coming', icon: 'calendar' },
+  { name: 'leaving', label: 'Leaving', icon: 'hourglass' },
+  { name: 'rate', label: 'Rate', icon: 'star' },
+  { name: 'watchlist', label: 'Watchlist', icon: 'bookmark' },
+  { name: 'stats', label: 'Stats', icon: 'chart' },
 ];
 
 let status = null;
@@ -67,7 +67,7 @@ function parseHash() {
 function chromeEls() {
   return {
     theatre: document.querySelector('#theatre-name'),
-    keys: document.querySelector('#key-warn'),
+    settingsBtn: document.querySelector('#settings-btn'),
     refreshBtn: document.querySelector('#refresh-btn'),
     nav: document.querySelector('#bottom-nav'),
   };
@@ -83,42 +83,43 @@ function renderChrome() {
   if (banner) banner.textContent = guest ? `${status?.ownerName || 'Owner'}'s picks — read only` : '';
 
   const extra = Math.max(0, (status?.theatres?.length || 1) - 1);
-  els.theatre.textContent = (status?.theatre?.name || (guest ? '' : 'Set your theatre')) + (extra ? ` +${extra}` : '');
+  const primary = status?.theatre;
+  els.theatre.textContent = (primary?.short || primary?.name || (guest ? '' : 'Set your theatre')) + (extra ? ` +${extra}` : '');
   // Guests can't open Settings, so the label just goes back to Picks.
   els.theatre.setAttribute('href', guest ? '#/home' : '#/settings');
   els.theatre.title = extra
-    ? `Also following: ${status.theatres.filter((t) => !t.isPrimary).map((t) => t.name).join(', ')}`
-    : '';
+    ? `${primary?.name || ''}. Also following ${status.theatres.filter((t) => !t.isPrimary).map((t) => t.name).join(', ')}`
+    : (primary?.name || '');
 
-  const missing = (!guest && status?.keys)
-    ? Object.entries(status.keys).filter(([, v]) => !v).map(([k]) => k.toUpperCase())
-    : [];
-  clear(els.keys);
-  if (missing.length) {
-    els.keys.appendChild(h('a', { class: 'key-warn', href: '#/settings' },
-      `⚠︎ Add ${missing.join(', ')} key${missing.length > 1 ? 's' : ''}`));
-  }
-  // AMC titles that couldn't be matched to TMDB are invisible to the ranking;
-  // keep that visible until they're matched or ignored (owner only).
+  // Anything that needs the owner's attention (a missing key, AMC titles that
+  // couldn't be matched and so are invisible to the ranking, matches to review)
+  // is a dot on the Settings button. The full text lives in Settings and in the
+  // note above Everything playing, not in the header.
+  const missing = (!guest && status?.keys) ? Object.values(status.keys).filter((v) => !v).length : 0;
   const unmatched = guest ? 0 : (status?.counts?.unmatchedAmc || 0);
   const review = guest ? 0 : (status?.counts?.reviewAmc || 0);
-  if (unmatched || review) {
-    const bits = [];
-    if (unmatched) bits.push(`${unmatched} unmatched AMC title${unmatched > 1 ? 's' : ''}`);
-    if (review) bits.push(`${review} match${review > 1 ? 'es' : ''} to review`);
-    els.keys.appendChild(h('a', { class: 'key-warn', href: '#/settings', title: 'Settings → AMC title matching' },
-      `⚠︎ ${bits.join(' · ')}`));
-  }
+  const attention = missing + unmatched + review;
+  els.settingsBtn.classList.toggle('has-dot', attention > 0);
+  els.settingsBtn.setAttribute('aria-label', attention
+    ? `Settings, ${attention} item${attention > 1 ? 's' : ''} need${attention > 1 ? '' : 's'} attention`
+    : 'Settings');
+  els.settingsBtn.title = attention
+    ? [missing && `${missing} missing key${missing > 1 ? 's' : ''}`, unmatched && `${unmatched} unmatched AMC title${unmatched > 1 ? 's' : ''}`, review && `${review} match${review > 1 ? 'es' : ''} to review`].filter(Boolean).join(', ')
+    : 'Settings';
 
   els.refreshBtn.classList.toggle('spinning', refreshing || Boolean(status?.refreshing));
   els.refreshBtn.title = status?.lastRefresh
-    ? `Last updated ${new Date(status.lastRefresh).toLocaleString()}`
+    ? `Refresh. Last updated ${new Date(status.lastRefresh).toLocaleString()}`
     : 'Refresh';
+  els.refreshBtn.setAttribute('aria-busy', String(refreshing || Boolean(status?.refreshing)));
 }
 
 function updateNavActive(name) {
-  document.querySelectorAll('.nav-item').forEach((el) => {
-    el.classList.toggle('active', el.dataset.name === name);
+  // A movie page belongs to no tab; everything else lights its own.
+  document.querySelectorAll('.nav-item, .seg-item').forEach((el) => {
+    const on = el.dataset.name === name;
+    el.classList.toggle('active', on);
+    if (on) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
   });
 }
 
@@ -178,7 +179,7 @@ async function route() {
     await view(main, params, ctx);
   } catch (e) {
     clear(main);
-    main.appendChild(emptyState('😕', 'Something went wrong', e.message,
+    main.appendChild(emptyState('alert', 'Something went wrong', e.message,
       h('button', { class: 'btn', onClick: () => route() }, 'Retry')));
   }
   window.scrollTo(0, 0);
@@ -190,24 +191,27 @@ function buildShell() {
   app.appendChild(
     h('div', { class: 'shell' },
       h('header', { class: 'app-header' },
-        h('a', { class: 'brand', href: '#/home' },
-          h('span', { class: 'brand-mark' }, '🎞️'),
+        h('a', { class: 'brand', href: '#/home', 'aria-label': 'Reel Picks, home' },
+          icon('reel', { size: 22, cls: 'brand-mark' }),
           h('span', { class: 'brand-name' }, 'Reel Picks'),
         ),
-        h('div', { class: 'header-mid' },
-          h('a', { id: 'theatre-name', class: 'theatre-name', href: '#/settings' }, '…'),
-          h('span', { id: 'key-warn' }),
+        // Wide screens: the tabs move up here as a segmented control and the
+        // bottom bar goes away.
+        h('nav', { class: 'seg', 'aria-label': 'Sections' },
+          ...NAV.map((n) => h('a', { class: 'seg-item', 'data-name': n.name, href: `#/${n.name}` }, n.label)),
         ),
         h('div', { class: 'header-actions' },
-          h('button', { id: 'refresh-btn', class: 'icon-btn', title: 'Refresh', onClick: doRefresh }, '↻'),
-          h('a', { class: 'icon-btn', href: '#/settings', title: 'Settings' }, '⚙️'),
+          h('a', { id: 'theatre-name', class: 'theatre-name', href: '#/settings' }, ''),
+          h('button', { id: 'refresh-btn', class: 'icon-btn round', type: 'button', 'aria-label': 'Refresh showtimes and scores', title: 'Refresh', onClick: doRefresh }, icon('refresh', { size: 20 })),
+          h('a', { id: 'settings-btn', class: 'icon-btn round', href: '#/settings', 'aria-label': 'Settings', title: 'Settings' },
+            icon('settings', { size: 20 }), h('span', { class: 'attn-dot', 'aria-hidden': 'true' })),
         ),
       ),
       h('div', { id: 'guest-banner', class: 'guest-banner' }),
       h('main', { id: 'main' }),
-      h('nav', { id: 'bottom-nav', class: 'bottom-nav' },
+      h('nav', { id: 'bottom-nav', class: 'bottom-nav', 'aria-label': 'Sections' },
         ...NAV.map((n) => h('a', { class: 'nav-item', 'data-name': n.name, href: `#/${n.name}` },
-          h('span', { class: 'nav-icon' }, n.icon),
+          h('span', { class: 'nav-icon' }, icon(n.icon, { size: 22 })),
           h('span', { class: 'nav-label' }, n.label),
         )),
       ),

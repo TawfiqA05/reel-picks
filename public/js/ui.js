@@ -1,4 +1,7 @@
 // DOM helpers + reusable UI components (no framework, no build step).
+import { icon } from './icons.js';
+
+export { icon };
 
 export function h(tag, props, ...kids) {
   const e = document.createElement(tag);
@@ -114,11 +117,16 @@ export function spinner(text) {
 
 export function emptyState(icon, title, msg, action) {
   return h('div', { class: 'empty' },
-    h('div', { class: 'empty-icon' }, icon),
+    h('div', { class: 'empty-icon' }, typeof icon === 'string' ? iconFor(icon) : icon),
     h('div', { class: 'empty-title' }, title),
     msg ? h('div', { class: 'empty-msg' }, msg) : null,
     action || null,
   );
+}
+
+// Empty / error states name their icon from the shared set.
+function iconFor(name) {
+  return icon(name, { size: 32 });
 }
 
 export function sectionTitle(text, sub) {
@@ -154,7 +162,7 @@ export function openModal(contentNode, { title } = {}) {
   const card = h('div', { class: 'modal-card' },
     h('div', { class: 'modal-head' },
       h('h3', {}, title || ''),
-      h('button', { class: 'modal-x', onClick: close }, '✕'),
+      h('button', { class: 'modal-x', type: 'button', 'aria-label': 'Close', onClick: close }, icon('x', { size: 20 })),
     ),
     h('div', { class: 'modal-body' }, contentNode),
   );

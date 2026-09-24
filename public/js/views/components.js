@@ -1,6 +1,6 @@
 // Reusable movie cards shared across Home / Coming Soon / Watchlist.
 import { api } from '../api.js';
-import { h, clear, poster, scorePill, badge, makeStars, toast } from '../ui.js';
+import { h, clear, poster, scorePill, badge, makeStars, toast, icon } from '../ui.js';
 
 export function fmtRuntime(min) {
   if (!min) return null;
@@ -132,7 +132,7 @@ export function theatreChips(entry, { multi = false } = {}) {
 
 // "Last week at Castleton — still at Indianapolis through Sep 4."
 export function handoffLine(entry) {
-  return entry.handoff ? h('div', { class: 'handoff' }, '↪ ', entry.handoff.text) : null;
+  return entry.handoff ? h('div', { class: 'handoff' }, icon('handoff', { size: 14 }), ' ', entry.handoff.text) : null;
 }
 
 export function flagBadges(entry) {
@@ -150,15 +150,24 @@ export function flagBadges(entry) {
 
 export function watchlistButton(entry, ctx, { compact = false, onToggle } = {}) {
   let on = Boolean(entry.watchlisted || entry.flags?.watchlisted);
-  const btn = h('button', { class: `chip-btn${on ? ' active' : ''}`, type: 'button' }, on ? '★' : '☆', compact ? null : ' Watchlist');
+  // Compact: a round icon button. The filled bookmark is the "on" state, and
+  // aria-pressed says the same thing to a screen reader.
+  const btn = h('button', { class: compact ? 'icon-btn round' : 'chip-btn', type: 'button' },
+    icon('bookmark', { size: compact ? 20 : 16 }), compact ? null : h('span', {}, 'Watchlist'));
+  const paint = () => {
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', String(on));
+    btn.setAttribute('aria-label', `${on ? 'Remove from' : 'Add to'} watchlist: ${entry.title || 'this movie'}`);
+    btn.title = on ? 'On your watchlist' : 'Add to watchlist';
+  };
+  paint();
   btn.addEventListener('click', async (e) => {
     e.preventDefault();
     e.stopPropagation();
     try {
       const r = await api.toggleWatchlist(entry.tmdb_id);
       on = r.watchlisted;
-      btn.classList.toggle('active', on);
-      btn.firstChild.nodeValue = on ? '★' : '☆';
+      paint();
       toast(on ? 'Added to watchlist' : 'Removed from watchlist');
       ctx?.refreshStatus?.();
       onToggle?.(on);
@@ -408,7 +417,7 @@ export function lastChanceCard(entry, ctx) {
   return h('a', { class: `lc-card${entry.watchlisted ? ' starred' : ''}`, href: `#/movie/${entry.tmdb_id}` },
     h('div', { class: 'lc-poster' },
       poster(entry, { size: 'grid', link: false }),
-      entry.watchlisted ? h('span', { class: 'lc-star', title: ctx?.isGuest?.() ? 'On the watchlist' : 'On your watchlist' }, '\u2605') : null,
+      entry.watchlisted ? h('span', { class: 'lc-star', title: ctx?.isGuest?.() ? 'On the watchlist' : 'On your watchlist' }, icon('bookmark', { size: 14 })) : null,
       h('span', { class: 'lc-score' }, scorePill(entry.final)),
     ),
     h('div', { class: 'lc-body' },
@@ -418,7 +427,7 @@ export function lastChanceCard(entry, ctx) {
         entry.leftLabel,
         entry.signal === 'shrinking' ? h('span', { class: 'lc-sig' }, ' \u00b7 schedule shrinking') : null,
       ),
-      entry.handoff ? h('div', { class: 'lc-handoff' }, '\u21aa ', entry.handoff.text) : null,
+      entry.handoff ? h('div', { class: 'lc-handoff' }, icon('handoff', { size: 13 }), ' ', entry.handoff.text) : null,
     ),
   );
 }

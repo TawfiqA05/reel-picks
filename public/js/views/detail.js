@@ -1,6 +1,6 @@
 // Movie detail: hero, score breakdown, trailer, showtimes, rating & actions.
 import { api } from '../api.js';
-import { h, clear, spinner, poster, scorePill, badge, makeStars, toast, openModal, scoreColor } from '../ui.js';
+import { h, clear, spinner, poster, scorePill, badge, makeStars, toast, openModal, scoreColor, icon } from '../ui.js';
 import { fmtRuntime, dayLabel, showtimeChip, watchlistButton, starRater, runwayBadge, handoffLine } from './components.js';
 
 export async function render(root, params, ctx) {
@@ -24,8 +24,8 @@ export async function render(root, params, ctx) {
         m.director ? h('div', { class: 'muted small' }, `Directed by ${m.director}`) : null,
         h('div', { class: 'hero-actions' },
           scorePill(d.final, { label: guest ? 'match' : 'your match', big: true, unscored: Boolean(d.flags?.noScores) }),
-          guest ? null : watchlistButton({ tmdb_id: m.tmdb_id, watchlisted: d.watchlisted }, ctx),
-          m.trailer_key ? h('a', { class: 'chip-btn', href: `https://www.youtube.com/watch?v=${m.trailer_key}`, target: '_blank', rel: 'noopener' }, '▶ Trailer') : null,
+          guest ? null : watchlistButton({ tmdb_id: m.tmdb_id, title: m.title, watchlisted: d.watchlisted }, ctx),
+          m.trailer_key ? h('a', { class: 'chip-btn', href: `https://www.youtube.com/watch?v=${m.trailer_key}`, target: '_blank', rel: 'noopener' }, icon('play', { size: 16 }), 'Trailer') : null,
         ),
       ),
     ),
@@ -71,7 +71,7 @@ function ratingRow(d, m, ctx) {
     onRated: (v) => { label.textContent = v ? 'Your rating' : 'Rate it'; },
   });
 
-  const seenBtn = h('button', { class: 'btn ghost', type: 'button' }, '🎟️ Mark seen (A-List)');
+  const seenBtn = h('button', { class: 'btn ghost', type: 'button' }, icon('ticket', { size: 16 }), 'Mark seen (A-List)');
   seenBtn.addEventListener('click', async () => {
     try {
       const wk = await api.markWatched({ tmdb_id: m.tmdb_id, title: m.title });
@@ -99,7 +99,7 @@ function publicCard(d) {
   return h('div', { class: 'stat-card' },
     h('div', { class: 'stat-head' }, h('h3', {}, 'Public score'), scorePill(p.combined)),
     d.flags?.settling ? badge('Scores still settling (new release)', 'settling') : null,
-    p.divergence ? h('div', { class: 'diverge-note' }, `⚠︎ ${p.divergence.label} (${p.divergence.gap} pts apart)`) : null,
+    p.divergence ? h('div', { class: 'diverge-note' }, icon('alert', { size: 14 }), ` ${p.divergence.label} (${p.divergence.gap} pts apart)`) : null,
     rows.length ? h('div', { class: 'sources' }, ...rows) : h('div', { class: 'muted small' }, 'No public scores found yet.'),
     p.noOmdbRecord
       ? h('div', { class: 'muted small' }, `OMDb has no record for this title${checked ? ` (checked ${checked})` : ''} — IMDb / RT / Metacritic are unavailable; ${rows.length ? 'TMDB is the only source' : 'the match score uses a neutral 50 for reviews'}.`)
@@ -122,7 +122,7 @@ function tasteCard(d, owner = null) {
   const t = d.taste || {};
   const factors = [];
   (t.genres || []).forEach((g) => factors.push(factorRow(g.name, g.avg, g.n)));
-  if (t.director) factors.push(factorRow(`🎬 ${t.director.name}`, t.director.avg, t.director.n));
+  if (t.director) factors.push(factorRow(`Director: ${t.director.name}`, t.director.avg, t.director.n));
   (t.actors || []).slice(0, 3).forEach((a) => factors.push(factorRow(a.name, a.avg, a.n)));
 
   const n = d.profile?.count ?? 0;

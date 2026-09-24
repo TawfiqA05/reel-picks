@@ -1,6 +1,6 @@
 // Stats: A-List usage, savings, ratings, recommendation hit-rate + tuning tip.
 import { api } from '../api.js';
-import { h, clear, spinner, money, pct, makeStars, toast, sectionTitle, openModal } from '../ui.js';
+import { h, clear, spinner, money, pct, makeStars, toast, sectionTitle, openModal, icon } from '../ui.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -28,7 +28,7 @@ export async function render(root, params, ctx) {
 
   if (s.suggestion) {
     const tip = h('div', { class: 'alert tip' },
-      h('span', { class: 'alert-icon' }, '🎯'),
+      h('span', { class: 'alert-icon' }, icon('target', { size: 18 })),
       h('span', {}, s.suggestion.text),
     );
     if (s.suggestion.weightTaste != null) {

@@ -1,6 +1,6 @@
 // Home: "Your 4 this week" + leaving-soon alerts + the full ranked lineup.
 import { api } from '../api.js';
-import { h, clear, spinner, emptyState, badge, sectionTitle } from '../ui.js';
+import { h, clear, spinner, emptyState, badge, sectionTitle, icon } from '../ui.js';
 import { weeklyCard, movieRow, posterTile, lastChanceCard, dayPicker } from './components.js';
 
 export async function render(root, params, ctx) {
@@ -27,10 +27,10 @@ export async function render(root, params, ctx) {
   if (!data.list.length) {
     // Guests can't refresh (read-only), so no setup copy and no button.
     page.appendChild(ctx.isGuest?.()
-      ? emptyState('🎬', 'Nothing loaded yet', 'Check back after the next refresh.')
-      : emptyState('🎬', 'No movies loaded yet',
+      ? emptyState('film', 'Nothing loaded yet', 'Check back after the next refresh.')
+      : emptyState('film', 'No movies loaded yet',
         status?.keys?.amc ? 'Tap refresh to pull showtimes from your theatre.' : 'Add your keys, then refresh to load what\'s playing.',
-        h('button', { class: 'btn', onClick: () => ctx.triggerRefresh() }, '↻ Refresh now')));
+        h('button', { class: 'btn', onClick: () => ctx.triggerRefresh() }, icon('refresh', { size: 16 }), 'Refresh now')));
     root.appendChild(page);
     return;
   }
@@ -141,7 +141,7 @@ export async function render(root, params, ctx) {
 function onboardingBanner(ctx) {
   return h('div', { class: 'banner' },
     h('div', {},
-      h('div', { class: 'banner-title' }, '⭐ Build your taste profile'),
+      h('div', { class: 'banner-title' }, 'Build your taste profile'),
       h('div', { class: 'banner-sub' }, 'Rate ~20 movies in a quick flow so your picks get personal.'),
     ),
     h('a', { class: 'btn', href: '#/onboarding' }, 'Start'),
@@ -150,7 +150,7 @@ function onboardingBanner(ctx) {
 
 function setupCard(ctx) {
   return h('div', { class: 'page' },
-    emptyState('🔑', 'Welcome to Reel Picks',
+    emptyState('key', 'Welcome to Reel Picks',
       'Add your TMDB (and optionally OMDb + AMC) API keys to start ranking what\'s playing.',
       h('div', { class: 'row-gap' },
         h('a', { class: 'btn', href: '#/settings' }, 'Open Settings'),

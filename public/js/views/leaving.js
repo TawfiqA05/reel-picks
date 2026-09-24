@@ -11,7 +11,7 @@
 // occupies a day. Labels are rendered verbatim from runway.label so the
 // "through at least" hedging is never re-worded or shortened here.
 import { api } from '../api.js';
-import { h, clear, spinner, emptyState, sectionTitle, poster, scorePill } from '../ui.js';
+import { h, clear, spinner, emptyState, sectionTitle, poster, scorePill, icon } from '../ui.js';
 
 const DAYS_AHEAD = 7;
 
@@ -26,7 +26,7 @@ export async function render(root, params, ctx) {
   const horizon = theatre.horizon?.publishedThrough || null;
 
   if (!data.list.length) {
-    page.appendChild(emptyState('🗓️', 'Nothing playing yet', 'Departure deadlines appear once showtimes load.'));
+    page.appendChild(emptyState('calendar', 'Nothing playing yet', 'Departure deadlines appear once showtimes load.'));
     root.appendChild(page);
     return;
   }
@@ -66,7 +66,7 @@ export async function render(root, params, ctx) {
     // when nothing is published would be its own small lie.
     const noSchedule = !withRunway.length || !horizon;
     page.appendChild(h('div', { class: 'alert tip lv-none' },
-      h('span', { class: 'alert-icon' }, noSchedule ? '🗓️' : '🎬'),
+      h('span', { class: 'alert-icon' }, icon(noSchedule ? 'calendar' : 'film', { size: 18 })),
       h('span', {}, noSchedule
         ? 'No showtimes are loaded for this theatre, so there are no departure dates to work from yet.'
         : 'Nothing has a confirmed last day this week. Every film is still running to the edge of the published schedule.'),
@@ -166,7 +166,7 @@ function filmRow(e, ctx, { date = null, showDate = false } = {}) {
     h('div', { class: 'lv-poster' },
       poster(e, { size: 'grid', link: false }),
       h('span', { class: 'lv-score' }, scorePill(e.final)),
-      e.flags?.watchlisted ? h('span', { class: 'lv-star', title: ctx?.isGuest?.() ? 'On the watchlist' : 'On your watchlist' }, '★') : null,
+      e.flags?.watchlisted ? h('span', { class: 'lv-star', title: ctx?.isGuest?.() ? 'On the watchlist' : 'On your watchlist' }, icon('bookmark', { size: 13 })) : null,
     ),
     h('div', { class: 'lv-film-body' },
       h('div', { class: 'lv-film-title' }, e.title),
@@ -178,7 +178,7 @@ function filmRow(e, ctx, { date = null, showDate = false } = {}) {
         : null,
       e.runway.detail ? h('div', { class: 'lv-sub' }, e.runway.detail) : null,
       // "still at Indianapolis through Sep 4" — a film leaving here but not gone.
-      e.handoff ? h('div', { class: 'lv-handoff' }, '↪ ', e.handoff.text) : null,
+      e.handoff ? h('div', { class: 'lv-handoff' }, icon('handoff', { size: 13 }), ' ', e.handoff.text) : null,
       live.length
         ? h('div', { class: 'lv-slots' },
           ...live.map((s) => h('span', { class: 'lv-slot' }, s.time)),
@@ -196,7 +196,7 @@ function hedgedRow(e, ctx) {
     h('div', { class: 'lv-poster' },
       poster(e, { size: 'grid', link: false }),
       h('span', { class: 'lv-score' }, scorePill(e.final)),
-      e.flags?.watchlisted ? h('span', { class: 'lv-star', title: ctx?.isGuest?.() ? 'On the watchlist' : 'On your watchlist' }, '★') : null,
+      e.flags?.watchlisted ? h('span', { class: 'lv-star', title: ctx?.isGuest?.() ? 'On the watchlist' : 'On your watchlist' }, icon('bookmark', { size: 13 })) : null,
     ),
     h('div', { class: 'lv-film-body' },
       h('div', { class: 'lv-film-title' }, e.title),

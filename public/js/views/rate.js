@@ -1,7 +1,7 @@
 // Rate: TMDB search + inline rating, the guided ratings-import flow, and your
 // ratings list.
 import { api } from '../api.js';
-import { h, clear, makeStars, toast, sectionTitle, chip } from '../ui.js';
+import { h, clear, makeStars, toast, sectionTitle, chip, icon } from '../ui.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -227,7 +227,7 @@ export async function render(root, params, ctx) {
     clear(guideBody);
     guideBody.append(
       h('ol', { class: 'import-steps' }, ...g.steps.map((s) => h('li', {}, ...s))),
-      h('div', { class: 'import-warn' }, '⚠︎ ', ...g.warn),
+      h('div', { class: 'import-warn' }, icon('alert', { size: 16 }), ' ', ...g.warn),
       h('div', { class: 'row-gap wrap' },
         h('button', { class: 'btn', onClick: () => fileInput.click() }, '⬆ Upload ratings.csv'),
         h('span', { class: 'muted small' }, 'Reel Picks backup CSVs restore here too.'),
@@ -252,9 +252,9 @@ export async function render(root, params, ctx) {
     'A one-time file upload — nothing connects to your account'));
   page.appendChild(h('div', { class: 'import-split' },
     h('div', { class: 'import-box' },
-      h('h4', {}, '⭐ Rate right here'),
+      h('h4', {}, 'Rate right here'),
       h('div', { class: 'muted small' }, 'No export needed. Search above, or run a quick tap-through of 20 popular films.'),
-      h('div', {}, h('a', { class: 'btn ghost', href: '#/onboarding' }, '⚡ Quick rate 20')),
+      h('div', {}, h('a', { class: 'btn ghost', href: '#/onboarding' }, icon('zap', { size: 16 }), 'Quick rate 20')),
     ),
     h('div', { class: 'import-box' },
       h('h4', {}, '⬆ Upload an export'),
