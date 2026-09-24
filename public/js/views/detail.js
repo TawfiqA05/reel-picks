@@ -1,7 +1,7 @@
 // Movie detail: hero, score breakdown, trailer, showtimes, rating & actions.
 import { api } from '../api.js';
 import { h, clear, spinner, poster, scorePill, badge, makeStars, toast, openModal, scoreColor, icon } from '../ui.js';
-import { fmtRuntime, dayLabel, showtimeChip, watchlistButton, starRater, runwayBadge, handoffLine } from './components.js';
+import { fmtRuntime, dayLabel, showtimeChip, watchlistButton, starRater, runwayBadge, handoffLine, backBadge } from './components.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -20,7 +20,7 @@ export async function render(root, params, ctx) {
       h('div', { class: 'hero-meta' },
         h('h1', {}, m.title),
         h('div', { class: 'hero-sub' }, [m.year, fmtRuntime(m.runtime), m.mpaa].filter(Boolean).join(' · ')),
-        h('div', { class: 'chips' }, ...(m.genres || []).map((g) => h('span', { class: 'chip static' }, g))),
+        h('div', { class: 'chips' }, d.playing ? backBadge(m) : null, ...(m.genres || []).map((g) => h('span', { class: 'chip static' }, g))),
         m.director ? h('div', { class: 'muted small' }, `Directed by ${m.director}`) : null,
         h('div', { class: 'hero-actions' },
           scorePill(d.final, { label: guest ? 'match' : 'your match', big: true, unscored: Boolean(d.flags?.noScores) }),

@@ -19,6 +19,16 @@ export function dayLabel(date) {
   return t.toLocaleDateString(undefined, { weekday: 'short' });
 }
 
+// An older film on the current lineup is a revival, not a new release. More
+// than a year old counts, so last winter's awards run doesn't get the badge.
+export function isOldRelease(m) {
+  return Boolean(m?.year) && m.year < new Date().getFullYear() - 1;
+}
+
+export function backBadge(m) {
+  return isOldRelease(m) ? badge('Back in theaters', 'back') : null;
+}
+
 export function metaLine(m) {
   return [m.year, fmtRuntime(m.runtime), m.mpaa].filter(Boolean).join(' · ');
 }
@@ -246,6 +256,7 @@ export function weeklyCard(entry, ctx, rank, { day = null, multi = 0, onHide = n
       h('div', { class: 'pick-meta' },
         meta ? h('span', {}, meta) : null,
         entry.flags?.imax ? badge('IMAX', 'imax') : null,
+        backBadge(entry),
         entry.flags?.noScores ? badge('No scores yet', 'noscore') : null,
         movedUp ? movedTag() : null,
       ),
@@ -359,6 +370,7 @@ export function heroPick(entry, ctx, { day = null, multi = 0, onHide = null, mov
       h('div', { class: 'hero-facts' },
         meta.length ? h('span', {}, meta.join(' · ')) : null,
         entry.flags?.imax ? badge('IMAX', 'imax') : null,
+        backBadge(entry),
         ...heroFlags(entry),
       ),
       entry.reason ? h('p', { class: 'hero-reason' }, entry.reason) : null,
@@ -536,8 +548,10 @@ export function movieRow(entry, ctx, { day = null, compact = false, multi = 0, n
       compact ? null : h('div', { class: 'row-reason', title: entry.reason }, entry.reason),
       // The no-scores flag shows even on compact rows: a dashed pill alone is
       // too easy to miss for a number that is partly made up.
-      compact && entry.flags?.noScores ? h('div', { class: 'row-tags' }, badge('No scores yet', 'noscore')) : null,
+      compact && (entry.flags?.noScores || isOldRelease(entry)) ? h('div', { class: 'row-tags' },
+        entry.flags?.noScores ? badge('No scores yet', 'noscore') : null, backBadge(entry)) : null,
       compact ? null : h('div', { class: 'row-tags' },
+        backBadge(entry),
         entry.flags?.noScores ? badge('No scores yet', 'noscore') : null,
         entry.flags?.imax ? badge('IMAX', 'imax') : null,
         entry.flags?.excluded ? badge('Filtered', 'muted') : null,
@@ -573,13 +587,16 @@ export function lastChanceCard(entry, ctx) {
   );
 }
 
-// Generic poster tile with a caption (Coming Soon / Watchlist grids).
-export function posterTile(movie, { corner, caption, sub } = {}) {
+// Generic poster tile with a caption (Coming Soon / Watchlist grids). The art
+// stays clean: score pills and badges sit in the caption row under it, and
+// only a control (`corner`, e.g. the watchlist button) overlays the poster.
+export function posterTile(movie, { corner, caption, sub, tags } = {}) {
   return h('a', { class: 'tile', href: `#/movie/${movie.tmdb_id}` },
     h('div', { class: 'tile-poster' },
       corner || null,
       poster(movie, { size: 'grid', link: false }),
     ),
+    tags ? h('div', { class: 'tile-tags' }, tags) : null,
     h('div', { class: 'tile-cap' }, caption || movie.title),
     sub ? h('div', { class: 'tile-sub' }, sub) : null,
   );

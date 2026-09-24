@@ -771,3 +771,9 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .hidden-row:last-child { border-bottom: none; }
 .hidden-title { font-weight: 600; min-width: 0; }
 .hidden-title:hover { text-decoration: underline; }
+
+/* ---- revivals / tile captions ---- */
+.badge.back { background: transparent; color: var(--text-2); border: 1px solid var(--line-strong); }
+.tile-tags { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.tile-tags .score-pill { min-width: 0; padding: 3px 8px; }
+.tile-tags .score-num { font-size: var(--fs-sm); }
