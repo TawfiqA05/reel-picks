@@ -386,14 +386,14 @@ export async function render(root, params, ctx) {
   ));
 
   // ---- Weights
-  const wRange = h('input', { type: 'range', min: '0', max: '100', step: '5', value: String(Math.round((s.weightPublic ?? 0.5) * 100)) });
+  const wRange = h('input', { type: 'range', 'aria-label': 'Balance between public scores and your taste', min: '0', max: '100', step: '5', value: String(Math.round((s.weightPublic ?? 0.5) * 100)) });
   const wLabel = h('div', { class: 'weight-label' });
   const paintW = () => { const p = Number(wRange.value); wLabel.textContent = `Public score ${p}%  ·  Taste match ${100 - p}%`; };
   wRange.addEventListener('input', paintW); paintW();
 
   // Urgency: how hard a CONFIRMED end date pulls a movie up the ranking. The
   // watchlist multiplier lives in the advanced boosts card but feeds this label.
-  const uRange = h('input', { type: 'range', min: '0', max: '20', step: '1', value: String(s.urgencyBoost ?? 6) });
+  const uRange = h('input', { type: 'range', 'aria-label': 'Urgency boost for films about to leave', min: '0', max: '20', step: '1', value: String(s.urgencyBoost ?? 6) });
   const uMult = h('input', { class: 'input num', type: 'number', min: '1', step: '0.1', value: String(s.urgencyWatchlistMultiplier ?? 1.5) });
   const uLabel = h('div', { class: 'weight-label' });
   const paintU = () => {

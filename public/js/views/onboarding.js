@@ -51,7 +51,7 @@ export async function render(root, params, ctx) {
 
   function show() {
     const m = movies[i];
-    page.querySelector('.ob-fill').style.width = `${(i / movies.length) * 100}%`;
+    page.querySelector('.ob-fill').style.transform = `scaleX(${i / movies.length})`;
     counter.textContent = `${i + 1} of ${movies.length} · ${collected.length} rated`;
     clear(stage);
     stage.appendChild(h('div', { class: 'ob-card' },

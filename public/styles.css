@@ -430,7 +430,7 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .onboard { display: flex; flex-direction: column; gap: 14px; align-items: center; }
 .ob-head { display: flex; align-items: center; justify-content: space-between; width: 100%; }
 .ob-progress { width: 100%; height: 5px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
-.ob-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
+.ob-fill { height: 100%; width: 100%; background: var(--accent); transform: scaleX(0); transform-origin: left center; transition: transform 0.2s var(--ease-out); }
 .ob-stage { width: 100%; display: grid; place-items: center; }
 .ob-card { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
 .ob-title { font-size: var(--fs-lg); font-weight: 700; }
@@ -701,7 +701,7 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .badge.noscore { background: color-mix(in srgb, var(--muted) 16%, transparent); color: var(--muted); border: 1px dashed color-mix(in srgb, var(--muted) 50%, transparent); }
 .score-pill.unscored { border-style: dashed; opacity: 0.85; }
 .diag-table td.warn { color: var(--low); font-weight: 700; }
-.unmatched-row.review { border-left: 3px solid var(--accent); }
+.unmatched-row.review { border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: color-mix(in srgb, var(--accent) 6%, var(--surface-2)); }
 .review-why { font-size: var(--fs-xs); color: var(--accent); }
 .confirm { display: flex; flex-direction: column; gap: 10px; }
 .confirm p { margin: 0; }
@@ -791,18 +791,15 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 
 /* ---- loading skeleton (Picks) ---- */
 .sk { background: var(--surface-2); border-radius: var(--r-sm); position: relative; overflow: hidden; }
-.sk::after {
-  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 5%, transparent), transparent);
-  animation: sk-sweep 1.4s ease-in-out infinite;
-}
-@keyframes sk-sweep { to { transform: translateX(100%); } }
+/* A slow breath, not a sweep: says "loading" without dragging the eye across. */
+.skeleton .sk { animation: sk-pulse 1.6s ease-in-out infinite alternate; }
+@keyframes sk-pulse { from { opacity: .55; } to { opacity: 1; } }
 .sk-line { height: 14px; width: 100%; }
 .sk.day-btn { border: none; }
 .sk-hero { background: var(--surface); min-height: 360px; display: flex; align-items: flex-end; }
 .sk-hero .hero-content { margin-top: 0; padding-top: var(--sp-8); width: 100%; }
 .sk-card { min-height: 180px; }
-@media (prefers-reduced-motion: reduce) { .sk::after { animation: none; display: none; } }
+@media (prefers-reduced-motion: reduce) { .skeleton .sk { animation: none; } }
 
 /* ---- tap targets ---- */
 .chip-btn, .btn { min-height: 40px; }
