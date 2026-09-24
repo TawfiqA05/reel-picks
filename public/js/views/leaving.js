@@ -25,6 +25,7 @@ export async function render(root, params, ctx) {
   const theatre = data.theatre || {};
   const horizon = theatre.horizon?.publishedThrough || null;
 
+  page.appendChild(sectionTitle('Leaving', theatre.name || '', { level: 1 }));
   if (!data.list.length) {
     page.appendChild(emptyState('calendar', 'Nothing playing yet', 'Departure deadlines appear once showtimes load.'));
     root.appendChild(page);
@@ -35,7 +36,6 @@ export async function render(root, params, ctx) {
   const committed = withRunway.filter((e) => e.runway.kind === 'ending');
   const hedged = withRunway.filter((e) => e.runway.kind === 'open' || e.runway.kind === 'thin');
 
-  page.appendChild(sectionTitle('Leaving', theatre.name || ''));
   page.appendChild(h('p', { class: 'muted small lv-intro' },
     'Films whose run at your primary theatre is confirmed to end. Only a run that stops before the published schedule does counts as a deadline. Everything still running at the edge of what AMC has posted is listed underneath, not on a day.'));
 

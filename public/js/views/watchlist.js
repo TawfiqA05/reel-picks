@@ -13,7 +13,7 @@ export async function render(root, params, ctx) {
   clear(root);
 
   const page = h('div', { class: 'page' });
-  page.appendChild(sectionTitle('Watchlist', `${movies.length} starred`));
+  page.appendChild(sectionTitle('Watchlist', `${movies.length} starred`, { level: 1 }));
 
   const leaving = (recs.leavingSoon || []).filter((m) => m.watchlisted);
   if (leaving.length) {

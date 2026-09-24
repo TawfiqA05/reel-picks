@@ -68,7 +68,7 @@ button, input, select, textarea { font-family: inherit; }
 /* Display serif: hero, page and section titles, pick-card titles. Instrument
    Serif ships one weight, so these never ask for bold. Big sizes tighten;
    anything at body size keeps normal tracking. */
-.display, .section-title h2, .pick-title, .hero-title, .detail-title, .brand-name, .empty-title {
+.display, .section-title h1, .section-title h2, .pick-title, .hero-title, .detail-title, .brand-name, .empty-title {
   font-family: var(--font-display); font-weight: 400; letter-spacing: -0.02em; line-height: 1.05;
 }
 
@@ -177,7 +177,7 @@ main { padding: var(--sp-4); padding-bottom: 104px; }
 
 /* ---- section titles ---- */
 .section-title { display: flex; align-items: baseline; gap: 10px; margin: 22px 2px 12px; flex-wrap: wrap; }
-.section-title h2 { font-size: var(--fs-lg); }
+.section-title h1, .section-title h2 { font-size: var(--fs-lg); }
 .section-sub { color: var(--muted); font-size: var(--fs-xs); }
 
 /* ---- posters ---- */

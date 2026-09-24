@@ -11,7 +11,7 @@ export async function render(root, params, ctx) {
 
   const page = h('div', { class: 'page' });
   page.appendChild(sectionTitle('Coming soon',
-    data.profile.lowData ? 'Predicted from public taste. Rate more to make it yours.' : 'Ranked by your predicted taste match'));
+    data.profile.lowData ? 'Predicted from public taste. Rate more to make it yours.' : 'Ranked by your predicted taste match', { level: 1 }));
 
   if (!data.list.length) {
     page.appendChild(emptyState('calendar', 'Nothing upcoming yet',

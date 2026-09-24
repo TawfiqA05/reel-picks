@@ -244,7 +244,7 @@ export async function render(root, params, ctx) {
   });
 
   // ---- Page assembly -------------------------------------------------------
-  page.appendChild(sectionTitle('Rate movies', 'Every rating sharpens your picks'));
+  page.appendChild(sectionTitle('Rate movies', 'Every rating sharpens your picks', { level: 1 }));
   page.appendChild(input);
   page.appendChild(results);
 

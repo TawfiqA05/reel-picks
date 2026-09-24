@@ -10,7 +10,7 @@ export async function render(root, params, ctx) {
 
   const page = h('div', { class: 'page' });
 
-  page.appendChild(sectionTitle('This A-List week', `Resets Friday · week of ${week.weekStart}`));
+  page.appendChild(sectionTitle('This A-List week', `Resets Friday · week of ${week.weekStart}`, { level: 1 }));
   page.appendChild(h('div', { class: 'stat-grid' },
     bigStat(`${week.used}/${week.limit}`, 'reservations used', `${week.remaining} left`),
     bigStat(money(week.savings.saved), 'saved this month', `${week.savings.monthTickets} tickets vs ${money(week.savings.alistFee)} fee`),

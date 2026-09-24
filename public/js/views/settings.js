@@ -18,7 +18,7 @@ export async function render(root, params, ctx) {
   clear(root);
 
   const page = h('div', { class: 'page settings' });
-  page.appendChild(sectionTitle('Settings'));
+  page.appendChild(sectionTitle('Settings', null, { level: 1 }));
 
   // ---- API keys
   const keyState = status?.keys || {};

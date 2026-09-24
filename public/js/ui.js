@@ -138,9 +138,11 @@ function iconFor(name) {
   return icon(name, { size: 32 });
 }
 
-export function sectionTitle(text, sub) {
+// level: 1 for the page's own title (one per page), 2 for its sections. Both
+// look the same; only the document outline differs.
+export function sectionTitle(text, sub, { level = 2 } = {}) {
   return h('div', { class: 'section-title' },
-    h('h2', {}, text),
+    h(level === 1 ? 'h1' : 'h2', {}, text),
     sub ? h('span', { class: 'section-sub' }, sub) : null,
   );
 }
