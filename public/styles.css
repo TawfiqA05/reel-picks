@@ -802,7 +802,11 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .sk-hero { background: var(--surface); min-height: 360px; display: flex; align-items: flex-end; }
 .sk-hero .hero-content { margin-top: 0; padding-top: var(--sp-8); width: 100%; }
 .sk-card { min-height: 180px; }
-@media (prefers-reduced-motion: reduce) { .skeleton .sk { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton .sk { animation: none; }
+  /* A ring that can't turn reads as stuck. The words carry it alone. */
+  .spinner-ring { display: none; }
+}
 
 /* ---- tap targets ---- */
 .chip-btn, .btn { min-height: 40px; }

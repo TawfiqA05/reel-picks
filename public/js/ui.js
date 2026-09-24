@@ -120,8 +120,10 @@ export function makeStars({ value = 0, interactive = false, onChange, size = 22,
   return wrap;
 }
 
-export function spinner(text) {
-  return h('div', { class: 'spinner' }, h('div', { class: 'spinner-ring' }), text ? h('div', { class: 'spinner-text' }, text) : null);
+// Always carries words: with reduced motion the ring is hidden and the text
+// is the whole indicator, so it can't be left empty.
+export function spinner(text = 'Loading…') {
+  return h('div', { class: 'spinner', role: 'status' }, h('div', { class: 'spinner-ring', 'aria-hidden': 'true' }), h('div', { class: 'spinner-text' }, text || 'Loading…'));
 }
 
 export function emptyState(icon, title, msg, action) {
