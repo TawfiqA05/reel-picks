@@ -46,10 +46,19 @@ export const scoreColor = (v) => (v == null ? 'na' : v >= 75 ? 'good' : v >= 55 
 
 // ---- components --------------------------------------------------------
 
+// The title set on a gradient, standing in for missing or broken artwork.
+function posterFallback(movie) {
+  return h('div', { class: 'poster-fallback', role: 'img', 'aria-label': movie.title || 'No poster' },
+    h('span', { class: 'poster-fallback-title' }, movie.title || 'No poster'),
+    movie.year ? h('span', { class: 'poster-fallback-year' }, String(movie.year)) : null);
+}
+
 export function poster(movie, { size = 'md', link = true } = {}) {
-  const inner = movie.poster
-    ? h('img', { class: 'poster-img', src: movie.poster, alt: movie.title || '', loading: 'lazy' })
-    : h('div', { class: 'poster-fallback' }, h('span', {}, movie.title || 'No poster'));
+  let inner;
+  if (movie.poster) {
+    inner = h('img', { class: 'poster-img', src: movie.poster, alt: movie.title || '', loading: 'lazy', decoding: 'async' });
+    inner.addEventListener('error', () => inner.replaceWith(posterFallback(movie)), { once: true });
+  } else inner = posterFallback(movie);
   const box = h('div', { class: `poster poster-${size}` }, inner);
   if (link && movie.tmdb_id) {
     return h('a', { class: 'poster-link', href: `#/movie/${movie.tmdb_id}` }, box);
