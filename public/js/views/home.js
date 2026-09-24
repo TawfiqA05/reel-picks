@@ -85,7 +85,8 @@ export async function render(root, params, ctx) {
 
   // Movies only at another followed theatre this week. Never part of the
   // ranking above, and absent entirely when a single theatre is followed.
-  const multi = Boolean(data.multiTheatre);
+  // How many theatres are followed, or 0 with just one (see theatreChips).
+  const multi = data.multiTheatre ? (data.theatres || []).length : 0;
   const nearby = data.alsoNearby || [];
   const nearbyList = h('div', { class: 'list' });
   if (nearby.length) {

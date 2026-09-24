@@ -120,14 +120,20 @@ export function runwayLine(runway, { theatre = null, compact = false } = {}) {
   );
 }
 
-// Which followed theatres a movie plays at this week. Only rendered when more
-// than one theatre is followed, so the single-theatre layout is untouched.
-export function theatreChips(entry, { multi = false } = {}) {
-  if (!multi || !entry.theatres?.length) return null;
-  return h('div', { class: 'theatre-chips' }, ...entry.theatres.map((t) => h('span', {
-    class: `t-chip${t.isPrimary ? ' primary' : ''}`,
-    title: `${t.name}${t.runway?.label ? ` — ${t.runway.label.toLowerCase()}` : ''}`,
-  }, t.short, t.distance ? h('span', { class: 't-dist' }, ` · ${t.distance.minutes} min`) : null)));
+// Where a movie plays, but only when that's news: a film at every followed
+// theatre says nothing ("it's everywhere" is the default), while one that isn't
+// names where it is ("Only at Castleton · 24 min"). `multi` is the number of
+// followed theatres when there's more than one, else 0, so a single-theatre
+// setup renders nothing here, as before.
+export function theatreChips(entry, { multi = 0 } = {}) {
+  const at = entry.theatres || [];
+  if (!multi || !at.length || at.length >= multi) return null;
+  return h('div', { class: 'theatre-chips' },
+    h('span', { class: 't-only' }, 'Only at'),
+    ...at.map((t) => h('span', {
+      class: `t-chip${t.isPrimary ? ' primary' : ''}`,
+      title: `${t.name}${t.runway?.label ? `: ${t.runway.label.toLowerCase()}` : ''}`,
+    }, t.short, t.distance ? h('span', { class: 't-dist' }, ` · ${t.distance.minutes} min`) : null)));
 }
 
 // "Last week at Castleton — still at Indianapolis through Sep 4."
@@ -224,7 +230,7 @@ export function starRater(entry, ctx, { value = 0, onRated, size = 20 } = {}) {
 
 // Picks 2-4: poster left, the facts in reading order on the right, and the
 // day's showtime with its Book link pinned to the bottom row.
-export function weeklyCard(entry, ctx, rank, { day = null, multi = false, extraActions = [] } = {}) {
+export function weeklyCard(entry, ctx, rank, { day = null, multi = 0, extraActions = [] } = {}) {
   const dayBest = pickBest(daySlots(entry, day));
   const meta = metaLine(entry) || (entry.genres || []).slice(0, 3).join(' · ');
   return h('article', { class: 'pick-card', 'data-id': entry.tmdb_id },
@@ -313,7 +319,7 @@ export function heroMedia(m, { cls = 'hero-media' } = {}) {
 }
 
 // The #1 pick of the week, full width over its own backdrop.
-export function heroPick(entry, ctx, { day = null, multi = false, extraActions = [] } = {}) {
+export function heroPick(entry, ctx, { day = null, multi = 0, extraActions = [] } = {}) {
   const best = pickBest(daySlots(entry, day));
   const guest = ctx.isGuest?.();
   const meta = [entry.year, fmtRuntime(entry.runtime), entry.mpaa].filter(Boolean);
@@ -436,10 +442,10 @@ export function dayPicker(days, selected, onSelect) {
 // link — it contains a Book link and buttons, which can't legally nest inside an
 // anchor, so the poster and title carry the navigation instead.
 // compact: drops the reason line and flag badges (used by "Everything playing").
-// multi: more than one theatre is followed — the expandable panel then groups
+// multi: how many theatres are followed (0 for one) — the expandable panel then groups
 // showtimes by theatre. nearby: the row is in "Also nearby", so its runway and
 // showtimes are about a theatre other than the primary and say which.
-export function movieRow(entry, ctx, { day = null, compact = false, multi = false, nearby = false } = {}) {
+export function movieRow(entry, ctx, { day = null, compact = false, multi = 0, nearby = false } = {}) {
   const slots = daySlots(entry, day);
   const next = pickBest(slots);
 
