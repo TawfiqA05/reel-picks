@@ -1,6 +1,7 @@
 // Full-setup export/import: everything that makes this instance *mine* —
 // settings (theatres, home base, weights, filters, windows), ratings,
-// watchlist, the A-List watch log, and manual AMC-match decisions — in one
+// watchlist, the A-List watch log, manual AMC-match decisions, and films marked
+// "Not for me" — in one
 // versioned JSON document, so a fresh deployment can be made an exact
 // duplicate of a local one.
 //
@@ -42,6 +43,10 @@ export function exportState() {
       // repoints, ignores, review keeps), and automatic rows are harmless —
       // they just save the new instance re-deriving the same answer.
       matches: all('SELECT amc_movie_id, amc_title, amc_year, tmdb_id, confidence, manual, review, updated_at FROM matches'),
+      // Added after v1 shipped. Optional on import, so the version stays 1 and
+      // an older export (no `hidden` key) still imports, and an older instance
+      // just ignores the key.
+      hidden: all('SELECT tmdb_id, title, hidden_at FROM hidden_movies'),
     },
   };
 }
@@ -60,7 +65,7 @@ export function importState(doc) {
     throw Object.assign(new Error(`This file is from a newer Reel Picks (state v${ver}; this instance reads v${STATE_VERSION}). Update the deployment first.`), { status: 400 });
   }
   const p = doc.profile;
-  const out = { settings: 0, ratings: 0, watchlist: 0, watched: 0, matches: 0 };
+  const out = { settings: 0, ratings: 0, watchlist: 0, watched: 0, matches: 0, hidden: 0 };
 
   // Only accept a value whose shape matches the default's: a hand-edited file
   // with, say, extraTheatres as an object would otherwise brick every request
@@ -131,6 +136,18 @@ export function importState(doc) {
       m.confidence ?? null, m.manual ? 1 : 0, m.review ?? null, m.updated_at || '1970-01-01T00:00:00.000Z',
     );
     out.matches++;
+  }
+
+  // "Not for me" films. Additive like the watchlist: a film already hidden
+  // here keeps its own timestamp. Counts only rows that were new.
+  for (const m of Array.isArray(p.hidden) ? p.hidden : []) {
+    const id = Number(m?.tmdb_id);
+    if (!Number.isInteger(id) || id <= 0) continue;
+    const res = run(
+      'INSERT INTO hidden_movies(tmdb_id, title, hidden_at) VALUES(?,?,?) ON CONFLICT(tmdb_id) DO NOTHING',
+      id, String(m.title || '').slice(0, 300), m.hidden_at || new Date().toISOString(),
+    );
+    if (res?.changes) out.hidden++;
   }
 
   return out;

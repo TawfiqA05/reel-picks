@@ -565,7 +565,7 @@ export async function render(root, params, ctx) {
       const doc = JSON.parse(await f.text());
       const r = await api.importState(doc);
       const c = r.imported || {};
-      toast(`Setup imported: ${c.ratings || 0} ratings, ${c.watchlist || 0} watchlist, ${c.watched || 0} watched, ${c.matches || 0} match decisions, ${c.settings || 0} settings. Refreshing showtimes…`, 'success');
+      toast(`Setup imported: ${c.ratings || 0} ratings, ${c.watchlist || 0} watchlist, ${c.watched || 0} watched, ${c.matches || 0} match decisions, ${c.hidden || 0} hidden, ${c.settings || 0} settings. Refreshing showtimes…`, 'success');
       ctx.triggerRefresh?.();
       ctx.refreshStatus();
     } catch (e) {
@@ -582,7 +582,7 @@ export async function render(root, params, ctx) {
       h('a', { class: 'btn ghost', href: '#/onboarding' }, icon('zap', { size: 16 }), 'Re-run quick rate'),
     ),
     h('p', { class: 'muted small' },
-      'Full setup carries settings, theatres, home base, ratings, watchlist, watch history, and AMC match decisions. Everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'),
+      'Full setup carries settings, theatres, home base, ratings, watchlist, watch history, AMC match decisions, and hidden films. Everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'),
     status?.lastRefreshLog?.errors?.length
       ? h('details', { class: 'log' }, h('summary', {}, `Last refresh: ${status.lastRefreshLog.errors.length} warning(s)`),
         ...status.lastRefreshLog.errors.map((e) => h('div', { class: 'muted small' }, `• ${e}`)))
