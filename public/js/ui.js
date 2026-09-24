@@ -173,16 +173,35 @@ export function toast(message, type = '', { action = null, duration = action ? 6
 }
 
 // Modal is portaled to <body> so page transforms never trap the fixed overlay.
+// It is a real dialog: labelled by its title, focus moves in on open, Tab
+// stays inside it, and focus goes back to whatever opened it on close.
+let modalSeq = 0;
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])';
 export function openModal(contentNode, { title } = {}) {
+  const opener = document.activeElement;
+  const titleId = `modal-title-${++modalSeq}`;
+  let closed = false;
   const close = () => {
+    if (closed) return;
+    closed = true;
     overlay.classList.remove('show');
     setTimeout(() => overlay.remove(), 200);
     document.removeEventListener('keydown', onKey);
+    if (opener && document.contains(opener)) opener.focus?.();
   };
-  const onKey = (e) => { if (e.key === 'Escape') close(); };
-  const card = h('div', { class: 'modal-card' },
+  const onKey = (e) => {
+    if (e.key === 'Escape') { close(); return; }
+    if (e.key !== 'Tab') return;
+    const items = [...card.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null);
+    if (!items.length) { e.preventDefault(); card.focus(); return; }
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && (document.activeElement === first || document.activeElement === card)) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  };
+  const card = h('div', { class: 'modal-card', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId, tabindex: '-1' },
     h('div', { class: 'modal-head' },
-      h('h3', {}, title || ''),
+      h('h3', { id: titleId }, title || ''),
       h('button', { class: 'modal-x', type: 'button', 'aria-label': 'Close', onClick: close }, icon('x', { size: 20 })),
     ),
     h('div', { class: 'modal-body' }, contentNode),
@@ -191,6 +210,10 @@ export function openModal(contentNode, { title } = {}) {
   document.body.appendChild(overlay);
   document.addEventListener('keydown', onKey);
   requestAnimationFrame(() => overlay.classList.add('show'));
+  // Focus the first field if there is one, else the dialog itself; a caller
+  // that focuses something specific right after opening still wins.
+  const firstField = card.querySelector('.modal-body input, .modal-body select, .modal-body textarea');
+  (firstField || card).focus();
   return { close, card };
 }
 

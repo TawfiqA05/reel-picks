@@ -5,7 +5,7 @@ import { weeklyCard, heroPick, movieRow, lastChanceCard, dayPicker } from './com
 
 export async function render(root, params, ctx) {
   clear(root);
-  root.appendChild(spinner(ctx.isGuest?.() ? 'Loading picks…' : 'Loading your picks…'));
+  root.appendChild(skeleton());
   const status = ctx.getStatus() || (await ctx.refreshStatus());
 
   // No TMDB key yet → nothing to rank. Guide setup.
@@ -249,6 +249,32 @@ async function openHiddenList(actions) {
     clear(body);
     body.appendChild(h('p', { class: 'muted' }, e.message));
   }
+}
+
+// Placeholder shapes in the layout's own proportions while the picks load, so
+// the page doesn't jump when they arrive.
+function skeleton() {
+  const card = () => h('div', { class: 'pick-card sk-card' },
+    h('div', { class: 'sk poster-card' }),
+    h('div', { class: 'pick-body' },
+      h('div', { class: 'sk sk-line', style: { width: '70%', height: '22px' } }),
+      h('div', { class: 'sk sk-line', style: { width: '40%' } }),
+      h('div', { class: 'sk sk-line' }),
+      h('div', { class: 'sk sk-line', style: { width: '85%' } }),
+      h('div', { class: 'sk sk-line', style: { width: '60%', height: '40px', marginTop: 'auto' } }),
+    ));
+  return h('div', { class: 'page skeleton', 'aria-busy': 'true', 'aria-label': 'Loading picks' },
+    h('div', { class: 'hero-pick sk-hero' },
+      h('div', { class: 'hero-content' },
+        h('div', { class: 'sk sk-line', style: { width: '180px' } }),
+        h('div', { class: 'sk sk-line', style: { width: '70%', height: '56px' } }),
+        h('div', { class: 'sk sk-line', style: { width: '45%' } }),
+        h('div', { class: 'sk sk-line', style: { width: '85%' } }),
+        h('div', { class: 'sk sk-line', style: { width: '200px', height: '44px' } }),
+      )),
+    h('div', { class: 'day-picker' }, ...Array.from({ length: 7 }, () => h('div', { class: 'sk day-btn' }))),
+    h('div', { class: 'pick-grid' }, card(), card(), card()),
+  );
 }
 
 function onboardingBanner(ctx) {

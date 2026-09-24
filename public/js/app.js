@@ -170,10 +170,11 @@ async function route() {
   if (Boolean(status?.guest) && !GUEST_ROUTES.has(name)) {
     if (location.hash !== '#/home') { location.hash = '#/home'; return; }
   }
-  const view = routes[name] || routes.home;
+  const view = routes[name] || notFound;
   const main = document.querySelector('#main');
   clear(main);
-  main.appendChild(spinner('Loading…'));
+  // Picks draws its own skeleton; everything else gets the spinner.
+  if (view !== routes.home) main.appendChild(spinner('Loading…'));
   updateNavActive(name);
   try {
     await view(main, params, ctx);
@@ -183,6 +184,12 @@ async function route() {
       h('button', { class: 'btn', onClick: () => route() }, 'Retry')));
   }
   window.scrollTo(0, 0);
+}
+
+function notFound(root) {
+  clear(root);
+  root.appendChild(emptyState('search', 'Page not found', 'There is nothing at this address.',
+    h('a', { class: 'btn', href: '#/home' }, 'Go to Picks')));
 }
 
 function buildShell() {

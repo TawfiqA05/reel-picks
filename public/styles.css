@@ -546,7 +546,8 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
    its content, which is how a single wide film row would distort the week. */
 .lv-week { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-bottom: 18px; }
 .lv-day { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); padding: 10px; min-width: 0; }
-.lv-day.empty { background: transparent; border-style: dashed; opacity: 0.55; }
+.lv-day.empty { background: transparent; border-style: dashed; }
+.lv-day.empty .lv-day-name { color: var(--muted); font-weight: 600; }
 .lv-day-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
 .lv-day-name { font-weight: 700; font-size: var(--fs-base); }
 .lv-day-num { color: var(--muted); font-size: var(--fs-xs); }
@@ -787,3 +788,38 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .tile-tags { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 .tile-tags .score-pill { min-width: 0; padding: 3px 8px; }
 .tile-tags .score-num { font-size: var(--fs-sm); }
+
+/* ---- loading skeleton (Picks) ---- */
+.sk { background: var(--surface-2); border-radius: var(--r-sm); position: relative; overflow: hidden; }
+.sk::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 5%, transparent), transparent);
+  animation: sk-sweep 1.4s ease-in-out infinite;
+}
+@keyframes sk-sweep { to { transform: translateX(100%); } }
+.sk-line { height: 14px; width: 100%; }
+.sk.day-btn { border: none; }
+.sk-hero { background: var(--surface); min-height: 360px; display: flex; align-items: flex-end; }
+.sk-hero .hero-content { margin-top: 0; padding-top: var(--sp-8); width: 100%; }
+.sk-card { min-height: 180px; }
+@media (prefers-reduced-motion: reduce) { .sk::after { animation: none; display: none; } }
+
+/* ---- tap targets ---- */
+.chip-btn, .btn { min-height: 40px; }
+@media (pointer: coarse) {
+  .chip, .chip-btn, .btn, .link-btn, .rater-clear, .row-more, .section-toggle { min-height: 44px; }
+  .chip { display: inline-flex; align-items: center; }
+  .link-btn, .rater-clear { display: inline-flex; align-items: center; }
+  .stars.interactive { font-size: calc(var(--fs-lg) + 4px) !important; padding: 9px 0; }
+}
+
+/* ---- dialog focus ---- */
+.modal-card:focus { outline: none; }
+.modal-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---- leaving: empty days shrink to their header on wide screens ---- */
+@media (min-width: 720px) {
+  .lv-week { align-items: start; }
+  .lv-day.empty .lv-day-head { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .lv-day.empty .lv-day-body { display: none; }
+}
