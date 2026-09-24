@@ -109,6 +109,15 @@ CREATE TABLE IF NOT EXISTS watchlist (
   added_at TEXT
 );
 
+-- "Not for me": films the owner has waved off. Keyed by TMDB id, so a hide
+-- survives refreshes and re-releases until it is undone. Never read by the
+-- scoring or the taste profile; it only filters what gets recommended.
+CREATE TABLE IF NOT EXISTS hidden_movies (
+  tmdb_id   INTEGER PRIMARY KEY,
+  title     TEXT,
+  hidden_at TEXT
+);
+
 -- A-List / watch log. Powers usage counter, savings, and hit-rate.
 -- watched_date is the LOCAL calendar day of watched_at; together with tmdb_id
 -- it carries a unique index (idx_watched_movie_day, created in the migration

@@ -230,7 +230,7 @@ export function starRater(entry, ctx, { value = 0, onRated, size = 20 } = {}) {
 
 // Picks 2-4: poster left, the facts in reading order on the right, and the
 // day's showtime with its Book link pinned to the bottom row.
-export function weeklyCard(entry, ctx, rank, { day = null, multi = 0, extraActions = [] } = {}) {
+export function weeklyCard(entry, ctx, rank, { day = null, multi = 0, onHide = null, movedUp = false } = {}) {
   const dayBest = pickBest(daySlots(entry, day));
   const meta = metaLine(entry) || (entry.genres || []).slice(0, 3).join(' · ');
   return h('article', { class: 'pick-card', 'data-id': entry.tmdb_id },
@@ -247,6 +247,7 @@ export function weeklyCard(entry, ctx, rank, { day = null, multi = 0, extraActio
         meta ? h('span', {}, meta) : null,
         entry.flags?.imax ? badge('IMAX', 'imax') : null,
         entry.flags?.noScores ? badge('No scores yet', 'noscore') : null,
+        movedUp ? movedTag() : null,
       ),
       entry.reason ? h('p', { class: 'pick-reason' }, entry.reason) : null,
       runwayLine(entry.runway, { compact: true }),
@@ -254,7 +255,7 @@ export function weeklyCard(entry, ctx, rank, { day = null, multi = 0, extraActio
       handoffLine(entry),
       h('div', { class: 'pick-foot' },
         dayBest ? showtimeChip(dayBest, { showDay: false }) : noTimesLine(day),
-        ...extraActions,
+        onHide && !ctx.isGuest?.() ? notForMeButton(entry, onHide) : null,
       ),
     ),
   );
@@ -318,8 +319,28 @@ export function heroMedia(m, { cls = 'hero-media' } = {}) {
   return wrap;
 }
 
+// "Not for me": hides the film from every recommendation (never from the full
+// list, never from the scores). `onHide(entry, card)` does the work; the card
+// is the element to fade out. `label` gives the hero its worded version.
+export function notForMeButton(entry, onHide, { label = false } = {}) {
+  const btn = h('button', {
+    class: label ? 'btn ghost not-for-me' : 'icon-btn round not-for-me', type: 'button',
+    'aria-label': `Not for me, hide ${entry.title}`, title: 'Not for me. Hide it from your picks',
+  }, icon('eyeOff', { size: label ? 18 : 20 }), label ? h('span', {}, 'Not for me') : null);
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    btn.disabled = true;
+    onHide(entry, btn.closest('.hero-pick, .pick-card, .list-row'));
+  });
+  return btn;
+}
+
+// Tag for a film that just moved into the four after a hide.
+const movedTag = () => badge('Moved up', 'moved');
+
 // The #1 pick of the week, full width over its own backdrop.
-export function heroPick(entry, ctx, { day = null, multi = 0, extraActions = [] } = {}) {
+export function heroPick(entry, ctx, { day = null, multi = 0, onHide = null, movedUp = false } = {}) {
   const best = pickBest(daySlots(entry, day));
   const guest = ctx.isGuest?.();
   const meta = [entry.year, fmtRuntime(entry.runtime), entry.mpaa].filter(Boolean);
@@ -331,6 +352,7 @@ export function heroPick(entry, ctx, { day = null, multi = 0, extraActions = [] 
         h('span', { class: 'eyebrow-dot', 'aria-hidden': 'true' }, ' · '),
         h('span', { class: `eyebrow-score ${scoreColor(entry.final)}`, title: entry.flags?.noScores ? 'No public scores yet. This number uses a neutral 50 for reviews.' : 'Match score' },
           `${entry.final ?? '-'} match`),
+        movedUp ? movedTag() : null,
       ),
       h('h2', { class: 'hero-title', id: `hero-${entry.tmdb_id}` },
         h('a', { href: `#/movie/${entry.tmdb_id}` }, entry.title)),
@@ -347,7 +369,7 @@ export function heroPick(entry, ctx, { day = null, multi = 0, extraActions = [] 
         bookButton(best, day),
         h('a', { class: 'btn ghost', href: `#/movie/${entry.tmdb_id}` }, 'Details'),
         guest ? null : watchlistButton(entry, ctx, { compact: true }),
-        ...extraActions,
+        onHide && !guest ? notForMeButton(entry, onHide, { label: true }) : null,
       ),
       seatLine(best),
     ),
@@ -445,7 +467,11 @@ export function dayPicker(days, selected, onSelect) {
 // multi: how many theatres are followed (0 for one) — the expandable panel then groups
 // showtimes by theatre. nearby: the row is in "Also nearby", so its runway and
 // showtimes are about a theatre other than the primary and say which.
-export function movieRow(entry, ctx, { day = null, compact = false, multi = 0, nearby = false } = {}) {
+// onHide adds the "Not for me" button; onUnhide, on a hidden film, the Unhide
+// link that stands in for it (Everything playing). Both owner only.
+export function movieRow(entry, ctx, { day = null, compact = false, multi = 0, nearby = false, onHide = null, onUnhide = null } = {}) {
+  const hidden = Boolean(entry.flags?.hidden);
+  const owner = !ctx.isGuest?.();
   const slots = daySlots(entry, day);
   const next = pickBest(slots);
 
@@ -488,14 +514,22 @@ export function movieRow(entry, ctx, { day = null, compact = false, multi = 0, n
     toggle.firstChild.nodeValue = opening ? 'Hide times' : label(total);
   });
 
-  return h('div', { class: `list-row${entry.flags?.excluded ? ' excluded' : ''}${entry.flags?.seen ? ' seen' : ''}` },
+  return h('div', { class: `list-row${entry.flags?.excluded ? ' excluded' : ''}${entry.flags?.seen ? ' seen' : ''}${hidden ? ' is-hidden' : ''}` },
     h('a', { class: 'row-poster', href: `#/movie/${entry.tmdb_id}` }, poster(entry, { size: 'sm', link: false })),
     h('div', { class: 'row-body' },
       h('div', { class: 'row-head' },
         h('a', { class: 'row-title', href: `#/movie/${entry.tmdb_id}` },
           entry.title, h('span', { class: 'row-year' }, entry.year ? ` ${entry.year}` : '')),
         scorePill(entry.final, { unscored: Boolean(entry.flags?.noScores) }),
+        owner && onHide && !hidden ? notForMeButton(entry, onHide) : null,
       ),
+      hidden ? h('div', { class: 'row-tags' },
+        badge('Hidden', 'hidden'),
+        owner && onUnhide ? h('button', {
+          class: 'link-btn', type: 'button', 'aria-label': `Unhide ${entry.title}`,
+          onClick: (e) => { e.currentTarget.disabled = true; onUnhide(entry); },
+        }, 'Unhide') : null,
+      ) : null,
       runwayLine(entry.runway, { theatre: nearby ? entry.theatre : null, compact: true }),
       // Single-line with ellipsis; the full reason (urgency clause included) is
       // on the tooltip and always in full on the card / detail page.

@@ -317,7 +317,7 @@ export function getLastChance(entries, ctx) {
   // The score bar is judged WITHOUT the urgency boost: everything here is
   // leaving by definition, so urgency would lower the bar for exactly these.
   const items = all_
-    .filter((m) => !m.flags?.seen && !ctx.watched.has(m.tmdb_id) && !m.flags?.excluded)
+    .filter((m) => !m.flags?.seen && !ctx.watched.has(m.tmdb_id) && !m.flags?.excluded && !m.flags?.hidden)
     .filter((m) => (m.finalBeforeUrgency ?? m.final) >= minScore)
     .slice(0, maxEntries);
 

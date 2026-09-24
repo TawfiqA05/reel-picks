@@ -503,6 +503,34 @@ router.post('/watchlist/toggle', (req, res) => {
   res.json({ watchlisted: true });
 });
 
+// ---- not for me (hidden films) ------------------------------------------
+// Owner only: none of these paths is on the guest allowlist, so the read-only
+// guard in index.js turns a guest away before the handler runs.
+
+router.get('/hidden', (req, res) => {
+  res.json({ movies: all('SELECT tmdb_id, title, hidden_at FROM hidden_movies ORDER BY hidden_at DESC') });
+});
+
+router.post('/hidden', (req, res) => {
+  const { tmdb_id, title } = req.body || {};
+  const id = Number(tmdb_id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'tmdb_id required.' });
+  const name = String(title || get('SELECT title FROM movies WHERE tmdb_id = ?', id)?.title || '').slice(0, 300);
+  run(
+    `INSERT INTO hidden_movies(tmdb_id, title, hidden_at) VALUES(?,?,?)
+      ON CONFLICT(tmdb_id) DO UPDATE SET title = excluded.title`,
+    id, name, new Date().toISOString(),
+  );
+  res.json({ hidden: true, tmdb_id: id });
+});
+
+router.delete('/hidden/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Bad id.' });
+  run('DELETE FROM hidden_movies WHERE tmdb_id = ?', id);
+  res.json({ hidden: false, tmdb_id: id });
+});
+
 // ---- A-List / watched --------------------------------------------------
 
 router.get('/alist', (req, res) => res.json(getWeek()));

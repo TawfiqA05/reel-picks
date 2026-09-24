@@ -137,18 +137,30 @@ export function sectionTitle(text, sub) {
 }
 
 let toastHost;
-export function toast(message, type = '') {
+// action: { label, onClick } adds a button (Undo) and keeps the toast up for
+// six seconds instead of the usual two and a half.
+export function toast(message, type = '', { action = null, duration = action ? 6000 : 2600 } = {}) {
   if (!toastHost) {
-    toastHost = h('div', { class: 'toast-host' });
+    toastHost = h('div', { class: 'toast-host', role: 'status', 'aria-live': 'polite' });
     document.body.appendChild(toastHost);
   }
-  const t = h('div', { class: `toast ${type}` }, message);
-  toastHost.appendChild(t);
-  requestAnimationFrame(() => t.classList.add('show'));
-  setTimeout(() => {
+  let timer;
+  const dismiss = () => {
+    clearTimeout(timer);
     t.classList.remove('show');
     setTimeout(() => t.remove(), 300);
-  }, 2600);
+  };
+  const t = h('div', { class: `toast ${type}${action ? ' has-action' : ''}` },
+    h('span', {}, message),
+    action ? h('button', {
+      class: 'toast-action', type: 'button',
+      onClick: () => { dismiss(); action.onClick(); },
+    }, action.label) : null,
+  );
+  toastHost.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  timer = setTimeout(dismiss, duration);
+  return { dismiss };
 }
 
 // Modal is portaled to <body> so page transforms never trap the fixed overlay.

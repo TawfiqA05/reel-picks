@@ -29,6 +29,12 @@ function watchedSet() {
   return new Set(all('SELECT DISTINCT tmdb_id FROM watched').map((r) => r.tmdb_id));
 }
 
+// Films marked "Not for me". Filters recommendations only; scores and the
+// taste profile never see it.
+function hiddenSet() {
+  return new Set(all('SELECT tmdb_id FROM hidden_movies').map((r) => r.tmdb_id));
+}
+
 // guest: the read-only shared link. Drive times/distances are dropped at the
 // source so no payload derived from this context can reveal where home is.
 function buildCtx({ guest = false } = {}) {
@@ -73,6 +79,7 @@ function buildCtx({ guest = false } = {}) {
     ratings: new Map(all('SELECT tmdb_id, rating FROM ratings').map((r) => [r.tmdb_id, r.rating])),
     watch: watchlistSet(),
     watched: watchedSet(),
+    hidden: hiddenSet(),
     weights: { public: Number(settings.weightPublic) || 0, taste: Number(settings.weightTaste) || 0 },
     today,
     weekEnd,
@@ -295,6 +302,8 @@ function evaluate(movie, ctx, tid = ctx.primaryId) {
       excluded,
       settling: isSettling(movie),
       seen: ctx.rated.has(movie.tmdb_id),
+      // "Not for me": kept in the full list, dropped from every recommendation.
+      hidden: ctx.hidden.has(movie.tmdb_id),
       // No public score at all: `final` is built on a neutral 50, so the UI
       // marks it and the "worth seeing" cut ignores it.
       noScores: pub.combined == null,
@@ -402,7 +411,8 @@ export function getRecommendations({ guest = false } = {}) {
 
   const evaluated = main.map((m) => evaluate(m, ctx));
   const list = evaluated.sort(byScore);
-  const eligible = list.filter((e) => !e.flags.seen && !e.flags.excluded);
+  // Hidden films drop out here, so the next-best film moves up into the four.
+  const eligible = list.filter((e) => !e.flags.seen && !e.flags.excluded && !e.flags.hidden);
   const weekly4 = eligible.slice(0, 4);
   if (!guest) recordWeekly4(weekly4);
   // Everything else that still clears the "good match" bar, so the picks page
@@ -415,6 +425,7 @@ export function getRecommendations({ guest = false } = {}) {
 
   const alsoNearby = nearby
     .map(({ m, t }) => evaluate(m, ctx, t.id))
+    .filter((e) => !e.flags.hidden)
     .sort(byScore);
 
   const primary = ctx.theatres[0];
@@ -427,6 +438,7 @@ export function getRecommendations({ guest = false } = {}) {
     list,
     alsoNearby,
     lastChance: lastChance.items,
+    hiddenCount: list.filter((e) => e.flags.hidden).length + nearby.filter(({ m }) => ctx.hidden.has(m.tmdb_id)).length,
     lastChanceDiagnostics: lastChance.diagnostics,
     profile: {
       count: ctx.profile.count,
@@ -450,7 +462,8 @@ export function getRecommendations({ guest = false } = {}) {
 
 export function getComingSoon({ guest = false } = {}) {
   const ctx = buildCtx({ guest });
-  const up = all('SELECT * FROM movies WHERE upcoming = 1').map(hydrate);
+  const up = all('SELECT * FROM movies WHERE upcoming = 1').map(hydrate)
+    .filter((m) => !ctx.hidden.has(m.tmdb_id));
   const advanceIds = new Set(
     all('SELECT DISTINCT tmdb_id FROM showtimes WHERE tmdb_id IS NOT NULL AND date > ?', ctx.weekEnd)
       .map((r) => r.tmdb_id),

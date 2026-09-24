@@ -45,6 +45,10 @@ export const api = {
   watchlist: () => req('GET', '/watchlist'),
   toggleWatchlist: (tmdb_id) => req('POST', '/watchlist/toggle', { tmdb_id }),
 
+  hidden: () => req('GET', '/hidden'),
+  hide: (tmdb_id, title) => req('POST', '/hidden', { tmdb_id, title }),
+  unhide: (tmdb_id) => req('DELETE', '/hidden/' + tmdb_id),
+
   alist: () => req('GET', '/alist'),
   markWatched: (payload) => req('POST', '/watched', payload),
   undoWatched: (id) => req('DELETE', '/watched/' + id),

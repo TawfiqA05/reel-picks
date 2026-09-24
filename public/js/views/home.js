@@ -1,7 +1,7 @@
 // Home: "Your 4 this week" + leaving-soon alerts + the full ranked lineup.
 import { api } from '../api.js';
-import { h, clear, spinner, emptyState, badge, sectionTitle, icon } from '../ui.js';
-import { weeklyCard, heroPick, movieRow, posterTile, lastChanceCard, dayPicker } from './components.js';
+import { h, clear, spinner, emptyState, sectionTitle, icon, toast, openModal } from '../ui.js';
+import { weeklyCard, heroPick, movieRow, lastChanceCard, dayPicker } from './components.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -15,9 +15,78 @@ export async function render(root, params, ctx) {
     return;
   }
 
-  const data = await api.recommendations();
-  clear(root);
+  let data = await api.recommendations();
+  // Page state that has to survive a re-render after a hide: the chosen day,
+  // the collapse toggle, and which films just moved into the four.
+  const state = {
+    day: data.days?.[0]?.date || null,
+    collapsed: Boolean(status?.everythingPlayingCollapsed),
+    movedUp: new Set(),
+  };
+
+  const draw = () => {
+    clear(root);
+    root.appendChild(buildPage(data, status, ctx, state, actions));
+  };
+  // Re-fetch and redraw where the reader is, rather than via the router,
+  // which would jump back to the top.
+  const reload = async () => {
+    const y = window.scrollY;
+    data = await api.recommendations();
+    draw();
+    window.scrollTo(0, y);
+  };
+
+  const actions = {
+    async hide(entry, card) {
+      const before = new Set(data.weekly4.map((e) => e.tmdb_id));
+      card?.classList.add('is-leaving');
+      const fade = new Promise((r) => setTimeout(r, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 220));
+      try {
+        await Promise.all([api.hide(entry.tmdb_id, entry.title), fade]);
+      } catch (e) {
+        card?.classList.remove('is-leaving');
+        card?.querySelector('.not-for-me')?.removeAttribute('disabled');
+        toast(e.message, 'error');
+        return;
+      }
+      const entrants = [];
+      try {
+        const y = window.scrollY;
+        data = await api.recommendations();
+        entrants.push(...data.weekly4.filter((e) => !before.has(e.tmdb_id)));
+        state.movedUp = new Set(entrants.map((e) => e.tmdb_id));
+        draw();
+        state.movedUp = new Set();
+        window.scrollTo(0, y);
+      } catch (e) {
+        toast(e.message, 'error');
+        return;
+      }
+      const next = before.has(entry.tmdb_id) && entrants[0] ? ` ${entrants[0].title} moved into your four.` : '';
+      toast(`Hid ${entry.title}.${next}`, '', {
+        action: { label: 'Undo', onClick: () => actions.unhide(entry, { undo: true }) },
+      });
+    },
+    async unhide(entry, { undo = false } = {}) {
+      try {
+        await api.unhide(entry.tmdb_id);
+        await reload();
+        toast(undo ? `${entry.title} is back.` : `Unhid ${entry.title}.`);
+      } catch (e) {
+        toast(e.message, 'error');
+      }
+    },
+  };
+
+  draw();
+}
+
+function buildPage(data, status, ctx, state, actions) {
   const page = h('div', { class: 'page' });
+  const guest = Boolean(ctx.isGuest?.());
+  const onHide = guest ? null : actions.hide;
+  const onUnhide = guest ? null : (e) => actions.unhide(e);
 
   // Onboarding nudge when the taste profile is thin.
   if (status && !status.onboardingDone && data.profile.count < 10) {
@@ -26,28 +95,26 @@ export async function render(root, params, ctx) {
 
   if (!data.list.length) {
     // Guests can't refresh (read-only), so no setup copy and no button.
-    page.appendChild(ctx.isGuest?.()
+    page.appendChild(guest
       ? emptyState('film', 'Nothing loaded yet', 'Check back after the next refresh.')
       : emptyState('film', 'No movies loaded yet',
         status?.keys?.amc ? 'Tap refresh to pull showtimes from your theatre.' : 'Add your keys, then refresh to load what\'s playing.',
         h('button', { class: 'btn', onClick: () => ctx.triggerRefresh() }, icon('refresh', { size: 16 }), 'Refresh now')));
-    root.appendChild(page);
-    return;
+    return page;
   }
 
   // Day picker drives every showtime on the page. Defaults to today, or the
   // first published day if today's schedule is already over.
   const days = data.days || [];
-  let day = days[0]?.date || null;
+  if (state.day && !days.some((d) => d.date === state.day)) state.day = days[0]?.date || null;
 
   // Weekly 4: the first pick is the hero, the day picker sits under it and
   // drives every showtime on the page, and the other three follow as cards.
-  const guest = Boolean(ctx.isGuest?.());
   const owner = status?.ownerName || 'Owner';
   const heroSlot = h('div', { class: 'hero-slot' });
   const pickGrid = h('div', { class: 'pick-grid' });
   if (data.weekly4.length) page.appendChild(heroSlot);
-  if (days.length) page.appendChild(dayPicker(days, day, (d) => { day = d; paint(); }));
+  if (days.length) page.appendChild(dayPicker(days, state.day, (d) => { state.day = d; paint(); }));
   if (data.weekly4.length > 1) {
     page.appendChild(sectionTitle(guest ? `The rest of ${owner}'s four` : 'The rest of your four',
       data.profile.lowData && !guest ? 'Leaning on public scores — rate more to personalize' : `${data.theatre?.name || ''}`));
@@ -82,6 +149,13 @@ export async function render(root, params, ctx) {
       `${worth.length} more scoring ${data.goodMatchMinScore}+`));
     page.appendChild(worthList);
   }
+  // What "Not for me" took out, and the way back.
+  const hiddenCount = guest ? 0 : (data.hiddenCount || 0);
+  if (hiddenCount) {
+    page.appendChild(h('div', { class: 'hidden-line' },
+      `${hiddenCount} hidden · `,
+      h('button', { class: 'link-btn', type: 'button', onClick: () => openHiddenList(actions) }, 'Show hidden')));
+  }
 
   // Movies only at another followed theatre this week. Never part of the
   // ranking above, and absent entirely when a single theatre is followed.
@@ -98,18 +172,18 @@ export async function render(root, params, ctx) {
 
   // Full lineup — nothing disappears, whatever the cutoff is. Collapsible, and
   // the choice is remembered server-side (guests just toggle locally).
-  let collapsed = Boolean(status?.everythingPlayingCollapsed);
   const listWrap = h('div', { class: 'list' });
   const collapseBtn = h('button', { class: 'chip-btn section-toggle', type: 'button' });
   const paintCollapse = () => {
-    listWrap.hidden = collapsed;
-    collapseBtn.textContent = collapsed ? `Show all ${data.list.length}` : 'Hide';
+    listWrap.hidden = state.collapsed;
+    collapseBtn.textContent = state.collapsed ? `Show all ${data.list.length}` : 'Hide';
+    collapseBtn.setAttribute('aria-expanded', String(!state.collapsed));
   };
   collapseBtn.addEventListener('click', async () => {
-    collapsed = !collapsed;
+    state.collapsed = !state.collapsed;
     paintCollapse();
-    if (ctx.isGuest?.()) return;
-    try { await api.saveSettings({ everythingPlayingCollapsed: collapsed }); } catch { /* local toggle still applies */ }
+    if (guest) return;
+    try { await api.saveSettings({ everythingPlayingCollapsed: state.collapsed }); } catch { /* local toggle still applies */ }
   });
   page.appendChild(h('div', { class: 'section-head' },
     sectionTitle('Everything playing', `${data.list.length} movies`),
@@ -127,21 +201,52 @@ export async function render(root, params, ctx) {
 
   // Re-render just the rows when the selected day changes.
   function paint() {
+    const { day } = state;
+    const moved = (e) => state.movedUp.has(e.tmdb_id);
     clear(heroSlot);
-    if (data.weekly4[0]) heroSlot.appendChild(heroPick(data.weekly4[0], ctx, { day, multi }));
+    if (data.weekly4[0]) heroSlot.appendChild(heroPick(data.weekly4[0], ctx, { day, multi, onHide, movedUp: moved(data.weekly4[0]) }));
     clear(pickGrid);
-    data.weekly4.slice(1).forEach((e, i) => pickGrid.appendChild(weeklyCard(e, ctx, i + 2, { day, multi })));
+    data.weekly4.slice(1).forEach((e, i) => pickGrid.appendChild(weeklyCard(e, ctx, i + 2, { day, multi, onHide, movedUp: moved(e) })));
     clear(worthList);
-    worth.forEach((e) => worthList.appendChild(movieRow(e, ctx, { day, multi })));
+    worth.forEach((e) => worthList.appendChild(movieRow(e, ctx, { day, multi, onHide })));
     clear(nearbyList);
-    nearby.forEach((e) => nearbyList.appendChild(movieRow(e, ctx, { day, multi, nearby: true })));
+    nearby.forEach((e) => nearbyList.appendChild(movieRow(e, ctx, { day, multi, nearby: true, onHide })));
     clear(listWrap);
-    data.list.forEach((e) => listWrap.appendChild(movieRow(e, ctx, { day, compact: true, multi })));
+    data.list.forEach((e) => listWrap.appendChild(movieRow(e, ctx, { day, compact: true, multi, onUnhide })));
   }
   paint();
   paintCollapse();
+  return page;
+}
 
-  root.appendChild(page);
+// Every hidden film, each with its way back.
+async function openHiddenList(actions) {
+  const body = h('div', { class: 'hidden-list' }, spinner());
+  const modal = openModal(body, { title: 'Hidden films' });
+  try {
+    const { movies } = await api.hidden();
+    clear(body);
+    if (!movies.length) { body.appendChild(h('p', { class: 'muted' }, 'Nothing is hidden.')); return; }
+    body.appendChild(h('p', { class: 'muted small' }, 'These stay out of your picks until you unhide them. Their scores are unchanged.'));
+    for (const m of movies) {
+      const row = h('div', { class: 'hidden-row' },
+        h('a', { class: 'hidden-title', href: `#/movie/${m.tmdb_id}`, onClick: () => modal.close() }, m.title || `Movie ${m.tmdb_id}`),
+        h('button', {
+          class: 'btn ghost small', type: 'button', 'aria-label': `Unhide ${m.title}`,
+          onClick: async (e) => {
+            e.currentTarget.disabled = true;
+            await actions.unhide({ tmdb_id: m.tmdb_id, title: m.title });
+            row.remove();
+            if (!body.querySelector('.hidden-row')) modal.close();
+          },
+        }, 'Unhide'),
+      );
+      body.appendChild(row);
+    }
+  } catch (e) {
+    clear(body);
+    body.appendChild(h('p', { class: 'muted' }, e.message));
+  }
 }
 
 function onboardingBanner(ctx) {
