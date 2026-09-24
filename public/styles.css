@@ -592,22 +592,27 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
   .lv-later, .lv-hedged { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-.lc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px; }
-.lc-card { display: flex; flex-direction: column; gap: 6px; }
-.lc-poster { position: relative; }
-.lc-card.starred .lc-poster img { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--r-md); }
-.lc-star {
-  position: absolute; top: 6px; left: 6px; z-index: 1;
-  font-size: var(--fs-sm); line-height: 1; padding: 4px 5px; border-radius: 6px;
-  background: color-mix(in srgb, var(--accent) 92%, transparent); color: var(--on-accent);
+.lc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4) var(--sp-3); }
+@media (min-width: 900px) { .lc-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.lc-card { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.lc-poster .poster { box-shadow: none; border: 1px solid var(--line); }
+.lc-card.committed .lc-poster .poster { border: 2px solid var(--urgent); }
+.lc-pill {
+  align-self: flex-start; font-size: var(--fs-xs); font-weight: 700; line-height: 1;
+  padding: 6px 10px; border-radius: 999px; background: var(--urgent); color: var(--on-accent);
 }
-.lc-score { position: absolute; bottom: 6px; right: 6px; z-index: 1; }
+/* A hedge stays quiet: plain muted text, no colour, no pill. */
+.lc-hedge { font-size: var(--fs-xs); font-weight: 600; font-style: italic; color: var(--muted); }
+.lc-body { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
 .lc-title { font-size: var(--fs-sm); font-weight: 600; line-height: 1.25; }
-.lc-when { font-size: var(--fs-xs); font-weight: 700; color: var(--accent); }
-.lc-when.soon { color: var(--accent); }
-.lc-when.urgent { color: var(--urgent); }
+.lc-meta { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.lc-meta .score-pill { min-width: 0; padding: 3px 7px; }
+.lc-meta .score-num { font-size: var(--fs-sm); }
+.lc-star { color: var(--accent); display: inline-grid; }
+.lc-star .icon { fill: currentColor; }
 .lc-left { font-size: var(--fs-xs); color: var(--muted); }
-.lc-sig { color: var(--muted); }
+.section-link { display: inline-flex; align-items: center; gap: var(--sp-1); min-height: 44px; color: var(--accent); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
+.section-link:hover { text-decoration: underline; }
 
 /* ---- runway badge + followed theatres ---- */
 .runway { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; }

@@ -567,20 +567,30 @@ export function movieRow(entry, ctx, { day = null, compact = false, multi = 0, n
   );
 }
 
-// "Last chance" card: scores well and is actually about to leave the theatre.
+// "Last chance" tile: scores well and is actually about to leave the theatre.
+// Only a committed end date (runway kind 'ending') gets the loud treatment: an
+// urgent border and a solid "Last day today" / "Leaving Fri" pill. Anything
+// hedged keeps its runway label verbatim, quiet and uncoloured, so a hedge
+// never reads like a deadline.
 export function lastChanceCard(entry, ctx) {
-  return h('a', { class: `lc-card${entry.watchlisted ? ' starred' : ''}`, href: `#/movie/${entry.tmdb_id}` },
-    h('div', { class: 'lc-poster' },
-      poster(entry, { size: 'grid', link: false }),
-      entry.watchlisted ? h('span', { class: 'lc-star', title: ctx?.isGuest?.() ? 'On the watchlist' : 'On your watchlist' }, icon('bookmark', { size: 14 })) : null,
-      h('span', { class: 'lc-score' }, scorePill(entry.final)),
-    ),
+  const committed = !entry.runway || entry.runway.kind === 'ending';
+  const days = entry.daysLeft ?? entry.runway?.daysLeft ?? null;
+  const when = days != null && days <= 0 ? 'Last day today'
+    : days === 1 ? 'Leaving tomorrow'
+    : `Leaving ${new Date(`${entry.lastDate || entry.runway?.lastDate}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short' })}`;
+  const onList = entry.watchlisted;
+  return h('a', { class: `lc-card${committed ? ' committed' : ' hedged'}`, href: `#/movie/${entry.tmdb_id}` },
+    h('div', { class: 'lc-poster' }, poster(entry, { size: 'grid', link: false })),
+    committed
+      ? h('span', { class: 'lc-pill', title: entry.lastLabel || '' }, when)
+      : h('span', { class: 'lc-hedge', title: entry.runway?.detail || entry.runway?.label || '' }, entry.runway?.label || entry.lastLabel),
     h('div', { class: 'lc-body' },
       h('div', { class: 'lc-title' }, entry.title),
-      h('div', { class: `lc-when ${entry.urgency}` }, entry.lastLabel),
-      h('div', { class: 'lc-left' },
-        entry.leftLabel,
-        entry.signal === 'shrinking' ? h('span', { class: 'lc-sig' }, ' \u00b7 schedule shrinking') : null,
+      h('div', { class: 'lc-meta' },
+        scorePill(entry.final),
+        onList ? h('span', { class: 'lc-star', title: ctx?.isGuest?.() ? 'On the watchlist' : 'On your watchlist' }, icon('bookmark', { size: 14 })) : null,
+        committed ? h('span', { class: 'lc-left' }, entry.leftLabel,
+          entry.signal === 'shrinking' ? ' · schedule shrinking' : null) : null,
       ),
       entry.handoff ? h('div', { class: 'lc-handoff' }, icon('handoff', { size: 13 }), ' ', entry.handoff.text) : null,
     ),

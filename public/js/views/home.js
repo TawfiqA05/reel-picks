@@ -129,8 +129,10 @@ function buildPage(data, status, ctx, state, actions) {
   // sitting empty on the weeks when nothing is leaving.
   const lastChance = data.lastChance || [];
   if (lastChance.length) {
-    page.appendChild(sectionTitle('Last chance',
-      `Leaving ${data.theatre?.name || 'your theatre'} soon`));
+    page.appendChild(h('div', { class: 'section-head' },
+      sectionTitle('Last chance', `Leaving ${data.theatre?.name || 'your theatre'} soon`),
+      h('a', { class: 'section-link', href: '#/leaving' }, 'See the week', icon('arrowRight', { size: 16 })),
+    ));
     const lcGrid = h('div', { class: 'lc-grid' });
     lastChance.forEach((e) => lcGrid.appendChild(lastChanceCard(e, ctx)));
     page.appendChild(lcGrid);
