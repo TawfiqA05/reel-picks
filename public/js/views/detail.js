@@ -1,7 +1,7 @@
-// Movie detail: hero, score breakdown, trailer, showtimes, rating & actions.
+// Movie detail: hero, rating, score breakdown, showtimes, trailer.
 import { api } from '../api.js';
-import { h, clear, spinner, poster, scorePill, badge, makeStars, toast, openModal, scoreColor, icon } from '../ui.js';
-import { fmtRuntime, dayLabel, showtimeChip, watchlistButton, starRater, runwayBadge, handoffLine, backBadge } from './components.js';
+import { h, clear, spinner, scorePill, badge, makeStars, toast, openModal, scoreColor, icon } from '../ui.js';
+import { fmtRuntime, dayLabel, showtimeChip, watchlistButton, starRater, runwayBadge, handoffLine, backBadge, heroMedia } from './components.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -13,25 +13,43 @@ export async function render(root, params, ctx) {
 
   const page = h('div', { class: 'detail' });
 
-  // Hero
-  page.appendChild(h('div', { class: 'hero', style: m.backdrop ? { backgroundImage: `linear-gradient(180deg, rgba(11,11,15,.25), rgba(11,11,15,.96)), url(${m.backdrop})` } : {} },
-    h('div', { class: 'hero-inner' },
-      poster(m, { size: 'lg', link: false }),
-      h('div', { class: 'hero-meta' },
-        h('h1', {}, m.title),
-        h('div', { class: 'hero-sub' }, [m.year, fmtRuntime(m.runtime), m.mpaa].filter(Boolean).join(' · ')),
-        h('div', { class: 'chips' }, d.playing ? backBadge(m) : null, ...(m.genres || []).map((g) => h('span', { class: 'chip static' }, g))),
-        m.director ? h('div', { class: 'muted small' }, `Directed by ${m.director}`) : null,
-        h('div', { class: 'hero-actions' },
-          scorePill(d.final, { label: guest ? 'match' : 'your match', big: true, unscored: Boolean(d.flags?.noScores) }),
-          guest ? null : watchlistButton({ tmdb_id: m.tmdb_id, title: m.title, watchlisted: d.watchlisted }, ctx),
-          m.trailer_key ? h('a', { class: 'chip-btn', href: `https://www.youtube.com/watch?v=${m.trailer_key}`, target: '_blank', rel: 'noopener' }, icon('play', { size: 16 }), 'Trailer') : null,
-        ),
+  // Hero: the same backdrop-and-scrim treatment as the #1 pick, so the title
+  // and metadata always sit on a dark, readable ground.
+  const trailer = m.trailer_key ? h('div', { class: 'trailer-wrap', id: 'trailer' }, h('div', { class: 'trailer' },
+    h('iframe', {
+      src: `https://www.youtube-nocookie.com/embed/${m.trailer_key}`,
+      title: `${m.title} trailer`, allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+      allowfullscreen: true, loading: 'lazy',
+    }),
+  )) : null;
+  const meta = [m.year, fmtRuntime(m.runtime), m.mpaa].filter(Boolean);
+  page.appendChild(h('section', { class: 'detail-hero', 'aria-labelledby': 'detail-title' },
+    heroMedia(m),
+    h('div', { class: 'hero-content' },
+      h('div', { class: 'eyebrow' },
+        h('span', { class: `eyebrow-score ${scoreColor(d.final)}`, title: d.flags?.noScores ? 'No public scores yet. This number uses a neutral 50 for reviews.' : 'Match score' },
+          `${d.final ?? '-'} ${guest ? 'match' : 'your match'}`),
+        d.flags?.noScores ? h('span', { class: 'eyebrow-dot' }, ' · no public scores yet') : null,
+      ),
+      h('h1', { class: 'hero-title', id: 'detail-title' }, m.title),
+      h('div', { class: 'hero-facts' },
+        meta.length ? h('span', {}, meta.join(' · ')) : null,
+        d.flags?.imax ? badge('IMAX', 'imax') : null,
+        d.playing ? backBadge(m) : null,
+      ),
+      (m.genres || []).length || m.director
+        ? h('div', { class: 'hero-facts muted' }, [(m.genres || []).join(', '), m.director ? `Directed by ${m.director}` : null].filter(Boolean).join(' · '))
+        : null,
+      d.reason ? h('p', { class: 'hero-reason' }, d.reason) : null,
+      h('div', { class: 'hero-actions' },
+        guest ? null : watchlistButton({ tmdb_id: m.tmdb_id, title: m.title, watchlisted: d.watchlisted }, ctx),
+        trailer ? h('button', {
+          class: 'chip-btn', type: 'button',
+          onClick: () => trailer.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' }),
+        }, icon('play', { size: 16 }), 'Trailer') : null,
       ),
     ),
   ));
-
-  page.appendChild(h('p', { class: 'reason big' }, d.reason));
 
   // Rate + A-List (owner only)
   if (!guest) page.appendChild(ratingRow(d, m, ctx));
@@ -40,25 +58,15 @@ export async function render(root, params, ctx) {
   const owner = guest ? (ctx.getStatus()?.ownerName || 'the owner') : null;
   page.appendChild(h('div', { class: 'cards-2' }, publicCard(d), tasteCard(d, owner)));
 
-  // Trailer embed
-  if (m.trailer_key) {
-    page.appendChild(h('div', { class: 'trailer' },
-      h('iframe', {
-        src: `https://www.youtube-nocookie.com/embed/${m.trailer_key}`,
-        title: 'Trailer', allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
-        allowfullscreen: true, loading: 'lazy',
-      }),
-    ));
-  }
+  // Showtimes first, then the trailer: booking is the thing people come for.
+  page.appendChild(showtimesSection(d, ctx));
+  if (trailer) page.appendChild(trailer);
 
   // Synopsis + cast
   if (m.synopsis) page.appendChild(h('p', { class: 'synopsis' }, m.synopsis));
   if ((m.cast || []).length) {
     page.appendChild(h('div', { class: 'cast' }, h('span', { class: 'muted small' }, 'Starring '), (m.cast || []).slice(0, 6).join(', ')));
   }
-
-  // Showtimes
-  page.appendChild(showtimesSection(d, ctx));
 
   root.appendChild(page);
 }
