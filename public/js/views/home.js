@@ -210,9 +210,16 @@ function buildPage(data, status, ctx, state, actions) {
     const { day } = state;
     const moved = (e) => state.movedUp.has(e.tmdb_id);
     clear(heroSlot);
-    if (data.weekly4[0]) heroSlot.appendChild(heroPick(data.weekly4[0], ctx, { day, multi, onHide, movedUp: moved(data.weekly4[0]) }));
+    // The hero is the top pick you can actually go and see: a film that hasn't
+    // opened yet (every showtime this week an early screening) is passed over
+    // unless one of those screenings is within two days. It keeps its rank on
+    // its card; nothing about the order changes.
+    const four = data.weekly4.map((e, i) => ({ e, rank: i + 1 }));
+    const heroAt = Math.max(0, four.findIndex(({ e }) => !e.prerelease || e.prerelease.soon));
+    const hero = four[heroAt];
+    if (hero) heroSlot.appendChild(heroPick(hero.e, ctx, { day, multi, onHide, movedUp: moved(hero.e), rank: hero.rank }));
     clear(pickGrid);
-    data.weekly4.slice(1).forEach((e, i) => pickGrid.appendChild(weeklyCard(e, ctx, i + 2, { day, multi, onHide, movedUp: moved(e) })));
+    four.filter((_, i) => i !== heroAt).forEach(({ e, rank }) => pickGrid.appendChild(weeklyCard(e, ctx, rank, { day, multi, onHide, movedUp: moved(e) })));
     clear(worthList);
     worth.forEach((e) => worthList.appendChild(movieRow(e, ctx, { day, multi, onHide, tools: true })));
     clear(nearbyList);

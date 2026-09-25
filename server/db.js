@@ -42,7 +42,9 @@ CREATE TABLE IF NOT EXISTS movies (
   tmdb_rating   REAL,            -- 0-10
   trailer_key   TEXT,            -- YouTube key
   mpaa          TEXT,            -- e.g. PG-13
-  release_date  TEXT,            -- YYYY-MM-DD
+  release_date  TEXT,            -- YYYY-MM-DD (TMDB's primary date; often a premiere)
+  tmdb_votes    INTEGER,         -- how many votes tmdb_rating rests on
+  us_release_date TEXT,          -- YYYY-MM-DD, US limited/theatrical release
   scores        TEXT,            -- JSON: raw {imdb,rt,metacritic,rated} from OMDb
   scores_at     TEXT,            -- ISO timestamp of last OMDb score fetch
   first_seen_at TEXT,            -- ISO timestamp we first ingested this movie
@@ -489,6 +491,47 @@ function migrateUsers() {
 }
 
 migrateUsers();
+
+// TMDB vote counts and US release dates, so a rating from a handful of votes
+// (or on a film nobody in the US can see yet) stops counting as a review (see
+// lib/scoring.js). Older databases gain the columns and are filled from the
+// TMDB detail responses already in the cache — the very responses the stored
+// ratings came from, so each count is the one its rating rests on. No
+// network. A copy of the database is written first. Films with no cached
+// detail stay unknown until the next refresh fetches them.
+function migrateMovieVotes() {
+  const needVotes = !hasColumn('movies', 'tmdb_votes');
+  const needUs = !hasColumn('movies', 'us_release_date');
+  if (!needVotes && !needUs) return;
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backup = path.join(dataDir, `reelpicks.pre-votes-${stamp}.db`);
+  db.exec(`VACUUM INTO '${backup.replace(/'/g, "''")}'`);
+  let filled = 0;
+  db.exec('BEGIN');
+  try {
+    if (needVotes) db.exec('ALTER TABLE movies ADD COLUMN tmdb_votes INTEGER');
+    if (needUs) db.exec('ALTER TABLE movies ADD COLUMN us_release_date TEXT');
+    const set = db.prepare('UPDATE movies SET tmdb_votes = ?, us_release_date = ? WHERE tmdb_id = ?');
+    for (const m of db.prepare('SELECT tmdb_id FROM movies').all()) {
+      const row = db.prepare('SELECT value FROM cache WHERE key = ?').get(`tmdb:movie:${m.tmdb_id}`);
+      if (!row) continue;
+      let d;
+      try { d = JSON.parse(row.value); } catch { continue; }
+      const us = (d?.release_dates?.results || []).find((r) => r.iso_3166_1 === 'US');
+      const usDate = (us?.release_dates || []).filter((x) => x.type === 2 || x.type === 3)
+        .map((x) => String(x.release_date || '').slice(0, 10)).filter(Boolean).sort()[0] || null;
+      set.run(Number.isInteger(d?.vote_count) ? d.vote_count : null, usDate, m.tmdb_id);
+      filled++;
+    }
+    db.exec('COMMIT');
+    console.log(`[db] movies: TMDB vote counts and US release dates for ${filled} film(s) from cache (backup: ${backup})`);
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+migrateMovieVotes();
 
 // ---- low-level helpers -------------------------------------------------
 

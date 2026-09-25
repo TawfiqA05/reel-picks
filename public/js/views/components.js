@@ -29,6 +29,15 @@ export function backBadge(m) {
   return isOldRelease(m) ? badge('Back in theaters', 'back') : null;
 }
 
+// Not out yet: this week's showtimes are all early screenings (server sets
+// entry.prerelease). "Opens Oct 2".
+export function opensBadge(entry) {
+  const d = entry?.prerelease?.opens;
+  if (!d) return null;
+  const when = new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return badge(`Opens ${when}`, 'opens');
+}
+
 export function metaLine(m) {
   return [m.year, fmtRuntime(m.runtime), m.mpaa].filter(Boolean).join(' · ');
 }
@@ -284,6 +293,7 @@ export function weeklyCard(entry, ctx, rank, { day = null, multi = 0, onHide = n
       ),
       h('div', { class: 'pick-meta' },
         meta ? h('span', {}, meta) : null,
+        opensBadge(entry),
         entry.flags?.imax ? badge('IMAX', 'imax') : null,
         backBadge(entry),
         entry.flags?.noScores ? badge('No scores yet', 'noscore') : null,
@@ -380,7 +390,7 @@ export function notForMeButton(entry, onHide, { label = false } = {}) {
 const movedTag = () => badge('Moved up', 'moved');
 
 // The #1 pick of the week, full width over its own backdrop.
-export function heroPick(entry, ctx, { day = null, multi = 0, onHide = null, movedUp = false } = {}) {
+export function heroPick(entry, ctx, { day = null, multi = 0, onHide = null, movedUp = false, rank = 1 } = {}) {
   const best = pickBest(daySlots(entry, day));
   const guest = ctx.isGuest?.();
   const meta = [entry.year, fmtRuntime(entry.runtime), entry.mpaa].filter(Boolean);
@@ -388,7 +398,7 @@ export function heroPick(entry, ctx, { day = null, multi = 0, onHide = null, mov
     heroMedia(entry),
     h('div', { class: 'hero-content' },
       h('div', { class: 'eyebrow' },
-        'No. 1 this week',
+        `No. ${rank} this week`,
         h('span', { class: 'eyebrow-dot', 'aria-hidden': 'true' }, ' · '),
         h('span', { class: `eyebrow-score ${scoreColor(entry.final)}`, title: entry.flags?.noScores ? 'No public scores yet. This number uses a neutral 50 for reviews.' : 'Match score' },
           `${entry.final ?? '-'} match`),
@@ -398,6 +408,7 @@ export function heroPick(entry, ctx, { day = null, multi = 0, onHide = null, mov
         h('a', { href: `#/movie/${entry.tmdb_id}` }, entry.title)),
       h('div', { class: 'hero-facts' },
         meta.length ? h('span', {}, meta.join(' · ')) : null,
+        opensBadge(entry),
         entry.flags?.imax ? badge('IMAX', 'imax') : null,
         backBadge(entry),
         ...heroFlags(entry),
@@ -578,9 +589,10 @@ export function movieRow(entry, ctx, { day = null, compact = false, multi = 0, n
       compact ? null : h('div', { class: 'row-reason', title: entry.reason }, entry.reason),
       // The no-scores flag shows even on compact rows: a dashed pill alone is
       // too easy to miss for a number that is partly made up.
-      compact && (entry.flags?.noScores || isOldRelease(entry)) ? h('div', { class: 'row-tags' },
-        entry.flags?.noScores ? badge('No scores yet', 'noscore') : null, backBadge(entry)) : null,
+      compact && (entry.flags?.noScores || isOldRelease(entry) || entry.prerelease) ? h('div', { class: 'row-tags' },
+        opensBadge(entry), entry.flags?.noScores ? badge('No scores yet', 'noscore') : null, backBadge(entry)) : null,
       compact ? null : h('div', { class: 'row-tags' },
+        opensBadge(entry),
         backBadge(entry),
         entry.flags?.noScores ? badge('No scores yet', 'noscore') : null,
         entry.flags?.imax ? badge('IMAX', 'imax') : null,

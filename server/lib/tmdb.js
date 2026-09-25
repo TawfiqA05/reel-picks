@@ -93,6 +93,7 @@ export function lightMovie(r) {
     poster: img(r.poster_path, 'w342'),
     backdrop: img(r.backdrop_path, 'w780'),
     tmdb_rating: r.vote_average ?? null,
+    tmdb_votes: r.vote_count ?? null,
     genres: (r.genre_ids || []).map((id) => TMDB_GENRES[id]).filter(Boolean),
     synopsis: r.overview || '',
     release_date: r.release_date || null,
@@ -117,6 +118,19 @@ function pickMpaa(releaseDates) {
   return cert || null;
 }
 
+// The US theatrical release (TMDB types 2 limited, 3 theatrical), earliest
+// first. TMDB's own release_date is often a festival or foreign premiere, which
+// says nothing about when a US audience can see the film.
+export function pickUsRelease(releaseDates) {
+  const us = (releaseDates?.results || []).find((r) => r.iso_3166_1 === 'US');
+  const dates = (us?.release_dates || [])
+    .filter((d) => d.type === 2 || d.type === 3)
+    .map((d) => String(d.release_date || '').slice(0, 10))
+    .filter(Boolean)
+    .sort();
+  return dates[0] || null;
+}
+
 // Convert a full TMDB detail response into our canonical movie shape.
 export function normalizeDetails(d) {
   const director = (d.credits?.crew || []).find((c) => c.job === 'Director')?.name || null;
@@ -138,8 +152,10 @@ export function normalizeDetails(d) {
     runtime: d.runtime || null,
     synopsis: d.overview || '',
     tmdb_rating: d.vote_average ?? null,
+    tmdb_votes: d.vote_count ?? null,
     trailer_key: pickTrailer(d.videos),
     mpaa: pickMpaa(d.release_dates),
     release_date: d.release_date || null,
+    us_release_date: pickUsRelease(d.release_dates),
   };
 }

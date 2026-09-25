@@ -64,9 +64,41 @@ export function computePublicScore(raw = {}, tmdbRating = null) {
   };
 }
 
+// A TMDB rating counts as a review only once enough people have voted and the
+// film is out in the US. A 9.5 from six early voters on a film that opens next
+// week is not "Excellent reviews"; it's no reviews yet, and gets the same
+// neutral default, dashed pill and "No scores yet" badge as a film with nothing.
+export const MIN_TMDB_VOTES = 50;
+
+const localYMD = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// The date a US audience can first see it: the US theatrical/limited release
+// when TMDB has one, else TMDB's primary date.
+export function usReleaseDate(movie) {
+  return movie?.us_release_date || movie?.release_date || null;
+}
+
+export function isReleased(movie, now = new Date()) {
+  const d = usReleaseDate(movie);
+  return !d || d <= localYMD(now);
+}
+
+// Why a stored TMDB rating isn't being counted, or null when it is. An unknown
+// vote count (not fetched yet) is given the benefit of the doubt; the refresh
+// fetches it.
+export function tmdbIgnoredReason(movie, now = new Date()) {
+  if (!(movie?.tmdb_rating > 0)) return null;
+  if (!isReleased(movie, now)) return 'unreleased';
+  if (movie.tmdb_votes != null && movie.tmdb_votes < MIN_TMDB_VOTES) return 'few-votes';
+  return null;
+}
+
 // Convenience: compute from a stored movie row (scores JSON holds raw omdb values).
-export function publicScoreForMovie(movie, rawScores) {
-  return computePublicScore(rawScores || {}, movie?.tmdb_rating ?? null);
+export function publicScoreForMovie(movie, rawScores, now = new Date()) {
+  const ignored = tmdbIgnoredReason(movie, now);
+  const pub = computePublicScore(rawScores || {}, ignored ? null : (movie?.tmdb_rating ?? null));
+  if (ignored) pub.tmdbIgnored = { reason: ignored, rating: movie.tmdb_rating, votes: movie.tmdb_votes ?? null, opens: usReleaseDate(movie) };
+  return pub;
 }
 
 // New releases keep getting reviews for ~14 days; show a "settling" badge and

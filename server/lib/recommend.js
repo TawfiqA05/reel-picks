@@ -11,7 +11,7 @@ import { getMovie, hydrate } from './movies.js';
 import { profileRows, ratedIds, getRating } from './ratings.js';
 import { getMatch } from './match.js';
 import { buildProfile, confidence, tasteMatch, topTasteFactor } from './taste.js';
-import { publicScoreForMovie, isSettling } from './scoring.js';
+import { publicScoreForMovie, isSettling, isReleased, usReleaseDate } from './scoring.js';
 import {
   finalScore, buildReason, bestShowtime, showtimeFits, endTimeLabel, beThereByLabel, urgencyBoost,
 } from './ranking.js';
@@ -150,7 +150,23 @@ function cardShape(m) {
     mpaa: m.mpaa || null,
     tmdb_rating: m.tmdb_rating ?? null,
     release_date: m.release_date || null,
+    us_release_date: m.us_release_date || null,
   };
+}
+
+const HERO_SOON_MS = 48 * 3600 * 1000;
+
+// Not out in the US yet, and every showtime this week is an early screening
+// (flagged advance by AMC, or simply before the US release date): the film
+// "opens" on its release date. soon: one of those screenings is within two
+// days, which is what earns it the Picks hero (see public/js/views/home.js).
+// Display only — nothing here feeds the score or the order.
+function prereleaseOf(movie, weekRows, now) {
+  const opens = usReleaseDate(movie);
+  if (!opens || isReleased(movie, new Date(now)) || !weekRows.length) return null;
+  if (!weekRows.every((s) => s.is_advance || s.date < opens)) return null;
+  const soon = weekRows.some((s) => (s.start_epoch ?? 0) >= now && (s.start_epoch ?? 0) <= now + HERO_SOON_MS);
+  return { opens, soon };
 }
 
 function theatreShape(t) {
@@ -307,6 +323,8 @@ function evaluate(movie, ctx, tid = ctx.primaryId) {
       combined: pub.combined, critic: pub.critic, audience: pub.audience, sources: pub.sources, divergence: pub.divergence, display: pub.display,
       // OMDb was asked (by IMDb id and title) and has nothing for this title.
       noOmdbRecord: Boolean(movie.scores?.noRecord),
+      // A TMDB rating on file but not counted (too few votes / not out yet).
+      tmdbIgnored: pub.tmdbIgnored || null,
       omdbCheckedAt: movie.scores?.checkedAt || movie.scores_at || null,
     },
     taste: { score: tm.score, hasSignal: tm.hasSignal },
@@ -327,6 +345,7 @@ function evaluate(movie, ctx, tid = ctx.primaryId) {
     nextShowtime: nextBest ? summarizeShowtime(nextBest.s, movie, ctx.settings) : null,
     showtimesByDay: byDay,
     showtimeCount: sts.length,
+    prerelease: prereleaseOf(movie, sts, ctx.now),
     theatre: theatreShape(theatre),
     theatres,
     runway,
@@ -547,6 +566,7 @@ export function getMovieDetail(tmdbId, { guest = false } = {}) {
     public: ev.public,
     taste: { ...ev.taste, ...tasteBreakdown(m, ctx.profile) },
     flags: ev.flags,
+    prerelease: ev.prerelease,
     watchlisted: ctx.watch.has(tmdbId),
     myRating: rating?.rating ?? null,
     showtimesByDay,

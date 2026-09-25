@@ -23,7 +23,7 @@ import {
 } from './match.js';
 import { upsertRating } from './ratings.js';
 import { localYMD, addDays } from './util.js';
-import { isSettling } from './scoring.js';
+import { isSettling, MIN_TMDB_VOTES } from './scoring.js';
 import { computeHorizon, snapshotLineup } from './leaving.js';
 import {
   followedTheatres, homeBase, theatreDistance, readDistance, shortName, sharedTheatres, activeUserIds,
@@ -108,7 +108,8 @@ function insertShowtime(s) {
 // Pass { detailsOnly: true } to skip OMDb (used when bulk-enriching restored
 // ratings — we only need genres/director/cast for the taste profile).
 // TMDB details are re-pulled (bypassing the 7-day cache) while a movie is
-// settling, and weekly while its TMDB rating is still zero — otherwise a film
+// settling, and weekly while its TMDB rating is still zero, rests on fewer
+// than MIN_TMDB_VOTES votes, or has an unknown vote count — otherwise a film
 // first seen before anyone voted would show "No scores yet" forever.
 const DETAILS_SETTLING_MS = 20 * 3600 * 1000;
 const DETAILS_ZERO_VOTE_MS = 6 * 86400 * 1000;
@@ -121,6 +122,7 @@ async function ingestMovie(tmdbId, log, opts = {}) {
     const refetch = !needDetails && !opts.detailsOnly && (
       (isSettling(movie) && age > DETAILS_SETTLING_MS)
       || (!(movie.tmdb_rating > 0) && age > DETAILS_ZERO_VOTE_MS)
+      || (!(movie.tmdb_votes >= MIN_TMDB_VOTES) && age > DETAILS_ZERO_VOTE_MS)
     );
     if (needDetails || refetch) {
       try {

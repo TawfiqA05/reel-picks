@@ -1,7 +1,7 @@
 // Movie detail: hero, rating, score breakdown, showtimes, trailer.
 import { api } from '../api.js';
 import { h, clear, spinner, scorePill, badge, makeStars, toast, openModal, scoreColor, icon } from '../ui.js';
-import { fmtRuntime, dayLabel, showtimeChip, watchlistButton, starRater, runwayBadge, handoffLine, backBadge, heroMedia } from './components.js';
+import { fmtRuntime, dayLabel, showtimeChip, watchlistButton, starRater, runwayBadge, handoffLine, backBadge, heroMedia, opensBadge } from './components.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -36,6 +36,7 @@ export async function render(root, params, ctx) {
         meta.length ? h('span', {}, meta.join(' · ')) : null,
         d.flags?.imax ? badge('IMAX', 'imax') : null,
         d.playing ? backBadge(m) : null,
+        opensBadge(d),
       ),
       (m.genres || []).length || m.director
         ? h('div', { class: 'hero-facts muted' }, [(m.genres || []).join(', '), m.director ? `Directed by ${m.director}` : null].filter(Boolean).join(' · '))
@@ -111,6 +112,11 @@ function publicCard(d) {
     rows.length ? h('div', { class: 'sources' }, ...rows) : h('div', { class: 'muted small' }, 'No public scores found yet.'),
     p.noOmdbRecord
       ? h('div', { class: 'muted small' }, `No IMDb, Rotten Tomatoes or Metacritic scores for this title${checked ? ` (checked ${checked})` : ''}. ${rows.length ? 'TMDB is the only source.' : 'The match score uses a neutral 50 for reviews.'}`)
+      : null,
+    p.tmdbIgnored
+      ? h('div', { class: 'muted small' }, p.tmdbIgnored.reason === 'unreleased'
+        ? `TMDB's ${Number(p.tmdbIgnored.rating).toFixed(1)} isn't counted until it opens${p.tmdbIgnored.opens ? ` on ${new Date(`${p.tmdbIgnored.opens}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}.`
+        : `TMDB's ${Number(p.tmdbIgnored.rating).toFixed(1)} rests on ${p.tmdbIgnored.votes} vote${p.tmdbIgnored.votes === 1 ? '' : 's'}, too few to count yet.`)
       : null,
     p.critic != null && p.audience != null
       ? h('div', { class: 'muted small' }, `Critics ${p.critic} · Audience ${p.audience}`) : null,
