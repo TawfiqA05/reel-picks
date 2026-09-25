@@ -633,7 +633,7 @@ router.get('/stats', (req, res) => res.json(getStats()));
 router.get('/export', (req, res) => {
   const uid = currentUserId();
   const ratings = all('SELECT tmdb_id, title, year, rating, source, rated_at FROM ratings WHERE user_id = ?', uid);
-  const watched = all('SELECT tmdb_id, title, watched_at, in_weekly4, ticket_price FROM watched WHERE user_id = ?', uid);
+  const watched = all('SELECT tmdb_id, title, watched_at, in_weekly4, ticket_price FROM watched WHERE user_id = ? ORDER BY id', uid);
   const lines = ['Type,tmdb_id,Title,Year,Rating,Source,RatedAt,WatchedAt,InWeekly4,Price'];
   for (const r of ratings) {
     lines.push(['rating', r.tmdb_id, csvField(r.title), r.year ?? '', r.rating, r.source, r.rated_at ?? '', '', '', ''].join(','));

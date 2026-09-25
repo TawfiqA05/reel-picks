@@ -11,11 +11,11 @@
 // Shape note for later multi-user work: the document is { version, kind,
 // exportedAt, profile: {...} } — one profile per document today, but nothing
 // here assumes the instance only ever holds one.
-import { all, get, run, getSettings, updateSettings, DEFAULT_SETTINGS } from '../db.js';
+import { all, get, run, getSettings, updateSettings, DEFAULT_SETTINGS, USER_SETTING_KEYS } from '../db.js';
 import { upsertLightMovie } from './movies.js';
 import { upsertRating } from './ratings.js';
 import { restoreWatched } from './alist.js';
-import { currentUserId } from './user.js';
+import { currentUserId, currentUser } from './user.js';
 
 export const STATE_VERSION = 1;
 
@@ -24,11 +24,15 @@ const SKIP_SETTINGS = new Set(['lastRefresh', 'lastRefreshLog']);
 
 const settingKeys = () => Object.keys(DEFAULT_SETTINGS).filter((k) => !SKIP_SETTINGS.has(k));
 
+// The owner's export is the full setup, as before. A friend's carries only
+// what is theirs: their own settings keys (no shared tuning) and no AMC match
+// decisions, which are the owner's.
 export function exportState() {
   const s = getSettings();
   const uid = currentUserId();
+  const owner = Boolean(currentUser()?.isOwner);
   const settings = {};
-  for (const k of settingKeys()) settings[k] = s[k];
+  for (const k of settingKeys()) if (owner || USER_SETTING_KEYS.has(k)) settings[k] = s[k];
   return {
     version: STATE_VERSION,
     kind: 'reelpicks-state',
@@ -41,11 +45,11 @@ export function exportState() {
           LEFT JOIN movies m ON m.tmdb_id = w.tmdb_id WHERE w.user_id = ?`,
         uid,
       ),
-      watched: all('SELECT tmdb_id, title, watched_at, in_weekly4, ticket_price FROM watched WHERE user_id = ?', uid),
+      watched: all('SELECT tmdb_id, title, watched_at, in_weekly4, ticket_price FROM watched WHERE user_id = ? ORDER BY id', uid),
       // Every match row travels: the table IS the decision record (manual
       // repoints, ignores, review keeps), and automatic rows are harmless —
       // they just save the new instance re-deriving the same answer.
-      matches: all('SELECT amc_movie_id, amc_title, amc_year, tmdb_id, confidence, manual, review, updated_at FROM matches'),
+      ...(owner ? { matches: all('SELECT amc_movie_id, amc_title, amc_year, tmdb_id, confidence, manual, review, updated_at FROM matches') } : {}),
       // Added after v1 shipped. Optional on import, so the version stays 1 and
       // an older export (no `hidden` key) still imports, and an older instance
       // just ignores the key.
