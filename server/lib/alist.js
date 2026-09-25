@@ -10,7 +10,7 @@ export function logWatched({ tmdb_id, title, in_weekly4 = false }) {
   const settings = getSettings();
   run(
     `INSERT INTO watched(tmdb_id, title, watched_at, week_start, watched_date, in_weekly4, ticket_price)
-      VALUES(?,?,?,?,?,?,?) ON CONFLICT(tmdb_id, watched_date) DO NOTHING`,
+      VALUES(?,?,?,?,?,?,?) ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
     tmdb_id, title, new Date().toISOString(), weekStartFriday(), localYMD(), in_weekly4, Number(settings.avgTicketPrice) || 0,
   );
   return getWeek();
@@ -30,7 +30,7 @@ export function restoreWatched({ tmdb_id, title, watched_at, in_weekly4 = false,
   const settings = getSettings();
   return run(
     `INSERT INTO watched(tmdb_id, title, watched_at, week_start, watched_date, in_weekly4, ticket_price)
-      VALUES(?,?,?,?,?,?,?) ON CONFLICT(tmdb_id, watched_date) DO NOTHING`,
+      VALUES(?,?,?,?,?,?,?) ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
     tmdb_id, title, when, weekStartFriday(new Date(when)), localYMD(new Date(when)), in_weekly4,
     price ?? Number(settings.avgTicketPrice) ?? 0,
   ).changes > 0;

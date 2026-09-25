@@ -381,7 +381,7 @@ function recordWeekly4(weekly4) {
   weekly4.forEach((e, i) => {
     run(
       `INSERT INTO weekly4_log(week_start, tmdb_id, rank, first_seen_at)
-        VALUES(?,?,?,?) ON CONFLICT(week_start, tmdb_id) DO NOTHING`,
+        VALUES(?,?,?,?) ON CONFLICT(user_id, week_start, tmdb_id) DO NOTHING`,
       week, e.tmdb_id, i + 1, new Date().toISOString(),
     );
   });

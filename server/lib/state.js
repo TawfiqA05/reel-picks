@@ -102,7 +102,7 @@ export function importState(doc) {
     if (!Number.isInteger(w.tmdb_id) || w.tmdb_id <= 0) continue;
     upsertLightMovie({ tmdb_id: w.tmdb_id, title: w.title, year: w.year });
     run(
-      'INSERT INTO watchlist(tmdb_id, added_at) VALUES(?, ?) ON CONFLICT(tmdb_id) DO NOTHING',
+      'INSERT INTO watchlist(tmdb_id, added_at) VALUES(?, ?) ON CONFLICT(user_id, tmdb_id) DO NOTHING',
       w.tmdb_id, w.added_at || new Date().toISOString(),
     );
     out.watchlist++;
@@ -144,7 +144,7 @@ export function importState(doc) {
     const id = Number(m?.tmdb_id);
     if (!Number.isInteger(id) || id <= 0) continue;
     const res = run(
-      'INSERT INTO hidden_movies(tmdb_id, title, hidden_at) VALUES(?,?,?) ON CONFLICT(tmdb_id) DO NOTHING',
+      'INSERT INTO hidden_movies(tmdb_id, title, hidden_at) VALUES(?,?,?) ON CONFLICT(user_id, tmdb_id) DO NOTHING',
       id, String(m.title || '').slice(0, 300), m.hidden_at || new Date().toISOString(),
     );
     if (res?.changes) out.hidden++;

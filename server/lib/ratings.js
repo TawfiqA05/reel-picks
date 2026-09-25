@@ -9,7 +9,7 @@ export function upsertRating({ tmdb_id, title, year, rating, source = 'manual', 
   run(
     `INSERT INTO ratings(tmdb_id, title, year, rating, source, rated_at, created_at)
      VALUES(?,?,?,?,?,?,?)
-     ON CONFLICT(tmdb_id) DO UPDATE SET
+     ON CONFLICT(user_id, tmdb_id) DO UPDATE SET
        rating = excluded.rating, source = excluded.source, rated_at = excluded.rated_at,
        title = COALESCE(NULLIF(excluded.title, ''), ratings.title)`,
     tmdb_id, title, y(year), rating, source, rated_at || now, now,

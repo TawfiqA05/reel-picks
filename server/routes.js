@@ -518,7 +518,7 @@ router.post('/hidden', (req, res) => {
   const name = String(title || get('SELECT title FROM movies WHERE tmdb_id = ?', id)?.title || '').slice(0, 300);
   run(
     `INSERT INTO hidden_movies(tmdb_id, title, hidden_at) VALUES(?,?,?)
-      ON CONFLICT(tmdb_id) DO UPDATE SET title = excluded.title`,
+      ON CONFLICT(user_id, tmdb_id) DO UPDATE SET title = excluded.title`,
     id, name, new Date().toISOString(),
   );
   res.json({ hidden: true, tmdb_id: id });

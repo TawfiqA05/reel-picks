@@ -83,20 +83,46 @@ CREATE TABLE IF NOT EXISTS showtimes (
 CREATE INDEX IF NOT EXISTS idx_showtimes_date ON showtimes(date);
 CREATE INDEX IF NOT EXISTS idx_showtimes_tmdb ON showtimes(tmdb_id);
 
--- User ratings (one row per movie; upserted). rating is on a 0.5-5 star scale.
+-- Accounts. User 1 is the owner; friends join through invite links. Only a
+-- hash of an invite token is stored, and it is cleared once redeemed.
+-- session_version is bumped on revoke / re-issue, which kills older cookies.
+CREATE TABLE IF NOT EXISTS users (
+  id                INTEGER PRIMARY KEY,
+  name              TEXT NOT NULL,
+  invite_token_hash TEXT,
+  created_at        TEXT,
+  revoked_at        TEXT,
+  last_seen_at      TEXT,
+  session_version   INTEGER NOT NULL DEFAULT 1
+);
+
+-- Per-user settings (theatres, home base, windows, weights, …). The keys are
+-- USER_SETTING_KEYS below; everything else stays in the shared settings table.
+CREATE TABLE IF NOT EXISTS user_settings (
+  user_id INTEGER NOT NULL,
+  key     TEXT NOT NULL,
+  value   TEXT,
+  PRIMARY KEY (user_id, key)
+);
+
+-- User ratings (one row per user per movie; upserted). rating is on a 0.5-5 star scale.
+-- Older databases get user_id in migrateUsers() below.
 CREATE TABLE IF NOT EXISTS ratings (
-  tmdb_id    INTEGER PRIMARY KEY,
+  user_id    INTEGER NOT NULL DEFAULT 1,
+  tmdb_id    INTEGER NOT NULL,
   title      TEXT,
   year       INTEGER,
   rating     REAL,        -- 0.5 - 5.0 stars
   source     TEXT,        -- letterboxd | imdb | manual | onboarding
   rated_at   TEXT,        -- when the user rated it (for recency weighting)
-  created_at TEXT
+  created_at TEXT,
+  PRIMARY KEY (user_id, tmdb_id)
 );
 
 -- Ratings imported before we could resolve a TMDB id (matched lazily).
 CREATE TABLE IF NOT EXISTS unmatched_ratings (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL DEFAULT 1,
   title      TEXT,
   year       INTEGER,
   rating     REAL,
@@ -105,17 +131,21 @@ CREATE TABLE IF NOT EXISTS unmatched_ratings (
 );
 
 CREATE TABLE IF NOT EXISTS watchlist (
-  tmdb_id  INTEGER PRIMARY KEY,
-  added_at TEXT
+  user_id  INTEGER NOT NULL DEFAULT 1,
+  tmdb_id  INTEGER NOT NULL,
+  added_at TEXT,
+  PRIMARY KEY (user_id, tmdb_id)
 );
 
 -- "Not for me": films the owner has waved off. Keyed by TMDB id, so a hide
 -- survives refreshes and re-releases until it is undone. Never read by the
 -- scoring or the taste profile; it only filters what gets recommended.
 CREATE TABLE IF NOT EXISTS hidden_movies (
-  tmdb_id   INTEGER PRIMARY KEY,
+  user_id   INTEGER NOT NULL DEFAULT 1,
+  tmdb_id   INTEGER NOT NULL,
   title     TEXT,
-  hidden_at TEXT
+  hidden_at TEXT,
+  PRIMARY KEY (user_id, tmdb_id)
 );
 
 -- A-List / watch log. Powers usage counter, savings, and hit-rate.
@@ -126,6 +156,7 @@ CREATE TABLE IF NOT EXISTS hidden_movies (
 -- a new row as before.
 CREATE TABLE IF NOT EXISTS watched (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id       INTEGER NOT NULL DEFAULT 1,
   tmdb_id       INTEGER,
   title         TEXT,
   watched_at    TEXT,
@@ -142,11 +173,12 @@ CREATE TABLE IF NOT EXISTS watched (
 -- instantaneous ranking. Mark-seen's in_weekly4 stamp — and therefore the
 -- Stats hit-rate — depends on it.
 CREATE TABLE IF NOT EXISTS weekly4_log (
+  user_id       INTEGER NOT NULL DEFAULT 1,
   week_start    TEXT,      -- Friday that begins the A-List week (YYYY-MM-DD)
   tmdb_id       INTEGER,
   rank          INTEGER,   -- 1-4 position when first seen that week
   first_seen_at TEXT,
-  PRIMARY KEY (week_start, tmdb_id)
+  PRIMARY KEY (user_id, week_start, tmdb_id)
 );
 
 -- One row per movie per theatre per refresh: the shape of that theatre's lineup
@@ -348,10 +380,114 @@ function migrateWatchedDaily() {
       throw err;
     }
   }
-  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_watched_movie_day ON watched(tmdb_id, watched_date)');
+  // Once watched carries user_id, the per-user index (migrateUsers) replaces
+  // this one: two people may well see the same film on the same day.
+  if (!hasColumn('watched', 'user_id')) {
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_watched_movie_day ON watched(tmdb_id, watched_date)');
+  }
 }
 
 migrateWatchedDaily();
+
+// Settings that belong to each person rather than to the instance. Everything
+// else (refresh bookkeeping, Last chance tuning, the fallback window, the
+// good-match cutoff) stays shared and owner-set.
+export const USER_SETTING_KEYS = new Set([
+  'theatreId', 'theatreName', 'theatreSlug', 'extraTheatres', 'home',
+  'showtimeWindows', 'previewsMinutes',
+  'alistWeeklyLimit', 'alistMonthlyFee', 'avgTicketPrice',
+  'excludedGenres', 'excludedMpaa',
+  'weightPublic', 'weightTaste', 'preferImax',
+  'watchlistBoost', 'imaxBoost', 'windowFitBoost', 'urgencyBoost', 'urgencyWatchlistMultiplier',
+  'onboardingDone', 'everythingPlayingCollapsed',
+]);
+
+// Friends: every per-person table gains user_id (existing rows become user 1,
+// the owner) and its uniqueness becomes per user; the owner's per-user
+// settings are copied into user_settings (the shared rows are left in place,
+// so the pre-migration backup and an older build still read them). A copy of
+// the database is written next to it first. Idempotent: each piece checks
+// whether it is already done, and a fully migrated database writes nothing.
+function migrateUsers() {
+  const need = {
+    ratings: !hasColumn('ratings', 'user_id'),
+    unmatched: !hasColumn('unmatched_ratings', 'user_id'),
+    watchlist: !hasColumn('watchlist', 'user_id'),
+    hidden: !hasColumn('hidden_movies', 'user_id'),
+    watched: !hasColumn('watched', 'user_id'),
+    weekly4: !hasColumn('weekly4_log', 'user_id'),
+  };
+  const structural = Object.values(need).some(Boolean);
+  const keys = [...USER_SETTING_KEYS];
+  const marks = keys.map(() => '?').join(',');
+  const needSettings = !db.prepare('SELECT 1 FROM user_settings WHERE user_id = 1 LIMIT 1').get()
+    && Boolean(db.prepare(`SELECT 1 FROM settings WHERE key IN (${marks}) LIMIT 1`).get(...keys));
+  const needOwner = !db.prepare('SELECT 1 FROM users WHERE id = 1').get();
+  const needIndex = !db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'idx_watched_user_movie_day'").get();
+  if (!structural && !needSettings && !needOwner && !needIndex) return;
+
+  let backup = null;
+  if (structural || needSettings) {
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    backup = path.join(dataDir, `reelpicks.pre-users-${stamp}.db`);
+    db.exec(`VACUUM INTO '${backup.replace(/'/g, "''")}'`);
+  }
+
+  // Rebuild a table whose primary key has to change, keeping row order.
+  const rebuild = (table, createSql, cols) => {
+    db.exec(createSql.replace(`CREATE TABLE ${table} `, `CREATE TABLE ${table}_v2 `));
+    db.exec(`INSERT INTO ${table}_v2(user_id, ${cols}) SELECT 1, ${cols} FROM ${table} ORDER BY rowid`);
+    db.exec(`DROP TABLE ${table}`);
+    db.exec(`ALTER TABLE ${table}_v2 RENAME TO ${table}`);
+  };
+
+  db.exec('BEGIN');
+  try {
+    if (needOwner) {
+      db.prepare('INSERT INTO users(id, name, created_at) VALUES(1, ?, ?)')
+        .run(process.env.OWNER_NAME || 'Tawfiq', new Date().toISOString());
+    }
+    if (need.ratings) {
+      rebuild('ratings', `CREATE TABLE ratings (
+        user_id INTEGER NOT NULL DEFAULT 1, tmdb_id INTEGER NOT NULL, title TEXT, year INTEGER, rating REAL,
+        source TEXT, rated_at TEXT, created_at TEXT, PRIMARY KEY (user_id, tmdb_id))`,
+      'tmdb_id, title, year, rating, source, rated_at, created_at');
+    }
+    if (need.watchlist) {
+      rebuild('watchlist', `CREATE TABLE watchlist (
+        user_id INTEGER NOT NULL DEFAULT 1, tmdb_id INTEGER NOT NULL, added_at TEXT, PRIMARY KEY (user_id, tmdb_id))`,
+      'tmdb_id, added_at');
+    }
+    if (need.hidden) {
+      rebuild('hidden_movies', `CREATE TABLE hidden_movies (
+        user_id INTEGER NOT NULL DEFAULT 1, tmdb_id INTEGER NOT NULL, title TEXT, hidden_at TEXT, PRIMARY KEY (user_id, tmdb_id))`,
+      'tmdb_id, title, hidden_at');
+    }
+    if (need.weekly4) {
+      rebuild('weekly4_log', `CREATE TABLE weekly4_log (
+        user_id INTEGER NOT NULL DEFAULT 1, week_start TEXT, tmdb_id INTEGER, rank INTEGER, first_seen_at TEXT,
+        PRIMARY KEY (user_id, week_start, tmdb_id))`,
+      'week_start, tmdb_id, rank, first_seen_at');
+    }
+    if (need.unmatched) db.exec('ALTER TABLE unmatched_ratings ADD COLUMN user_id INTEGER NOT NULL DEFAULT 1');
+    if (need.watched) db.exec('ALTER TABLE watched ADD COLUMN user_id INTEGER NOT NULL DEFAULT 1');
+    if (needIndex) {
+      db.exec('DROP INDEX IF EXISTS idx_watched_movie_day');
+      db.exec('CREATE UNIQUE INDEX idx_watched_user_movie_day ON watched(user_id, tmdb_id, watched_date)');
+    }
+    if (needSettings) {
+      db.prepare(`INSERT OR IGNORE INTO user_settings(user_id, key, value)
+        SELECT 1, key, value FROM settings WHERE key IN (${marks})`).run(...keys);
+    }
+    db.exec('COMMIT');
+    if (backup) console.log(`[db] per-user data: existing rows are now the owner's (user 1) (backup: ${backup})`);
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+migrateUsers();
 
 // ---- low-level helpers -------------------------------------------------
 
