@@ -41,9 +41,10 @@ export async function render(root, params, ctx) {
     page.appendChild(tip);
   }
 
-  if (s.topGenres.length) page.appendChild(topList('Top genres', 'by number of ratings', s.topGenres, 'genres'));
-  if (s.topDirectors.length) page.appendChild(topList('Top directors', 'with 3 or more rated films', s.topDirectors, 'directors'));
-  if (s.topActors.length) page.appendChild(topList('Top actors', 'with 3 or more rated films', s.topActors, 'actors'));
+  const ranked = "ranked by films you've rated";
+  if (s.topGenres.length) page.appendChild(topList('Top genres', ranked, s.topGenres, 'genres'));
+  if (s.topDirectors.length) page.appendChild(topList('Top directors', ranked, s.topDirectors, 'directors'));
+  if (s.topActors.length) page.appendChild(topList('Top actors', ranked, s.topActors, 'actors'));
   // Imported films arrive with genres only; director and cast follow in the
   // background. Say so while it's happening, so a short list isn't a mystery.
   if (s.backfilling && s.detailsPending > 0) {
@@ -112,16 +113,19 @@ function bigStat(value, label, sub) {
   );
 }
 
+// One numbered row per entry: "2 films · 4.5★" (the user's own average).
 function barList(items, id) {
-  return h('div', { class: 'bar-list', id }, ...items.map((it) => h('div', { class: 'bar-row' },
+  return h('ol', { class: 'bar-list', id }, ...items.map((it, i) => h('li', { class: 'bar-row' },
+    h('span', { class: 'bar-rank', 'aria-hidden': 'true' }, String(i + 1)),
     h('span', { class: 'bar-name' }, it.name),
     makeStars({ value: it.avg, size: 14 }),
-    h('span', { class: 'bar-meta' }, `${it.avg.toFixed(1)} · ${it.n}×`),
+    h('span', { class: 'bar-meta' }, `${it.n} film${it.n === 1 ? '' : 's'} · ${it.avg.toFixed(1)}★`),
   )));
 }
 
 // A ranked list showing its first TOP rows, with "Show all (N)" underneath
-// to expand to the rest when there are more.
+// to expand to the rest when the server sent more (for people, that's only
+// those with 2+ films).
 const TOP = 10;
 function topList(title, sub, items, key) {
   const id = `top-${key}`;

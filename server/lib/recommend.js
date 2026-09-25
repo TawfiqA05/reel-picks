@@ -367,26 +367,42 @@ function byScore(a, b) {
   return b.final - a.final || (b.urgencyBoost?.points ?? 0) - (a.urgencyBoost?.points ?? 0);
 }
 
+// Stats' three rankings. Display only: they count films and average the
+// user's own ratings plainly, and never touch the (recency-weighted) taste
+// profile that scores the picks.
+const TOP_SHOWN = 10;
+const parseList = (v) => { try { return (typeof v === 'string' ? JSON.parse(v) : v) || []; } catch { return []; } };
+function ranking(rows, keysOf) {
+  const m = new Map();
+  for (const r of rows) {
+    for (const k of new Set(keysOf(r))) {
+      if (!k) continue;
+      const e = m.get(k) || { n: 0, sum: 0 };
+      e.n++;
+      e.sum += Number(r.rating) || 0;
+      m.set(k, e);
+    }
+  }
+  return [...m].map(([name, e]) => ({ name, n: e.n, avg: Math.round((e.sum / e.n) * 100) / 100 }))
+    .sort((a, b) => b.n - a.n || b.avg - a.avg || a.name.localeCompare(b.name));
+}
+// People: the top ten, plus everyone else with 2+ films for "Show all", so a
+// big import doesn't list hundreds of one-film names. Ranked by films, so the
+// 2+ people are always a prefix of the list.
+const forPeople = (list) => list.slice(0, Math.max(TOP_SHOWN, list.filter((d) => d.n >= 2).length));
+
 export function getProfileSummary() {
-  const profile = buildProfile(profileRows());
-  // Full lists, most-rated first, then by average. Stats shows the first ten
-  // and a "Show all".
-  const top = (obj) =>
-    Object.entries(obj)
-      .map(([k, v]) => ({ name: k, avg: Number(v.avg.toFixed(2)), n: v.n }))
-      .sort((a, b) => b.n - a.n || b.avg - a.avg);
-  const atLeast3 = (obj) => Object.fromEntries(Object.entries(obj).filter(([, v]) => v.n >= 3));
+  const rows = profileRows();
+  const profile = buildProfile(rows);
   return {
     count: profile.count,
     confidence: confidence(profile),
     overall: Number(profile.overall.toFixed(2)),
     lowData: profile.count < 10,
-    topGenres: top(profile.genre),
-    // Like genres, by number of rated films then average, but only people with
-    // at least three: one or two films say little about a director or an actor
-    // (and a big import would otherwise list thousands of one-film actors).
-    topDirectors: top(atLeast3(profile.director)),
-    topActors: top(atLeast3(profile.actor)),
+    // Ranked by films rated, then the user's average rating, then name.
+    topGenres: ranking(rows, (r) => parseList(r.genres)),
+    topDirectors: forPeople(ranking(rows, (r) => [r.director])),
+    topActors: forPeople(ranking(rows, (r) => parseList(r.cast))),
   };
 }
 
