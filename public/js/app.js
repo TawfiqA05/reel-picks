@@ -70,6 +70,7 @@ function parseHash() {
 function chromeEls() {
   return {
     theatre: document.querySelector('#theatre-name'),
+    userChip: document.querySelector('#user-chip'),
     settingsBtn: document.querySelector('#settings-btn'),
     refreshBtn: document.querySelector('#refresh-btn'),
     nav: document.querySelector('#bottom-nav'),
@@ -81,6 +82,13 @@ function renderChrome() {
   if (!els.theatre) return;
   const guest = Boolean(status?.guest);
   document.querySelector('.shell')?.classList.toggle('guest', guest);
+  // Who's signed in, beside Settings. The guest link has its own banner.
+  if (els.userChip) {
+    const name = !guest && status?.user?.name ? status.user.name : '';
+    els.userChip.textContent = name;
+    els.userChip.hidden = !name;
+    els.userChip.title = name ? `Signed in as ${name}` : '';
+  }
   // A friend can't force a refresh; the server would refuse it anyway.
   document.querySelector('.shell')?.classList.toggle('friend', !guest && status?.user?.isOwner === false);
 
@@ -215,6 +223,7 @@ function buildShell() {
         h('div', { class: 'header-actions' },
           h('a', { id: 'theatre-name', class: 'theatre-name', href: '#/settings' }, ''),
           h('button', { id: 'refresh-btn', class: 'icon-btn round', type: 'button', 'aria-label': 'Refresh showtimes and scores', title: 'Refresh', onClick: doRefresh }, icon('refresh', { size: 20 })),
+          h('span', { id: 'user-chip', class: 't-chip user-chip', hidden: true }),
           h('a', { id: 'settings-btn', class: 'icon-btn round', href: '#/settings', 'aria-label': 'Settings', title: 'Settings' },
             icon('settings', { size: 20 }), h('span', { class: 'attn-dot', 'aria-hidden': 'true' })),
         ),

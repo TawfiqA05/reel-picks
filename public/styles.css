@@ -523,6 +523,8 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 }
 .shell.guest .app-header .icon-btn { display: none; }
 .shell.friend #refresh-btn { display: none; }
+.user-chip { color: var(--text-2); max-width: 10em; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
+.user-chip[hidden] { display: none; }
 .shell.guest .nav-item[data-name="rate"],
 .shell.guest .nav-item[data-name="watchlist"],
 .shell.guest .nav-item[data-name="stats"],
