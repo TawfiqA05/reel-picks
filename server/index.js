@@ -8,6 +8,7 @@ import {
   isGuest, guestAllowed, tokenMatches, ownerCookieName, ownerCookieValue, ownerCookieMaxAgeMs,
 } from './lib/guest.js';
 import { refreshAll, shouldAutoRefresh, state as refreshState } from './lib/refresh.js';
+import { runAs, OWNER_ID } from './lib/user.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 
@@ -38,6 +39,13 @@ app.use('/api', (req, res, next) => {
 });
 
 app.use(express.json({ limit: '20mb' })); // large enough for CSV ratings uploads
+
+// Every API request runs as one user (lib/user.js): the owner, and the guest
+// link reads the owner's picks. Bound after the body parser, whose stream
+// callbacks would otherwise run outside the request's context.
+app.use('/api', (req, res, next) => {
+  runAs(OWNER_ID, next, { guest: isGuest(req) });
+});
 app.use('/api', router);
 
 const publicDir = fileURLToPath(new URL('../public/', import.meta.url));

@@ -15,6 +15,7 @@ import { all, get, run, getSettings, updateSettings, DEFAULT_SETTINGS } from '..
 import { upsertLightMovie } from './movies.js';
 import { upsertRating } from './ratings.js';
 import { restoreWatched } from './alist.js';
+import { currentUserId } from './user.js';
 
 export const STATE_VERSION = 1;
 
@@ -25,6 +26,7 @@ const settingKeys = () => Object.keys(DEFAULT_SETTINGS).filter((k) => !SKIP_SETT
 
 export function exportState() {
   const s = getSettings();
+  const uid = currentUserId();
   const settings = {};
   for (const k of settingKeys()) settings[k] = s[k];
   return {
@@ -33,12 +35,13 @@ export function exportState() {
     exportedAt: new Date().toISOString(),
     profile: {
       settings,
-      ratings: all('SELECT tmdb_id, title, year, rating, source, rated_at FROM ratings'),
+      ratings: all('SELECT tmdb_id, title, year, rating, source, rated_at FROM ratings WHERE user_id = ?', uid),
       watchlist: all(
         `SELECT w.tmdb_id, w.added_at, m.title, m.year FROM watchlist w
-          LEFT JOIN movies m ON m.tmdb_id = w.tmdb_id`,
+          LEFT JOIN movies m ON m.tmdb_id = w.tmdb_id WHERE w.user_id = ?`,
+        uid,
       ),
-      watched: all('SELECT tmdb_id, title, watched_at, in_weekly4, ticket_price FROM watched'),
+      watched: all('SELECT tmdb_id, title, watched_at, in_weekly4, ticket_price FROM watched WHERE user_id = ?', uid),
       // Every match row travels: the table IS the decision record (manual
       // repoints, ignores, review keeps), and automatic rows are harmless —
       // they just save the new instance re-deriving the same answer.
@@ -46,7 +49,7 @@ export function exportState() {
       // Added after v1 shipped. Optional on import, so the version stays 1 and
       // an older export (no `hidden` key) still imports, and an older instance
       // just ignores the key.
-      hidden: all('SELECT tmdb_id, title, hidden_at FROM hidden_movies'),
+      hidden: all('SELECT tmdb_id, title, hidden_at FROM hidden_movies WHERE user_id = ?', uid),
     },
   };
 }
@@ -102,8 +105,8 @@ export function importState(doc) {
     if (!Number.isInteger(w.tmdb_id) || w.tmdb_id <= 0) continue;
     upsertLightMovie({ tmdb_id: w.tmdb_id, title: w.title, year: w.year });
     run(
-      'INSERT INTO watchlist(tmdb_id, added_at) VALUES(?, ?) ON CONFLICT(user_id, tmdb_id) DO NOTHING',
-      w.tmdb_id, w.added_at || new Date().toISOString(),
+      'INSERT INTO watchlist(user_id, tmdb_id, added_at) VALUES(?, ?, ?) ON CONFLICT(user_id, tmdb_id) DO NOTHING',
+      currentUserId(), w.tmdb_id, w.added_at || new Date().toISOString(),
     );
     out.watchlist++;
   }
@@ -144,8 +147,8 @@ export function importState(doc) {
     const id = Number(m?.tmdb_id);
     if (!Number.isInteger(id) || id <= 0) continue;
     const res = run(
-      'INSERT INTO hidden_movies(tmdb_id, title, hidden_at) VALUES(?,?,?) ON CONFLICT(user_id, tmdb_id) DO NOTHING',
-      id, String(m.title || '').slice(0, 300), m.hidden_at || new Date().toISOString(),
+      'INSERT INTO hidden_movies(user_id, tmdb_id, title, hidden_at) VALUES(?,?,?,?) ON CONFLICT(user_id, tmdb_id) DO NOTHING',
+      currentUserId(), id, String(m.title || '').slice(0, 300), m.hidden_at || new Date().toISOString(),
     );
     if (res?.changes) out.hidden++;
   }

@@ -2,6 +2,9 @@
 // (weeks reset Friday), and computes money saved vs the monthly fee.
 import { run, all, getSettings } from '../db.js';
 import { weekStartFriday, localYMD, round2 } from './util.js';
+import { currentUserId } from './user.js';
+
+// Everything here is the current user's log (lib/user.js).
 
 // At most one row per movie per local calendar day: the insert lands on the
 // unique (tmdb_id, watched_date) index, so a double-press can't double-count.
@@ -9,15 +12,15 @@ import { weekStartFriday, localYMD, round2 } from './util.js';
 export function logWatched({ tmdb_id, title, in_weekly4 = false }) {
   const settings = getSettings();
   run(
-    `INSERT INTO watched(tmdb_id, title, watched_at, week_start, watched_date, in_weekly4, ticket_price)
-      VALUES(?,?,?,?,?,?,?) ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
-    tmdb_id, title, new Date().toISOString(), weekStartFriday(), localYMD(), in_weekly4, Number(settings.avgTicketPrice) || 0,
+    `INSERT INTO watched(user_id, tmdb_id, title, watched_at, week_start, watched_date, in_weekly4, ticket_price)
+      VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
+    currentUserId(), tmdb_id, title, new Date().toISOString(), weekStartFriday(), localYMD(), in_weekly4, Number(settings.avgTicketPrice) || 0,
   );
   return getWeek();
 }
 
 export function undoWatched(id) {
-  run('DELETE FROM watched WHERE id = ?', id);
+  run('DELETE FROM watched WHERE id = ? AND user_id = ?', id, currentUserId());
   return getWeek();
 }
 
@@ -29,16 +32,16 @@ export function restoreWatched({ tmdb_id, title, watched_at, in_weekly4 = false,
   const when = watched_at || new Date().toISOString();
   const settings = getSettings();
   return run(
-    `INSERT INTO watched(tmdb_id, title, watched_at, week_start, watched_date, in_weekly4, ticket_price)
-      VALUES(?,?,?,?,?,?,?) ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
-    tmdb_id, title, when, weekStartFriday(new Date(when)), localYMD(new Date(when)), in_weekly4,
+    `INSERT INTO watched(user_id, tmdb_id, title, watched_at, week_start, watched_date, in_weekly4, ticket_price)
+      VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
+    currentUserId(), tmdb_id, title, when, weekStartFriday(new Date(when)), localYMD(new Date(when)), in_weekly4,
     price ?? Number(settings.avgTicketPrice) ?? 0,
   ).changes > 0;
 }
 
 export function savings(settings = getSettings()) {
   const month = new Date().toISOString().slice(0, 7); // YYYY-MM (UTC-ish, fine here)
-  const rows = all("SELECT ticket_price FROM watched WHERE substr(watched_at, 1, 7) = ?", month);
+  const rows = all('SELECT ticket_price FROM watched WHERE user_id = ? AND substr(watched_at, 1, 7) = ?', currentUserId(), month);
   const ticketValue = rows.reduce((s, r) => s + (Number(r.ticket_price) || Number(settings.avgTicketPrice) || 0), 0);
   const fee = Number(settings.alistMonthlyFee) || 0;
   return {
@@ -54,8 +57,8 @@ export function getWeek() {
   const week = weekStartFriday();
   const rows = all(
     `SELECT w.*, m.poster FROM watched w LEFT JOIN movies m ON m.tmdb_id = w.tmdb_id
-      WHERE w.week_start = ? ORDER BY w.watched_at DESC`,
-    week,
+      WHERE w.user_id = ? AND w.week_start = ? ORDER BY w.watched_at DESC`,
+    currentUserId(), week,
   );
   const limit = Number(settings.alistWeeklyLimit) || 4;
   return {

@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { currentUserId } from './lib/user.js';
 
 // DATA_DIR lets the SQLite database live on a persistent volume in production
 // (e.g. a mounted /data). Locally it defaults to ./data next to the app.
@@ -572,17 +573,35 @@ export const DEFAULT_SETTINGS = {
   lastRefreshLog: null,     // JSON summary of last refresh
 };
 
-export function getSetting(key) {
-  const row = get('SELECT value FROM settings WHERE key = ?', key);
+// Per-user keys (USER_SETTING_KEYS) live in user_settings for the current
+// user, or for `userId` when a caller names one; every other key is shared and
+// lives in settings. Reading a per-user key with no user in context throws
+// (see lib/user.js) rather than quietly returning the owner's value.
+const parse = (row, key) => {
   if (row === undefined) return structuredCloneish(DEFAULT_SETTINGS[key]);
   try {
     return JSON.parse(row.value);
   } catch {
     return row.value;
   }
+};
+
+export function getSetting(key, { userId } = {}) {
+  if (USER_SETTING_KEYS.has(key)) {
+    return parse(get('SELECT value FROM user_settings WHERE user_id = ? AND key = ?', userId ?? currentUserId(), key), key);
+  }
+  return parse(get('SELECT value FROM settings WHERE key = ?', key), key);
 }
 
-export function setSetting(key, value) {
+export function setSetting(key, value, { userId } = {}) {
+  if (USER_SETTING_KEYS.has(key)) {
+    run(
+      `INSERT INTO user_settings(user_id, key, value) VALUES(?, ?, ?)
+        ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value`,
+      userId ?? currentUserId(), key, JSON.stringify(value),
+    );
+    return value;
+  }
   run(
     'INSERT INTO settings(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
     key,
@@ -591,17 +610,27 @@ export function setSetting(key, value) {
   return value;
 }
 
-export function getSettings() {
+// One user's view of the settings: their own per-user keys over the shared ones.
+export function getSettings({ userId } = {}) {
+  const uid = userId ?? currentUserId();
   const out = {};
-  for (const key of Object.keys(DEFAULT_SETTINGS)) out[key] = getSetting(key);
+  for (const key of Object.keys(DEFAULT_SETTINGS)) out[key] = getSetting(key, { userId: uid });
   return out;
 }
 
-export function updateSettings(patch) {
+// Only the shared keys, for background work that belongs to no one user.
+export function getSharedSettings() {
+  const out = {};
+  for (const key of Object.keys(DEFAULT_SETTINGS)) if (!USER_SETTING_KEYS.has(key)) out[key] = getSetting(key);
+  return out;
+}
+
+export function updateSettings(patch, { userId } = {}) {
+  const uid = userId ?? currentUserId();
   for (const [k, v] of Object.entries(patch)) {
-    if (k in DEFAULT_SETTINGS) setSetting(k, v);
+    if (k in DEFAULT_SETTINGS) setSetting(k, v, { userId: uid });
   }
-  return getSettings();
+  return getSettings({ userId: uid });
 }
 
 function structuredCloneish(v) {

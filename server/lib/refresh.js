@@ -10,7 +10,8 @@
 // for 24h; a user-initiated refresh re-pulls only today and tomorrow (see
 // FRESH_DAYS), so a same-day refresh costs 2 calls per theatre. The per-theatre
 // call count is written to the refresh log.
-import { run, all, get, getSettings, setSetting, getSetting } from '../db.js';
+import { run, all, get, getSettings, getSharedSettings, setSetting, getSetting } from '../db.js';
+import { runSystem, OWNER_ID } from './user.js';
 import * as amc from './amc.js';
 import * as tmdb from './tmdb.js';
 import * as omdb from './omdb.js';
@@ -26,7 +27,11 @@ import { isSettling } from './scoring.js';
 import { computeHorizon, snapshotLineup } from './leaving.js';
 import { followedTheatres, homeBase, theatreDistance, readDistance, shortName } from './theatres.js';
 
-export const state = { running: false, lastLog: null };
+export const state = { running: false, lastLog: null, lastRequest: null };
+
+// The owner's settings, for the parts of a refresh that are the owner's call
+// (resolving the primary theatre by name on first run, home for drive times).
+const ownerSettings = () => getSettings({ userId: OWNER_ID });
 
 // A user-initiated refresh (`force`) re-pulls this many days from today even
 // when they're cached, so a cancelled or added showing shows up the same day.
@@ -225,7 +230,7 @@ async function resolveUnmatchedRatings(log, limit = 25) {
         upsertLightMovie(found.result);
         upsertRating({
           tmdb_id: found.tmdb_id, title: found.result.title, year: found.result.year,
-          rating: r.rating, source: r.source, rated_at: r.rated_at,
+          rating: r.rating, source: r.source, rated_at: r.rated_at, userId: r.user_id,
         });
         run('DELETE FROM unmatched_ratings WHERE id = ?', r.id);
       }
@@ -240,7 +245,7 @@ async function resolveUnmatchedRatings(log, limit = 25) {
 async function enrichRatedMovies(log, limit = 12) {
   if (!tmdb.tmdbConfigured()) return;
   const rows = all(
-    `SELECT r.tmdb_id FROM ratings r JOIN movies m ON m.tmdb_id = r.tmdb_id
+    `SELECT DISTINCT r.tmdb_id FROM ratings r JOIN movies m ON m.tmdb_id = r.tmdb_id
       WHERE m.details_at IS NULL LIMIT ?`,
     limit,
   );
@@ -257,17 +262,17 @@ async function enrichRatedMovies(log, limit = 12) {
 // return every followed theatre. Returns [] when AMC isn't usable.
 async function resolveTheatres(log) {
   if (!amc.amcConfigured()) return [];
-  const settings = getSettings();
+  const settings = ownerSettings();
   try {
     if (!settings.theatreId && settings.theatreName) {
       const found = await amc.searchTheatres(settings.theatreName);
       if (found.length) {
-        setSetting('theatreId', found[0].id);
-        setSetting('theatreSlug', found[0].slug || '');
-        setSetting('theatreName', found[0].name);
+        setSetting('theatreId', found[0].id, { userId: OWNER_ID });
+        setSetting('theatreSlug', found[0].slug || '', { userId: OWNER_ID });
+        setSetting('theatreName', found[0].name, { userId: OWNER_ID });
       }
     }
-    const theatres = followedTheatres(getSettings()).filter((t) => t.id);
+    const theatres = followedTheatres(ownerSettings()).filter((t) => t.id);
     for (const t of theatres) t.record = (await amc.getTheatre(t.id)) || null;
     return theatres;
   } catch (e) {
@@ -279,7 +284,19 @@ async function resolveTheatres(log) {
   }
 }
 
-export async function refreshAll({ force = false, days = 14 } = {}) {
+// The refresh belongs to no one user: it runs in the system context (per-user
+// reads throw there, see lib/user.js) whoever's request started it.
+// RP_DISABLE_REFRESH=1 turns it into a no-op that only records the request,
+// for test servers that must never call AMC.
+export function refreshAll(opts = {}) {
+  state.lastRequest = { force: Boolean(opts.force), at: new Date().toISOString(), reason: opts.reason || null };
+  if (process.env.RP_DISABLE_REFRESH === '1') {
+    return Promise.resolve({ skipped: 'disabled', ...(state.lastLog || {}) });
+  }
+  return runSystem(() => refreshAllInner(opts));
+}
+
+async function refreshAllInner({ force = false, days = 14 } = {}) {
   // A refresh requested mid-run (e.g. following a second theatre while the
   // first is still loading) runs again as soon as this one finishes, instead
   // of being dropped — otherwise the second theatre would have no showtimes
@@ -296,7 +313,8 @@ export async function refreshAll({ force = false, days = 14 } = {}) {
   const start = new Date();
   const log = { startedAt: start.toISOString(), finishedAt: null, sources: {}, counts: {}, errors: [] };
   try {
-    const settings = getSettings();
+    const settings = getSharedSettings();
+    const owner = ownerSettings();
     if (!tmdb.tmdbConfigured()) log.errors.push('TMDB_API_KEY not set. Posters, metadata and matching are off.');
 
     // 1. Resolve the followed theatres (primary first).
@@ -392,7 +410,7 @@ export async function refreshAll({ force = false, days = 14 } = {}) {
       }
 
       // Drive time from home, once per theatre (cached for a year).
-      const home = homeBase(getSettings());
+      const home = homeBase(ownerSettings());
       for (const t of theatres) {
         await safe(theatreDistance(t.id, home), (e) => log.errors.push(`Drive time ${t.short}: ${e.message}`));
       }
@@ -498,10 +516,10 @@ export async function refreshAll({ force = false, days = 14 } = {}) {
     //    schedule AMC hasn't posted yet, so it's logged every refresh to be
     //    sanity-checked against the theatre's site.
     const density = Number(settings.lastChanceDensity) || 0.5;
-    const home = homeBase(getSettings());
+    const home = homeBase(ownerSettings());
     const snapTheatres = theatres.length
       ? theatres
-      : [{ id: String(getSetting('theatreId') || ''), name: settings.theatreName, short: shortName(settings.theatreName), isPrimary: true }];
+      : [{ id: String(owner.theatreId || ''), name: owner.theatreName, short: shortName(owner.theatreName), isPrimary: true }];
     log.horizons = [];
     for (const t of snapTheatres) {
       const info = computeHorizon({ today, density, theatreId: t.id });
@@ -558,7 +576,7 @@ export async function refreshAll({ force = false, days = 14 } = {}) {
     state.running = false;
     const queued = state.rerun;
     state.rerun = null;
-    if (queued) refreshAll(queued).catch((e) => console.error('[refresh rerun]', e.message));
+    if (queued) runSystem(() => refreshAllInner(queued)).catch((e) => console.error('[refresh rerun]', e.message));
   }
 }
 
@@ -579,7 +597,7 @@ export async function enrichMissingDetails({ max = 400 } = {}) {
   try {
     if (!tmdb.tmdbConfigured()) return { enriched: 0 };
     const rows = all(
-      `SELECT r.tmdb_id FROM ratings r JOIN movies m ON m.tmdb_id = r.tmdb_id
+      `SELECT DISTINCT r.tmdb_id FROM ratings r JOIN movies m ON m.tmdb_id = r.tmdb_id
         WHERE m.details_at IS NULL LIMIT ?`,
       max,
     );
@@ -622,7 +640,7 @@ export async function drainUnmatched({ max = 800 } = {}) {
             upsertLightMovie(found.result);
             upsertRating({
               tmdb_id: found.tmdb_id, title: found.result.title, year: found.result.year,
-              rating: r.rating, source: r.source, rated_at: r.rated_at,
+              rating: r.rating, source: r.source, rated_at: r.rated_at, userId: r.user_id,
             });
             run('DELETE FROM unmatched_ratings WHERE id = ?', r.id);
             matched++;

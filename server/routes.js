@@ -30,6 +30,7 @@ import { geocode, reverseGeocode } from './lib/geocode.js';
 import { bustCache } from './lib/cache.js';
 import { localYMD, addDays, csvField } from './lib/util.js';
 import { isGuest, ownerName } from './lib/guest.js';
+import { currentUserId } from './lib/user.js';
 
 const router = Router();
 const h = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -108,7 +109,7 @@ router.get('/status', (req, res) => {
       showtimes: get('SELECT COUNT(*) AS n FROM showtimes').n,
       ratings: ratingsCount(),
       unmatched: unmatchedCount(),
-      watchlist: get('SELECT COUNT(*) AS n FROM watchlist').n,
+      watchlist: get('SELECT COUNT(*) AS n FROM watchlist WHERE user_id = ?', currentUserId()).n,
       // AMC titles with upcoming showtimes and no TMDB match (not ignored):
       // invisible to ranking/runway until matched, so the UI nags about them.
       unmatchedAmc: unmatchedTitles(localYMD()).unmatched.length,
@@ -442,7 +443,7 @@ router.get('/ratings/search', h(async (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q) return res.json({ results: [] });
   const results = await tmdb.liveSearch(q);
-  const mine = new Map(all('SELECT tmdb_id, rating FROM ratings').map((r) => [r.tmdb_id, r.rating]));
+  const mine = new Map(all('SELECT tmdb_id, rating FROM ratings WHERE user_id = ?', currentUserId()).map((r) => [r.tmdb_id, r.rating]));
   res.json({ results: results.map((r) => ({ ...r, myRating: mine.get(r.tmdb_id) ?? null })) });
 }));
 
@@ -486,7 +487,8 @@ router.post('/onboarding/done', (req, res) => {
 
 router.get('/watchlist', (req, res) => {
   const rows = all(
-    'SELECT m.* FROM watchlist w JOIN movies m ON m.tmdb_id = w.tmdb_id ORDER BY w.added_at DESC',
+    'SELECT m.* FROM watchlist w JOIN movies m ON m.tmdb_id = w.tmdb_id WHERE w.user_id = ? ORDER BY w.added_at DESC',
+    currentUserId(),
   ).map(hydrate);
   res.json({ movies: rows.map(card) });
 });
@@ -494,12 +496,13 @@ router.get('/watchlist', (req, res) => {
 router.post('/watchlist/toggle', (req, res) => {
   const { tmdb_id } = req.body || {};
   if (!tmdb_id) return res.status(400).json({ error: 'tmdb_id required.' });
-  const exists = get('SELECT tmdb_id FROM watchlist WHERE tmdb_id = ?', tmdb_id);
+  const uid = currentUserId();
+  const exists = get('SELECT tmdb_id FROM watchlist WHERE user_id = ? AND tmdb_id = ?', uid, tmdb_id);
   if (exists) {
-    run('DELETE FROM watchlist WHERE tmdb_id = ?', tmdb_id);
+    run('DELETE FROM watchlist WHERE user_id = ? AND tmdb_id = ?', uid, tmdb_id);
     return res.json({ watchlisted: false });
   }
-  run('INSERT INTO watchlist(tmdb_id, added_at) VALUES(?, ?)', tmdb_id, new Date().toISOString());
+  run('INSERT INTO watchlist(user_id, tmdb_id, added_at) VALUES(?, ?, ?)', uid, tmdb_id, new Date().toISOString());
   res.json({ watchlisted: true });
 });
 
@@ -508,7 +511,7 @@ router.post('/watchlist/toggle', (req, res) => {
 // guard in index.js turns a guest away before the handler runs.
 
 router.get('/hidden', (req, res) => {
-  res.json({ movies: all('SELECT tmdb_id, title, hidden_at FROM hidden_movies ORDER BY hidden_at DESC') });
+  res.json({ movies: all('SELECT tmdb_id, title, hidden_at FROM hidden_movies WHERE user_id = ? ORDER BY hidden_at DESC', currentUserId()) });
 });
 
 router.post('/hidden', (req, res) => {
@@ -517,9 +520,9 @@ router.post('/hidden', (req, res) => {
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'tmdb_id required.' });
   const name = String(title || get('SELECT title FROM movies WHERE tmdb_id = ?', id)?.title || '').slice(0, 300);
   run(
-    `INSERT INTO hidden_movies(tmdb_id, title, hidden_at) VALUES(?,?,?)
+    `INSERT INTO hidden_movies(user_id, tmdb_id, title, hidden_at) VALUES(?,?,?,?)
       ON CONFLICT(user_id, tmdb_id) DO UPDATE SET title = excluded.title`,
-    id, name, new Date().toISOString(),
+    currentUserId(), id, name, new Date().toISOString(),
   );
   res.json({ hidden: true, tmdb_id: id });
 });
@@ -527,7 +530,7 @@ router.post('/hidden', (req, res) => {
 router.delete('/hidden/:id', (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Bad id.' });
-  run('DELETE FROM hidden_movies WHERE tmdb_id = ?', id);
+  run('DELETE FROM hidden_movies WHERE user_id = ? AND tmdb_id = ?', currentUserId(), id);
   res.json({ hidden: false, tmdb_id: id });
 });
 
@@ -566,8 +569,9 @@ router.delete('/watched/:id', (req, res) => res.json(undoWatched(Number(req.para
 router.get('/stats', (req, res) => res.json(getStats()));
 
 router.get('/export', (req, res) => {
-  const ratings = all('SELECT tmdb_id, title, year, rating, source, rated_at FROM ratings');
-  const watched = all('SELECT tmdb_id, title, watched_at, in_weekly4, ticket_price FROM watched');
+  const uid = currentUserId();
+  const ratings = all('SELECT tmdb_id, title, year, rating, source, rated_at FROM ratings WHERE user_id = ?', uid);
+  const watched = all('SELECT tmdb_id, title, watched_at, in_weekly4, ticket_price FROM watched WHERE user_id = ?', uid);
   const lines = ['Type,tmdb_id,Title,Year,Rating,Source,RatedAt,WatchedAt,InWeekly4,Price'];
   for (const r of ratings) {
     lines.push(['rating', r.tmdb_id, csvField(r.title), r.year ?? '', r.rating, r.source, r.rated_at ?? '', '', '', ''].join(','));

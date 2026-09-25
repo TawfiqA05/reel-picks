@@ -20,19 +20,23 @@ import { followedTheatres, homeBase, readDistance } from './theatres.js';
 import { computeRunway, runwayDates, handoffLine, goneAfterPhrase } from './runway.js';
 import { localYMD, addDays, timeLabel, weekStartFriday } from './util.js';
 import { ownerName } from './guest.js';
+import { currentUserId } from './user.js';
 
+// Everything below is for the user in context (lib/user.js): their settings,
+// ratings, watchlist, watch log and hidden films. The guest link runs as the
+// owner. Movies, showtimes and scores are shared.
 function watchlistSet() {
-  return new Set(all('SELECT tmdb_id FROM watchlist').map((r) => r.tmdb_id));
+  return new Set(all('SELECT tmdb_id FROM watchlist WHERE user_id = ?', currentUserId()).map((r) => r.tmdb_id));
 }
 
 function watchedSet() {
-  return new Set(all('SELECT DISTINCT tmdb_id FROM watched').map((r) => r.tmdb_id));
+  return new Set(all('SELECT DISTINCT tmdb_id FROM watched WHERE user_id = ?', currentUserId()).map((r) => r.tmdb_id));
 }
 
 // Films marked "Not for me". Filters recommendations only; scores and the
 // taste profile never see it.
 function hiddenSet() {
-  return new Set(all('SELECT tmdb_id FROM hidden_movies').map((r) => r.tmdb_id));
+  return new Set(all('SELECT tmdb_id FROM hidden_movies WHERE user_id = ?', currentUserId()).map((r) => r.tmdb_id));
 }
 
 // guest: the read-only shared link. Drive times/distances are dropped at the
@@ -76,7 +80,7 @@ function buildCtx({ guest = false } = {}) {
     profile,
     conf,
     rated: ratedIds(),
-    ratings: new Map(all('SELECT tmdb_id, rating FROM ratings').map((r) => [r.tmdb_id, r.rating])),
+    ratings: new Map(all('SELECT tmdb_id, rating FROM ratings WHERE user_id = ?', currentUserId()).map((r) => [r.tmdb_id, r.rating])),
     watch: watchlistSet(),
     watched: watchedSet(),
     hidden: hiddenSet(),
@@ -378,18 +382,19 @@ export function theatreList(ctx) {
 // read this log, not a recomputation. Guest views never write.
 function recordWeekly4(weekly4) {
   const week = weekStartFriday();
+  const uid = currentUserId();
   weekly4.forEach((e, i) => {
     run(
-      `INSERT INTO weekly4_log(week_start, tmdb_id, rank, first_seen_at)
-        VALUES(?,?,?,?) ON CONFLICT(user_id, week_start, tmdb_id) DO NOTHING`,
-      week, e.tmdb_id, i + 1, new Date().toISOString(),
+      `INSERT INTO weekly4_log(user_id, week_start, tmdb_id, rank, first_seen_at)
+        VALUES(?,?,?,?,?) ON CONFLICT(user_id, week_start, tmdb_id) DO NOTHING`,
+      uid, week, e.tmdb_id, i + 1, new Date().toISOString(),
     );
   });
 }
 
 // Was this movie among the weekly 4 at any point in the given A-List week?
 export function wasWeekly4Pick(tmdbId, week = weekStartFriday()) {
-  return Boolean(get('SELECT 1 AS x FROM weekly4_log WHERE week_start = ? AND tmdb_id = ?', week, tmdbId));
+  return Boolean(get('SELECT 1 AS x FROM weekly4_log WHERE user_id = ? AND week_start = ? AND tmdb_id = ?', currentUserId(), week, tmdbId));
 }
 
 export function getRecommendations({ guest = false } = {}) {

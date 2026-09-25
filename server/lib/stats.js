@@ -3,18 +3,21 @@ import { all, get, getSettings } from '../db.js';
 import { mean, round2 } from './util.js';
 import { getProfileSummary } from './recommend.js';
 import { savings } from './alist.js';
+import { currentUserId } from './user.js';
 
+// The current user's stats (lib/user.js).
 export function getStats() {
   const settings = getSettings();
+  const uid = currentUserId();
   const year = new Date().getFullYear();
 
   const seenThisYear = get(
-    "SELECT COUNT(DISTINCT tmdb_id) AS n FROM watched WHERE substr(watched_at, 1, 4) = ?",
-    String(year),
+    'SELECT COUNT(DISTINCT tmdb_id) AS n FROM watched WHERE user_id = ? AND substr(watched_at, 1, 4) = ?',
+    uid, String(year),
   ).n;
-  const seenAll = get('SELECT COUNT(*) AS n FROM watched').n;
+  const seenAll = get('SELECT COUNT(*) AS n FROM watched WHERE user_id = ?', uid).n;
 
-  const ratings = all('SELECT rating FROM ratings').map((r) => r.rating);
+  const ratings = all('SELECT rating FROM ratings WHERE user_id = ?', uid).map((r) => r.rating);
   const avgRating = ratings.length ? round2(mean(ratings)) : null;
 
   const profile = getProfileSummary();
@@ -23,8 +26,9 @@ export function getStats() {
   // did they rate them?
   const picks = all(
     `SELECT w.tmdb_id, r.rating FROM watched w
-       LEFT JOIN ratings r ON r.tmdb_id = w.tmdb_id
-      WHERE w.in_weekly4 = 1`,
+       LEFT JOIN ratings r ON r.tmdb_id = w.tmdb_id AND r.user_id = w.user_id
+      WHERE w.user_id = ? AND w.in_weekly4 = 1`,
+    uid,
   );
   const ratedPicks = picks.filter((p) => p.rating != null);
   const pickAvg = ratedPicks.length ? round2(mean(ratedPicks.map((p) => p.rating))) : null;
