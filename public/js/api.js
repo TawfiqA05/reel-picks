@@ -54,6 +54,7 @@ export const api = {
   undoWatched: (id) => req('DELETE', '/watched/' + id),
 
   stats: () => req('GET', '/stats'),
+  statsGroup: (kind, name) => req('GET', `/stats/group?kind=${encodeURIComponent(kind)}&name=${encodeURIComponent(name)}`),
 
   friends: () => req('GET', '/friends'),
   addFriend: (name) => req('POST', '/friends', { name }),

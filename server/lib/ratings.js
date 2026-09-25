@@ -58,6 +58,18 @@ export function profileRows() {
   );
 }
 
+// Rows for the Stats rankings and their drill-down sheets: the same rated
+// films as profileRows() (same join, same user), plus what a film list shows.
+export function statsRows() {
+  return all(
+    `SELECT r.tmdb_id, r.rating, COALESCE(NULLIF(m.title, ''), r.title) AS title, COALESCE(m.year, r.year) AS year,
+            m.poster, m.genres, m.director, m.cast
+       FROM ratings r JOIN movies m ON m.tmdb_id = r.tmdb_id
+      WHERE r.user_id = ?`,
+    currentUserId(),
+  );
+}
+
 export function ratingsCount() {
   return get('SELECT COUNT(*) AS n FROM ratings WHERE user_id = ?', currentUserId()).n;
 }

@@ -42,9 +42,9 @@ export async function render(root, params, ctx) {
   }
 
   const ranked = "ranked by films you've rated";
-  if (s.topGenres.length) page.appendChild(topList('Top genres', ranked, s.topGenres, 'genres'));
-  if (s.topDirectors.length) page.appendChild(topList('Top directors', ranked, s.topDirectors, 'directors'));
-  if (s.topActors.length) page.appendChild(topList('Top actors', ranked, s.topActors, 'actors'));
+  if (s.topGenres.length) page.appendChild(topList('Top genres', ranked, s.topGenres, 'genre'));
+  if (s.topDirectors.length) page.appendChild(topList('Top directors', ranked, s.topDirectors, 'director'));
+  if (s.topActors.length) page.appendChild(topList('Top actors', ranked, s.topActors, 'actor'));
   // Imported films arrive with genres only; director and cast follow in the
   // background. Say so while it's happening, so a short list isn't a mystery.
   if (s.backfilling && s.detailsPending > 0) {
@@ -113,14 +113,62 @@ function bigStat(value, label, sub) {
   );
 }
 
+const filmsLabel = (n, avg) => `${n} film${n === 1 ? '' : 's'} · ${avg.toFixed(1)}★`;
+
 // One numbered row per entry: "2 films · 4.5★" (the user's own average).
-function barList(items, id) {
-  return h('ol', { class: 'bar-list', id }, ...items.map((it, i) => h('li', { class: 'bar-row' },
-    h('span', { class: 'bar-rank', 'aria-hidden': 'true' }, String(i + 1)),
-    h('span', { class: 'bar-name' }, it.name),
-    makeStars({ value: it.avg, size: 14 }),
-    h('span', { class: 'bar-meta' }, `${it.n} film${it.n === 1 ? '' : 's'} · ${it.avg.toFixed(1)}★`),
-  )));
+// Each row is a button that opens the films behind it.
+function barList(items, id, kind) {
+  return h('ol', { class: 'bar-list', id }, ...items.map((it, i) => {
+    const btn = h('button', {
+      class: 'bar-row', type: 'button', 'aria-haspopup': 'dialog',
+      'aria-label': `${i + 1}. ${it.name}: ${it.n} film${it.n === 1 ? '' : 's'}, average ${it.avg.toFixed(1)} stars. Show the films`,
+    },
+      h('span', { class: 'bar-rank', 'aria-hidden': 'true' }, String(i + 1)),
+      h('span', { class: 'bar-name' }, it.name),
+      makeStars({ value: it.avg, size: 14 }),
+      h('span', { class: 'bar-meta' }, filmsLabel(it.n, it.avg)),
+      icon('chevronRight', { size: 16, cls: 'row-chevron' }),
+    );
+    btn.addEventListener('click', () => openGroup(kind, it));
+    return h('li', { class: 'bar-item' }, btn);
+  }));
+}
+
+// A small TMDB thumbnail: the list only ever shows 40px posters.
+const thumb = (url) => (url ? url.replace(/\/w\d+\//, '/w92/') : null);
+
+// The sheet for one row: every film the user rated in that genre / by that
+// person, best-rated first. The count comes from the same server-side
+// counting as the row, and is checked against it.
+async function openGroup(kind, it) {
+  const body = h('div', { class: 'sheet' },
+    h('p', { class: 'sheet-sub' }, filmsLabel(it.n, it.avg)),
+    spinner('Loading films…'));
+  const modal = openModal(body, { title: it.name });
+  try {
+    const g = await api.statsGroup(kind, it.name);
+    clear(body);
+    body.appendChild(h('p', { class: 'sheet-sub' }, filmsLabel(g.n, g.avg)));
+    const list = h('ul', { class: 'sheet-films', 'aria-label': `Films you rated: ${it.name}` });
+    const frag = document.createDocumentFragment();
+    for (const f of g.films) {
+      const art = f.poster
+        ? h('img', { class: 'sheet-thumb', src: thumb(f.poster), alt: '', loading: 'lazy', decoding: 'async', width: '40', height: '60' })
+        : h('span', { class: 'sheet-thumb sheet-noposter', 'aria-hidden': 'true' }, icon('film', { size: 18 }));
+      frag.appendChild(h('li', { class: 'sheet-film' },
+        h('a', { href: `#/movie/${f.tmdb_id}`, onClick: () => modal.close() },
+          art,
+          h('span', { class: 'sheet-title' }, f.title, f.year ? h('span', { class: 'sheet-year' }, ` ${f.year}`) : null),
+          h('span', { class: 'sheet-rating', 'aria-label': `your rating ${f.rating} stars` },
+            makeStars({ value: f.rating, size: 13 }), h('span', { 'aria-hidden': 'true' }, `${f.rating}★`)),
+        )));
+    }
+    list.appendChild(frag);
+    body.appendChild(g.films.length ? list : h('p', { class: 'muted' }, 'No films here any more.'));
+  } catch (e) {
+    clear(body);
+    body.appendChild(h('p', { class: 'muted' }, e.message));
+  }
 }
 
 // A ranked list showing its first TOP rows, with "Show all (N)" underneath
@@ -129,7 +177,7 @@ function barList(items, id) {
 const TOP = 10;
 function topList(title, sub, items, key) {
   const id = `top-${key}`;
-  const list = barList(items, id);
+  const list = barList(items, id, key);
   const extra = [...list.children].slice(TOP);
   const wrap = h('section', { class: 'stat-list' }, sectionTitle(title, sub), list);
   if (!extra.length) return wrap;

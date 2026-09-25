@@ -446,12 +446,28 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .bs-label { color: var(--muted); font-size: var(--fs-sm); margin-top: 2px; }
 .bs-sub { color: var(--muted); font-size: var(--fs-xs); margin-top: 4px; }
 .bar-list { display: flex; flex-direction: column; gap: 8px; }
-.bar-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 12px; }
+.bar-row { width: 100%; font: inherit; color: inherit; text-align: left; cursor: pointer; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 12px; }
 .bar-name { font-weight: 600; }
 .bar-meta { color: var(--muted); font-size: var(--fs-xs); }
 .stat-list { display: flex; flex-direction: column; }
 .stat-list .show-all { align-self: flex-start; margin-top: var(--sp-2); }
-.bar-row[hidden] { display: none; }
+.bar-row[hidden], .bar-item[hidden] { display: none; }
+.bar-row:hover { background: var(--surface-2); border-color: var(--line-strong); }
+.bar-row .row-chevron { color: var(--muted); }
+.bar-row:hover .row-chevron { color: var(--text); }
+/* ---- Stats drill-down sheet ---- */
+.sheet-sub { margin: 0 0 var(--sp-3); color: var(--text-2); font-size: var(--fs-sm); }
+.sheet-films { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+/* Off-screen rows skip layout and paint, so a 300-film list scrolls smoothly. */
+.sheet-film { content-visibility: auto; contain-intrinsic-size: auto 68px; }
+.sheet-film a { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: var(--sp-3); align-items: center; padding: 4px 6px; border-radius: var(--r-sm); min-height: 44px; }
+.sheet-film a:hover { background: var(--surface-2); }
+.sheet-thumb { width: 40px; height: 60px; border-radius: 6px; object-fit: cover; background: var(--surface-2); display: block; }
+.sheet-noposter { display: grid; place-items: center; color: var(--muted); border: 1px solid var(--line); }
+.sheet-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.sheet-year { color: var(--muted); font-weight: 400; }
+.sheet-rating { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+@media (max-width: 420px) { .sheet-rating .stars { display: none; } }
 .bar-list { list-style: none; margin: 0; padding: 0; }
 .bar-rank { min-width: 1.6em; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
 .bar-row .bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -8,7 +8,7 @@
 // line when a movie is leaving the primary but still on elsewhere.
 import { all, get, run, getSettings } from '../db.js';
 import { getMovie, hydrate } from './movies.js';
-import { profileRows, ratedIds, getRating } from './ratings.js';
+import { profileRows, ratedIds, getRating, statsRows } from './ratings.js';
 import { getMatch } from './match.js';
 import { buildProfile, confidence, tasteMatch, topTasteFactor } from './taste.js';
 import { publicScoreForMovie, isSettling, isReleased, usReleaseDate } from './scoring.js';
@@ -367,23 +367,32 @@ function byScore(a, b) {
   return b.final - a.final || (b.urgencyBoost?.points ?? 0) - (a.urgencyBoost?.points ?? 0);
 }
 
-// Stats' three rankings. Display only: they count films and average the
-// user's own ratings plainly, and never touch the (recency-weighted) taste
-// profile that scores the picks.
+// Stats' three rankings and their drill-down sheets. Display only: they
+// count films and average the user's own ratings plainly, and never touch the
+// (recency-weighted) taste profile that scores the picks. The rankings and the
+// sheets share GROUP_KEYS and statsRows(), so a sheet's films are exactly the
+// films its row counted.
 const TOP_SHOWN = 10;
 const parseList = (v) => { try { return (typeof v === 'string' ? JSON.parse(v) : v) || []; } catch { return []; } };
-function ranking(rows, keysOf) {
+const GROUP_KEYS = {
+  genre: (r) => parseList(r.genres),
+  director: (r) => [r.director],
+  actor: (r) => parseList(r.cast),
+};
+const keysOf = (kind, r) => [...new Set(GROUP_KEYS[kind](r))].filter(Boolean);
+const average = (sum, n) => Math.round((sum / n) * 100) / 100;
+
+function ranking(rows, kind) {
   const m = new Map();
   for (const r of rows) {
-    for (const k of new Set(keysOf(r))) {
-      if (!k) continue;
+    for (const k of keysOf(kind, r)) {
       const e = m.get(k) || { n: 0, sum: 0 };
       e.n++;
       e.sum += Number(r.rating) || 0;
       m.set(k, e);
     }
   }
-  return [...m].map(([name, e]) => ({ name, n: e.n, avg: Math.round((e.sum / e.n) * 100) / 100 }))
+  return [...m].map(([name, e]) => ({ name, n: e.n, avg: average(e.sum, e.n) }))
     .sort((a, b) => b.n - a.n || b.avg - a.avg || a.name.localeCompare(b.name));
 }
 // People: the top ten, plus everyone else with 2+ films for "Show all", so a
@@ -391,18 +400,31 @@ function ranking(rows, keysOf) {
 // 2+ people are always a prefix of the list.
 const forPeople = (list) => list.slice(0, Math.max(TOP_SHOWN, list.filter((d) => d.n >= 2).length));
 
+export const STATS_GROUP_KINDS = Object.keys(GROUP_KEYS);
+
+// The films behind one Stats row, for the current user: highest rating first,
+// then title. n and avg are computed exactly as the row's were.
+export function getStatsGroup(kind, name) {
+  const films = statsRows()
+    .filter((r) => keysOf(kind, r).includes(name))
+    .map((r) => ({ tmdb_id: r.tmdb_id, title: r.title || `Movie ${r.tmdb_id}`, year: r.year ?? null, poster: r.poster || null, rating: Number(r.rating) || 0 }))
+    .sort((a, b) => b.rating - a.rating || a.title.localeCompare(b.title));
+  const sum = films.reduce((s, f) => s + f.rating, 0);
+  return { kind, name, n: films.length, avg: films.length ? average(sum, films.length) : 0, films };
+}
+
 export function getProfileSummary() {
-  const rows = profileRows();
-  const profile = buildProfile(rows);
+  const profile = buildProfile(profileRows());
+  const rows = statsRows();
   return {
     count: profile.count,
     confidence: confidence(profile),
     overall: Number(profile.overall.toFixed(2)),
     lowData: profile.count < 10,
     // Ranked by films rated, then the user's average rating, then name.
-    topGenres: ranking(rows, (r) => parseList(r.genres)),
-    topDirectors: forPeople(ranking(rows, (r) => [r.director])),
-    topActors: forPeople(ranking(rows, (r) => parseList(r.cast))),
+    topGenres: ranking(rows, 'genre'),
+    topDirectors: forPeople(ranking(rows, 'director')),
+    topActors: forPeople(ranking(rows, 'actor')),
   };
 }
 

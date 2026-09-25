@@ -25,6 +25,7 @@ const PATHS = {
   handoff: '<path d="M4 4v7a4 4 0 0 0 4 4h12"/><path d="m15 10 5 5-5 5"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
   arrowRight: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  chevronRight: '<path d="M9 5l7 7-7 7"/>',
 };
 
 export function icon(name, { size = 20, cls = '', label = null } = {}) {

@@ -9,7 +9,7 @@ import {
   refreshAll, shouldAutoRefresh, state as refreshState, ingestOne, drainUnmatched,
 } from './lib/refresh.js';
 import {
-  getRecommendations, getComingSoon, getMovieDetail, getProfileSummary, wasWeekly4Pick,
+  getRecommendations, getComingSoon, getMovieDetail, getProfileSummary, wasWeekly4Pick, getStatsGroup, STATS_GROUP_KINDS,
 } from './lib/recommend.js';
 import {
   upsertRating, addUnmatched, deleteRating, listRatings, ratedIds,
@@ -633,6 +633,16 @@ router.delete('/watched/:id', (req, res) => res.json(undoWatched(Number(req.para
 // ---- stats / export ----------------------------------------------------
 
 router.get('/stats', (req, res) => res.json(getStats()));
+
+// The films behind one Stats row (genre / director / actor), the caller's own.
+// Not on the guest allowlist, like /stats.
+router.get('/stats/group', (req, res) => {
+  const kind = String(req.query.kind || '');
+  const name = String(req.query.name || '');
+  if (!STATS_GROUP_KINDS.includes(kind)) return res.status(400).json({ error: 'kind must be genre, director or actor.' });
+  if (!name || name.length > 300) return res.status(400).json({ error: 'name is required.' });
+  res.json(getStatsGroup(kind, name));
+});
 
 router.get('/export', (req, res) => {
   const uid = currentUserId();
