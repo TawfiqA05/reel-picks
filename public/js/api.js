@@ -54,6 +54,11 @@ export const api = {
   undoWatched: (id) => req('DELETE', '/watched/' + id),
 
   stats: () => req('GET', '/stats'),
+
+  friends: () => req('GET', '/friends'),
+  addFriend: (name) => req('POST', '/friends', { name }),
+  revokeFriend: (id) => req('POST', `/friends/${id}/revoke`),
+  reissueFriend: (id) => req('POST', `/friends/${id}/reissue`),
   setMatch: (payload) => req('POST', '/match/set', payload),
   unmatched: () => req('GET', '/matches/unmatched'),
   ignoreMatch: (amc_movie_id, amc_title) => req('POST', '/match/ignore', { amc_movie_id, amc_title }),
