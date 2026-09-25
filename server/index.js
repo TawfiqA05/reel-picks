@@ -5,10 +5,12 @@ import { fileURLToPath } from 'node:url';
 import { config } from './env.js';
 import router from './routes.js';
 import {
-  isGuest, guestAllowed, tokenMatches, ownerCookieName, ownerCookieValue, ownerCookieMaxAgeMs,
+  isGuest, isOwner, isLocalRequest, guestAllowed, tokenMatches, ownerCookieName, ownerCookieValue, ownerCookieMaxAgeMs, requestUser,
 } from './lib/guest.js';
+import { FRIEND_COOKIE, FRIEND_TTL_MS, redeemInvite, signFriendCookie, touchLastSeen } from './lib/accounts.js';
+import { getSetting } from './db.js';
 import { refreshAll, shouldAutoRefresh, state as refreshState } from './lib/refresh.js';
-import { runAs, OWNER_ID } from './lib/user.js';
+import { runAs } from './lib/user.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 
@@ -31,6 +33,26 @@ app.use((req, res, next) => {
   res.redirect(302, u.pathname + (u.search || ''));
 });
 
+// Friend invite: /?invite=<token> redeems a one-time token (only its hash is
+// stored) into a signed, HttpOnly friend cookie — never the token itself —
+// then redirects to a token-free URL: onboarding for someone new, Picks for
+// someone returning with a re-issued link. The owner opening a link (owner
+// cookie, or at localhost where every request is the owner) doesn't burn it
+// and is sent to Settings, where the friend list is. A used or unknown token
+// just lands on the app with no cookie.
+app.use((req, res, next) => {
+  if (!('invite' in req.query)) return next();
+  if (isOwner(req) || isLocalRequest(req)) return res.redirect(302, '/#/settings');
+  const raw = req.query.invite;
+  const friend = redeemInvite(Array.isArray(raw) ? raw[0] : raw);
+  if (!friend) return res.redirect(302, '/');
+  res.cookie(FRIEND_COOKIE, signFriendCookie(friend), {
+    httpOnly: true, secure: true, sameSite: 'lax', maxAge: FRIEND_TTL_MS, path: '/',
+  });
+  const onboarded = getSetting('onboardingDone', { userId: friend.id });
+  res.redirect(302, onboarded ? '/' : '/#/onboarding');
+});
+
 // Read-only guard for the public tunnel: reject guest writes and owner-only
 // reads BEFORE any body is parsed, so the shared link can never touch the DB.
 app.use('/api', (req, res, next) => {
@@ -40,11 +62,14 @@ app.use('/api', (req, res, next) => {
 
 app.use(express.json({ limit: '20mb' })); // large enough for CSV ratings uploads
 
-// Every API request runs as one user (lib/user.js): the owner, and the guest
-// link reads the owner's picks. Bound after the body parser, whose stream
-// callbacks would otherwise run outside the request's context.
+// Every API request runs as one user (lib/user.js): the owner, a signed-in
+// friend, or — for the read-only guest link — the owner's picks with guest
+// set. Bound after the body parser, whose stream callbacks would otherwise run
+// outside the request's context.
 app.use('/api', (req, res, next) => {
-  runAs(OWNER_ID, next, { guest: isGuest(req) });
+  const u = requestUser(req);
+  if (u.row) touchLastSeen(u.row);
+  runAs(u.id, next, { guest: u.guest, isOwner: u.isOwner, name: u.name || null });
 });
 app.use('/api', router);
 

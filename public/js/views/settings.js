@@ -19,10 +19,14 @@ export async function render(root, params, ctx) {
 
   const page = h('div', { class: 'page settings' });
   page.appendChild(sectionTitle('Settings', null, { level: 1 }));
+  // A friend sees their own settings only: no key status, no AMC matching, and
+  // none of the shared tuning (fallback window, good-match cutoff, Last chance),
+  // which the owner sets for everyone. The server enforces the same split.
+  const isOwner = status?.user?.isOwner !== false;
 
   // ---- API keys
   const keyState = status?.keys || {};
-  page.appendChild(card('API keys',
+  if (isOwner) page.appendChild(card('API keys',
     h('div', { class: 'key-list' },
       keyRow('TMDB', keyState.tmdb, 'posters, metadata, matching'),
       keyRow('OMDb', keyState.omdb, 'IMDb / RT / Metacritic scores'),
@@ -242,14 +246,14 @@ export async function render(root, params, ctx) {
       }
     } catch (e) { unmatchedWrap.appendChild(h('div', { class: 'muted small' }, e.message)); }
   }
-  page.appendChild(card('AMC title matching',
+  if (isOwner) page.appendChild(card('AMC title matching',
     h('p', { class: 'muted small' },
       'AMC titles are matched to TMDB records automatically, using AMC\'s release year to tell a new film from an older one with the same name. '
       + 'A match to a film years older than AMC\'s release date is flagged here for review (Keep it, or search and re-point it). '
       + 'Titles that couldn\'t be matched at all aren\'t ranked, have no runway badge and never show as leaving. Search and pick the right movie, or Ignore one-offs like "AMC Screen Unseen".'),
     unmatchedWrap, ignoredWrap,
   ));
-  loadUnmatched();
+  if (isOwner) loadUnmatched();
 
   // ---- Home base (where drive times are measured from). Values come only from
   // the owner-only status payload — this file is a public static asset, so it
@@ -437,7 +441,7 @@ export async function render(root, params, ctx) {
 
   // ---- Now-playing fallback (only used when no AMC key)
   const recencyInput = h('input', { class: 'input num', type: 'number', min: '1', step: '1', value: String(s.fallbackRecencyWeeks ?? 8) });
-  page.appendChild(card('Now-playing fallback',
+  if (isOwner) page.appendChild(card('Now-playing fallback',
     labeled('Only show films released in the last N weeks', recencyInput),
     h('p', { class: 'muted small' }, 'Applies only when no AMC key is connected (Reel Picks ranks TMDB\'s current US releases). Widen this if the list gets thin. With an AMC key, your theatre\'s actual lineup (re-releases and special screenings included) is used as-is.'),
   ));
@@ -491,7 +495,7 @@ export async function render(root, params, ctx) {
 
   // ---- Picks sections
   const gmScore = h('input', { class: 'input num', type: 'number', min: '0', max: '100', value: String(s.goodMatchMinScore ?? 75) });
-  page.appendChild(card('Also worth seeing',
+  if (isOwner) page.appendChild(card('Also worth seeing',
     h('div', { class: 'grid-3' }, labeled('Minimum score', gmScore)),
     h('div', { class: 'muted small' },
       'Score a movie needs to appear in the "Also worth seeing" section under your weekly 4. '
@@ -502,7 +506,7 @@ export async function render(root, params, ctx) {
   const lcScore = h('input', { class: 'input num', type: 'number', min: '0', max: '100', value: String(s.lastChanceMinScore ?? 75) });
   const lcGap = h('input', { class: 'input num', type: 'number', min: '1', value: String(s.lastChanceMinGapDays ?? 3) });
   const lcMax = h('input', { class: 'input num', type: 'number', min: '1', value: String(s.lastChanceMaxEntries ?? 3) });
-  page.appendChild(card('Last chance',
+  if (isOwner) page.appendChild(card('Last chance',
     h('div', { class: 'grid-3' },
       labeled('Min score', lcScore),
       labeled('Days before horizon', lcGap),
@@ -574,15 +578,16 @@ export async function render(root, params, ctx) {
   });
   page.appendChild(card('Data',
     h('div', { class: 'row-gap wrap' },
-      h('a', { class: 'btn ghost', href: api.stateUrl() }, '⬇ Export full setup'),
-      h('button', { class: 'btn ghost', onClick: () => stateFile.click() }, '⬆ Import full setup'),
-      stateFile,
+      h('a', { class: 'btn ghost', href: api.stateUrl() }, isOwner ? '⬇ Export full setup' : '⬇ Export my data'),
+      isOwner ? h('button', { class: 'btn ghost', onClick: () => stateFile.click() }, '⬆ Import full setup') : null,
+      isOwner ? stateFile : null,
       h('a', { class: 'btn ghost', href: api.exportUrl() }, '⬇ Export backup CSV'),
-      h('button', { class: 'btn ghost', onClick: () => ctx.triggerRefresh() }, icon('refresh', { size: 16 }), 'Refresh now'),
+      isOwner ? h('button', { class: 'btn ghost', onClick: () => ctx.triggerRefresh() }, icon('refresh', { size: 16 }), 'Refresh now') : null,
       h('a', { class: 'btn ghost', href: '#/onboarding' }, icon('zap', { size: 16 }), 'Re-run quick rate'),
     ),
-    h('p', { class: 'muted small' },
-      'Full setup carries settings, theatres, home base, ratings, watchlist, watch history, AMC match decisions, and hidden films. Everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'),
+    h('p', { class: 'muted small' }, isOwner
+      ? 'Full setup carries settings, theatres, home base, ratings, watchlist, watch history, AMC match decisions, and hidden films. Everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'
+      : 'Your export carries your own settings, theatres, home base, ratings, watchlist, watch history and hidden films.'),
     status?.lastRefreshLog?.errors?.length
       ? h('details', { class: 'log' }, h('summary', {}, `Last refresh: ${status.lastRefreshLog.errors.length} warning(s)`),
         ...status.lastRefreshLog.errors.map((e) => h('div', { class: 'muted small' }, `• ${e}`)))

@@ -11,6 +11,8 @@
 // value is an HMAC (keyed by the token) — never the token itself. A valid cookie
 // makes isGuest() return false, so the owner gets full access over the tunnel.
 import crypto from 'node:crypto';
+import { FRIEND_COOKIE, verifyFriendCookie } from './accounts.js';
+import { OWNER_ID } from './user.js';
 
 export function guestModeEnabled() {
   const v = (process.env.GUEST_MODE || '').toLowerCase();
@@ -30,13 +32,38 @@ function viaCloudflare(req) {
   return Boolean(req.headers['cf-connecting-ip'] || req.headers['cf-ray']);
 }
 
-// A request is a guest (read-only) if it came through Cloudflare, or — when
-// guest mode is enabled — if it isn't addressed to localhost.
+function isRemote(req) {
+  return viaCloudflare(req) || (guestModeEnabled() && !hostIsLocal(req));
+}
+
+// The owner at their own machine: localhost, not through the tunnel.
+export function isLocalRequest(req) {
+  return hostIsLocal(req) && !viaCloudflare(req);
+}
+
+// Who a request belongs to, in this order: the owner cookie (the owner, even
+// over the tunnel); a valid friend cookie (that friend); anything remote with
+// neither (the read-only guest view of the owner's picks); otherwise a local
+// request, which is the owner as it has always been. A revoked, expired or
+// tampered friend cookie counts as no cookie. Cached on the request.
+export function requestUser(req) {
+  if (req._rpUser) return req._rpUser;
+  let u;
+  if (isOwner(req)) u = { id: OWNER_ID, isOwner: true, guest: false };
+  else {
+    const friend = verifyFriendCookie(readCookie(req, FRIEND_COOKIE));
+    if (friend) u = { id: friend.id, isOwner: false, guest: false, name: friend.name, row: friend };
+    else if (isRemote(req)) u = { id: OWNER_ID, isOwner: false, guest: true };
+    else u = { id: OWNER_ID, isOwner: true, guest: false };
+  }
+  req._rpUser = u;
+  return u;
+}
+
+// A request is a guest (read-only) if it is remote with neither the owner
+// cookie nor a valid friend cookie (see requestUser).
 export function isGuest(req) {
-  if (isOwner(req)) return false; // authenticated owner → full access, even over the tunnel
-  if (viaCloudflare(req)) return true;
-  if (guestModeEnabled() && !hostIsLocal(req)) return true;
-  return false;
+  return requestUser(req).guest;
 }
 
 // Endpoints a guest may reach. Default-deny: everything else is rejected.
@@ -100,7 +127,7 @@ function verifyOwnerCookie(value) {
   return Number.isFinite(exp) && exp > Date.now();
 }
 
-function readCookie(req, name) {
+export function readCookie(req, name) {
   const raw = req.headers.cookie || '';
   for (const part of raw.split(';')) {
     const i = part.indexOf('=');

@@ -38,6 +38,9 @@ let refreshing = false;
 const ctx = {
   getStatus: () => status,
   isGuest: () => Boolean(status?.guest),
+  // The owner's own controls (refresh, AMC matching, friends). A signed-in
+  // friend and the guest link both get false.
+  isOwner: () => Boolean(status && !status.guest && status.user?.isOwner !== false),
   refreshStatus,
   navigate: (hash) => { location.hash = hash; },
   rerender: () => route(),
@@ -78,6 +81,8 @@ function renderChrome() {
   if (!els.theatre) return;
   const guest = Boolean(status?.guest);
   document.querySelector('.shell')?.classList.toggle('guest', guest);
+  // A friend can't force a refresh; the server would refuse it anyway.
+  document.querySelector('.shell')?.classList.toggle('friend', !guest && status?.user?.isOwner === false);
 
   const banner = document.querySelector('#guest-banner');
   if (banner) banner.textContent = guest ? `${status?.ownerName || 'Owner'}'s picks, read only` : '';

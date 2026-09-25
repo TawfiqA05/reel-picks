@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import { get, all, run, getSettings, updateSettings, getSetting, setSetting, dataDir, dbPath } from './db.js';
+import { get, all, run, getSettings, updateSettings, getSetting, setSetting, dataDir, dbPath, USER_SETTING_KEYS } from './db.js';
 import { exportState, importState } from './lib/state.js';
 import { keyStatus } from './env.js';
 import {
@@ -30,10 +30,27 @@ import { geocode, reverseGeocode } from './lib/geocode.js';
 import { bustCache } from './lib/cache.js';
 import { localYMD, addDays, csvField } from './lib/util.js';
 import { isGuest, ownerName } from './lib/guest.js';
-import { currentUserId } from './lib/user.js';
+import { currentUserId, currentUser } from './lib/user.js';
+import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, userName } from './lib/accounts.js';
 
 const router = Router();
 const h = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+// The owner's controls: key status, AMC title matching, friends, full-setup
+// import, forced refreshes. A friend gets a 403; the guest link never reaches
+// these (lib/guest.js allowlist).
+const isOwnerRequest = () => Boolean(currentUser()?.isOwner);
+const ownerOnly = (req, res, next) => (isOwnerRequest()
+  ? next()
+  : res.status(403).json({ error: 'Only the owner can do that.' }));
+
+// A friend's view of the settings: no refresh log (it carries the owner's
+// drive times), and the shared keys are the owner's to change.
+function forCaller(settings) {
+  if (isOwnerRequest()) return settings;
+  const { lastRefreshLog, ...rest } = settings;
+  return rest;
+}
 const card = (m) => ({
   tmdb_id: m.tmdb_id, title: m.title, year: m.year, poster: m.poster,
   genres: m.genres || [], mpaa: m.mpaa || null, tmdb_rating: m.tmdb_rating ?? null,
@@ -67,6 +84,35 @@ router.get('/status', (req, res) => {
       lastRefresh: s.lastRefresh, lastRefreshLog: null,
     });
   }
+  const me = currentUser();
+  const user = { id: me.userId, name: me.isOwner ? ownerName() : (userName(me.userId) || 'Friend'), isOwner: Boolean(me.isOwner) };
+  if (!me.isOwner) {
+    // A friend: their own theatres, home and counts; none of the owner's
+    // diagnostics (key fingerprints, data dir, refresh log, AMC matching).
+    return res.json({
+      guest: false,
+      user,
+      ownerName: ownerName(),
+      keys: { tmdb: keyStatus().tmdb, omdb: true, amc: true },
+      theatre: { ...theatres[0] },
+      theatres,
+      maxTheatres: MAX_THEATRES,
+      home: homeBase(s),
+      onboardingDone: Boolean(s.onboardingDone),
+      everythingPlayingCollapsed: Boolean(s.everythingPlayingCollapsed),
+      lastRefresh: s.lastRefresh,
+      refreshing: refreshState.running,
+      matching: Boolean(refreshState.draining),
+      lastDrain: refreshState.lastDrain || null,
+      enriching: Boolean(refreshState.enriching),
+      counts: {
+        ratings: ratingsCount(),
+        unmatched: unmatchedCount(),
+        watchlist: get('SELECT COUNT(*) AS n FROM watchlist WHERE user_id = ?', currentUserId()).n,
+      },
+      lastRefreshLog: null,
+    });
+  }
   const log = s.lastRefreshLog;
   // Non-reversible key fingerprints (length + sha256 prefix): enough to tell
   // whether two instances hold the SAME key value without exposing either.
@@ -81,6 +127,7 @@ router.get('/status', (req, res) => {
   } catch { /* unreadable: leave null */ }
   res.json({
     guest: false,
+    user,
     ownerName: ownerName(),
     keys: keyStatus(),
     keyMeta: {
@@ -129,7 +176,7 @@ router.get('/status', (req, res) => {
 // Manual refresh. If one is already running (e.g. the startup auto-refresh),
 // this one is queued behind it — with force, so it still re-pulls today and
 // tomorrow — instead of being dropped.
-router.post('/refresh', (req, res) => {
+router.post('/refresh', ownerOnly, (req, res) => {
   const queued = refreshState.running;
   refreshAll({ force: true }).catch((e) => console.error('[refresh]', e.message));
   res.json({ started: true, queued });
@@ -169,10 +216,12 @@ router.get('/movies/:id', h(async (req, res) => {
 
 // ---- settings / theatre ------------------------------------------------
 
-router.get('/settings', (req, res) => res.json(getSettings()));
+router.get('/settings', (req, res) => res.json(forCaller(getSettings())));
 
 router.put('/settings', (req, res) => {
   const patch = { ...(req.body || {}) };
+  // Friends change only their own keys; the shared ones are the owner's.
+  if (!isOwnerRequest()) for (const k of Object.keys(patch)) if (!USER_SETTING_KEYS.has(k)) delete patch[k];
   if (patch.weightPublic != null || patch.weightTaste != null) {
     const wp = Number(patch.weightPublic ?? getSetting('weightPublic')) || 0;
     const wt = Number(patch.weightTaste ?? getSetting('weightTaste')) || 0;
@@ -205,7 +254,7 @@ router.put('/settings', (req, res) => {
   if ('home' in patch && (before.lat !== after.lat || before.lng !== after.lng)) {
     refreshDistances(next).catch((e) => console.error('[home] drive-time refresh', e.message));
   }
-  res.json(next);
+  res.json(forCaller(next));
 });
 
 // ---- home base / geocoding ----------------------------------------------
@@ -259,7 +308,7 @@ router.post('/theatre', (req, res) => {
   const { id, name, slug } = req.body || {};
   try {
     const settings = replacePrimary({ id, name, slug });
-    refreshAll({ force: true }).catch((e) => console.error('[theatre refresh]', e.message));
+    if (isOwnerRequest()) refreshAll({ force: true }).catch((e) => console.error('[theatre refresh]', e.message));
     res.json(settings);
   } catch (e) {
     res.status(e.status || 500).json({ error: e.message });
@@ -272,7 +321,7 @@ router.post('/theatres/follow', (req, res) => {
   const { id, name, slug } = req.body || {};
   try {
     const settings = addFollowed({ id, name, slug });
-    refreshAll({ force: true }).catch((e) => console.error('[follow refresh]', e.message));
+    if (isOwnerRequest()) refreshAll({ force: true }).catch((e) => console.error('[follow refresh]', e.message));
     res.json(settings);
   } catch (e) {
     res.status(e.status || 500).json({ error: e.message });
@@ -291,7 +340,7 @@ router.post('/theatres/primary', (req, res) => {
     const settings = promoteToPrimary(id);
     // Showtimes for both are already loaded; re-run so the per-theatre horizon
     // log and the primary-driven snapshot history line up with the new roles.
-    refreshAll({ force: true }).catch((e) => console.error('[primary refresh]', e.message));
+    if (isOwnerRequest()) refreshAll({ force: true }).catch((e) => console.error('[primary refresh]', e.message));
     res.json(settings);
   } catch (e) {
     res.status(e.status || 500).json({ error: e.message });
@@ -311,7 +360,7 @@ router.get('/state', (req, res) => {
 // Apply a full-setup document, then rebuild everything derived: a forced
 // refresh pulls this instance's own showtimes/scores for the imported
 // theatres, and detail enrichment fills in posters for imported ratings.
-router.post('/state', (req, res) => {
+router.post('/state', ownerOnly, (req, res) => {
   let doc = req.body;
   if (typeof doc === 'string') { try { doc = JSON.parse(doc); } catch { doc = null; } }
   try {
@@ -588,7 +637,7 @@ router.get('/export', (req, res) => {
 
 // AMC titles currently showing that have no TMDB record, with where/when they
 // play, so they can be matched by hand (or ignored, e.g. "Screen Unseen").
-router.get('/matches/unmatched', (req, res) => {
+router.get('/matches/unmatched', ownerOnly, (req, res) => {
   const short = new Map(followedTheatres(getSettings()).map((t) => [t.id, t.short]));
   const decorate = (r) => ({ ...r, theatres: r.theatre_ids.map((id) => ({ id, short: short.get(id) || id })) });
   const data = unmatchedTitles(localYMD());
@@ -600,14 +649,14 @@ router.get('/matches/unmatched', (req, res) => {
 });
 
 // Owner looked at a flagged automatic match and it's right: keep it.
-router.post('/match/keep', (req, res) => {
+router.post('/match/keep', ownerOnly, (req, res) => {
   const { amc_movie_id } = req.body || {};
   if (!amc_movie_id) return res.status(400).json({ error: 'amc_movie_id required.' });
   keepMatch(String(amc_movie_id));
   res.json({ ok: true });
 });
 
-router.post('/match/ignore', (req, res) => {
+router.post('/match/ignore', ownerOnly, (req, res) => {
   const { amc_movie_id, amc_title } = req.body || {};
   if (!amc_movie_id) return res.status(400).json({ error: 'amc_movie_id required.' });
   ignoreMatch(String(amc_movie_id), amc_title || '');
@@ -615,12 +664,12 @@ router.post('/match/ignore', (req, res) => {
 });
 
 // Forget an ignore: the next refresh retries the match automatically.
-router.delete('/match/ignore/:id', (req, res) => {
+router.delete('/match/ignore/:id', ownerOnly, (req, res) => {
   unignoreMatch(String(req.params.id));
   res.json({ ok: true });
 });
 
-router.post('/match/set', h(async (req, res) => {
+router.post('/match/set', ownerOnly, h(async (req, res) => {
   const { amc_movie_id, amc_title, tmdb_id } = req.body || {};
   if (!amc_movie_id || !tmdb_id) return res.status(400).json({ error: 'amc_movie_id and tmdb_id required.' });
   await ingestOne(tmdb_id); // make sure the movie exists with full details
@@ -634,5 +683,36 @@ router.post('/match/set', h(async (req, res) => {
   );
   res.json({ ok: true });
 }));
+
+// ---- friends (owner only) -------------------------------------------------
+// Invite links are shown once, at creation or re-issue; only a hash is kept.
+
+router.get('/friends', ownerOnly, (req, res) => res.json({ friends: listFriends(), max: MAX_USERS }));
+
+router.post('/friends', ownerOnly, (req, res) => {
+  try {
+    const { friend, token } = createFriend(req.body?.name);
+    res.json({ friend, invite: `/?invite=${token}` });
+  } catch (e) {
+    res.status(e.status || 500).json({ error: e.message });
+  }
+});
+
+router.post('/friends/:id/revoke', ownerOnly, (req, res) => {
+  try {
+    res.json({ friend: revokeFriend(req.params.id) });
+  } catch (e) {
+    res.status(e.status || 500).json({ error: e.message });
+  }
+});
+
+router.post('/friends/:id/reissue', ownerOnly, (req, res) => {
+  try {
+    const { friend, token } = reissueFriend(req.params.id);
+    res.json({ friend, invite: `/?invite=${token}` });
+  } catch (e) {
+    res.status(e.status || 500).json({ error: e.message });
+  }
+});
 
 export default router;

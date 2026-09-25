@@ -194,7 +194,7 @@ function showtimesSection(d, ctx) {
   }
   // Any matched movie can be re-pointed, not just low-confidence ones: a
   // confident-but-wrong match ("Idiots" → a 1998 film) needs a way out too.
-  if (d.match && !ctx.isGuest?.()) {
+  if (d.match && ctx.isOwner?.()) {
     wrap.appendChild(h('button', { class: 'link-btn', onClick: () => openFixMatch(d, ctx) },
       d.match.low
         ? `Wrong movie? Matched to AMC's "${d.match.amc_title}" with low confidence. Fix it`
