@@ -2,7 +2,8 @@
 // plus any extras the user added, in their order. Also the drive-time lookup
 // from home, computed once per theatre and cached for a year. Home coordinates
 // only ever leave the app rounded to ~1 km (see outboundHome below).
-import { get, getSettings, updateSettings, run, DEFAULT_SETTINGS } from '../db.js';
+import { get, all, getSettings, updateSettings, run, DEFAULT_SETTINGS } from '../db.js';
+import { OWNER_ID } from './user.js';
 import * as amc from './amc.js';
 import { cachedJson, fetchJson, bustCache } from './cache.js';
 import { localYMD, addDays } from './util.js';
@@ -10,6 +11,10 @@ import { localYMD, addDays } from './util.js';
 // Primary + 4 followed. Each theatre costs ~14 AMC calls per refresh (one per
 // published day, more if a day paginates), so five keeps a refresh under ~100.
 export const MAX_THEATRES = 5;
+
+// Across everyone: the refresh pulls every active user's followed theatres,
+// capped so a refresh stays around ~110 AMC calls.
+export const MAX_SHARED_THEATRES = 8;
 
 // "AMC Castleton Square 14" -> "Castleton"; "AMC Indianapolis 17" -> "Indianapolis".
 // Used wherever a theatre is named inside a sentence or a chip.
@@ -46,6 +51,41 @@ export function followedIds(settings = getSettings()) {
   return followedTheatres(settings).map((t) => t.id).filter(Boolean);
 }
 
+// Users whose theatres the refresh covers: the owner and every friend who
+// hasn't been revoked, owner first.
+export function activeUserIds() {
+  const ids = all('SELECT id FROM users WHERE revoked_at IS NULL ORDER BY id').map((r) => r.id);
+  return ids.includes(OWNER_ID) ? ids : [OWNER_ID, ...ids];
+}
+
+// The theatres the refresh pulls: the union of every active user's followed
+// theatres, the owner's first (their primary stays the refresh's primary, which
+// drives the TMDB fallback and the headline horizon), deduped, capped at
+// MAX_SHARED_THEATRES. Each entry lists the users who follow it.
+export function sharedTheatres() {
+  const byId = new Map();
+  for (const uid of activeUserIds()) {
+    for (const t of followedTheatres(getSettings({ userId: uid }))) {
+      if (!t.id) continue;
+      if (!byId.has(t.id)) byId.set(t.id, { ...t, isPrimary: uid === OWNER_ID && t.isPrimary, users: [] });
+      byId.get(t.id).users.push(uid);
+    }
+  }
+  return [...byId.values()].slice(0, MAX_SHARED_THEATRES);
+}
+
+export const sharedTheatreIds = () => new Set(sharedTheatres().map((t) => t.id));
+
+// Adding a theatre nobody follows grows the shared set; refuse it once the
+// set is full, whoever asks.
+function assertRoomFor(id) {
+  const shared = sharedTheatres();
+  if (shared.some((t) => t.id === id)) return;
+  if (shared.length >= MAX_SHARED_THEATRES) {
+    throw Object.assign(new Error(`Reel Picks follows up to ${MAX_SHARED_THEATRES} theatres across everyone, and that's full. Pick one that's already followed, or drop one first.`), { status: 400 });
+  }
+}
+
 // Drop a theatre's current schedule when it's unfollowed. Its lineup history
 // (snapshots, departures) is deliberately KEPT: it can't be rebuilt, the
 // per-theatre queries ignore theatres that aren't followed, and it comes back
@@ -79,14 +119,18 @@ export function addFollowed(raw) {
   if (extras.length + 1 >= MAX_THEATRES) {
     throw Object.assign(new Error(`You can follow up to ${MAX_THEATRES} theatres (primary + ${MAX_THEATRES - 1}). Remove one first.`), { status: 400 });
   }
+  assertRoomFor(t.id);
   return updateSettings({ extraTheatres: [...extras, t] });
 }
 
+// Unfollow. The theatre's schedule is dropped only when no one else still
+// follows it.
 export function removeFollowed(id) {
   const s = getSettings();
   const extras = (s.extraTheatres || []).map(normalize).filter((x) => x.id !== String(id));
-  purgeTheatreData(String(id));
-  return updateSettings({ extraTheatres: extras });
+  const next = updateSettings({ extraTheatres: extras });
+  if (!sharedTheatreIds().has(String(id))) purgeTheatreData(String(id));
+  return next;
 }
 
 // Promote a followed theatre to primary; the old primary becomes a followed
@@ -118,6 +162,7 @@ export function replacePrimary(raw) {
   const extras = (s.extraTheatres || []).map(normalize).filter((x) => x.id !== t.id);
   const old = oldId ? { id: oldId, name: s.theatreName || '', slug: s.theatreSlug || '' } : null;
   const next = old ? [old, ...extras] : extras;
+  assertRoomFor(t.id);
   if (next.length + 1 > MAX_THEATRES) {
     throw Object.assign(
       new Error(`Making ${t.name || 'that theatre'} primary would mean following ${next.length + 1} theatres (max ${MAX_THEATRES}). Remove one first.`),
@@ -212,12 +257,17 @@ export function readDistance(theatreId, home = homeBase()) {
   try { return JSON.parse(row.value); } catch { return null; }
 }
 
-// Forget every cached drive time (any origin, any theatre) and re-measure from
-// the current home in the background, so a changed or cleared home base heals
-// in seconds rather than at the next daily refresh. Per-theatre failures are
+// Forget the cached drive times measured from `oldHome` (this user's previous
+// origin; other people's origins are theirs and stay) and re-measure from the
+// current home in the background, so a changed or cleared home base heals in
+// seconds rather than at the next daily refresh. Per-theatre failures are
 // swallowed here; the daily refresh logs its own attempt anyway.
-export function refreshDistances(settings = getSettings()) {
-  bustCache('geo:drive:');
+export function refreshDistances(settings = getSettings(), oldHome = null) {
+  if (oldHome) {
+    const o = outboundHome(oldHome);
+    run('DELETE FROM cache WHERE key LIKE ?', `geo:drive:%:${o.lat.toFixed(2)},${o.lng.toFixed(2)}`);
+    run('DELETE FROM cache WHERE key LIKE ?', `geo:drive:%:${oldHome.lat.toFixed(4)},${oldHome.lng.toFixed(4)}`);
+  }
   const home = homeBase(settings);
   return Promise.allSettled(
     followedTheatres(settings).filter((t) => t.id).map((t) => theatreDistance(t.id, home)),

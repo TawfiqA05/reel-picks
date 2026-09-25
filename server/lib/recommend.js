@@ -16,7 +16,7 @@ import {
   finalScore, buildReason, bestShowtime, showtimeFits, endTimeLabel, beThereByLabel, urgencyBoost,
 } from './ranking.js';
 import { getLastChance, dailyBreadth, computeHorizon, lineupExodus } from './leaving.js';
-import { followedTheatres, homeBase, readDistance } from './theatres.js';
+import { followedTheatres, homeBase, readDistance, sharedTheatreIds } from './theatres.js';
 import { computeRunway, runwayDates, handoffLine, goneAfterPhrase } from './runway.js';
 import { localYMD, addDays, timeLabel, weekStartFriday } from './util.js';
 import { ownerName } from './guest.js';
@@ -55,11 +55,20 @@ function buildCtx({ guest = false } = {}) {
   // Every upcoming showtime, partitioned theatre -> movie (all published dates,
   // not just this week — runway needs the tail). Rows from a theatre that is
   // no longer followed shouldn't exist after a refresh; if any do, they fold
-  // into the primary rather than vanish.
+  // into the primary rather than vanish. Rows from a theatre someone ELSE
+  // follows are theirs, not this user's lineup: skipped, and remembered so a
+  // movie showing only there stays out of this user's list.
   const byTheatre = new Map(theatres.map((t) => [t.id, new Map()]));
+  const others = sharedTheatreIds();
+  for (const id of known) others.delete(id);
+  const elsewhereThisWeek = new Set();
   for (const s of all(
     'SELECT * FROM showtimes WHERE tmdb_id IS NOT NULL AND date >= ? ORDER BY start_epoch', today,
   )) {
+    if (!known.has(s.theatre_id) && others.has(s.theatre_id)) {
+      if (s.date <= weekEnd) elsewhereThisWeek.add(s.tmdb_id);
+      continue;
+    }
     const tid = known.has(s.theatre_id) ? s.theatre_id : primaryId;
     const m = byTheatre.get(tid);
     if (!m.has(s.tmdb_id)) m.set(s.tmdb_id, []);
@@ -91,6 +100,8 @@ function buildCtx({ guest = false } = {}) {
     theatres,
     primaryId,
     byTheatre,
+    elsewhereThisWeek,
+    othersTheatres: others,
     horizons,
     exodus,
     minGap,
@@ -411,6 +422,8 @@ export function getRecommendations({ guest = false } = {}) {
     if (hasWeek(ctx.primaryId, m.tmdb_id)) { main.push(m); continue; }
     const t = ctx.theatres.find((x) => !x.isPrimary && hasWeek(x.id, m.tmdb_id));
     if (t) nearby.push({ m, t });
+    // Playing this week only at theatres other people follow: not this user's.
+    else if (ctx.elsewhereThisWeek.has(m.tmdb_id)) continue;
     else main.push(m);
   }
 
@@ -469,8 +482,11 @@ export function getComingSoon({ guest = false } = {}) {
   const ctx = buildCtx({ guest });
   const up = all('SELECT * FROM movies WHERE upcoming = 1').map(hydrate)
     .filter((m) => !ctx.hidden.has(m.tmdb_id));
+  // Advance screenings at this user's theatres (or unfollowed leftovers), not
+  // at theatres only other people follow.
   const advanceIds = new Set(
-    all('SELECT DISTINCT tmdb_id FROM showtimes WHERE tmdb_id IS NOT NULL AND date > ?', ctx.weekEnd)
+    all('SELECT DISTINCT tmdb_id, theatre_id FROM showtimes WHERE tmdb_id IS NOT NULL AND date > ?', ctx.weekEnd)
+      .filter((r) => !ctx.othersTheatres.has(r.theatre_id))
       .map((r) => r.tmdb_id),
   );
   const scored = up.map((m) => {

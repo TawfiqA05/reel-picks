@@ -24,7 +24,7 @@ import * as tmdb from './lib/tmdb.js';
 import * as amc from './lib/amc.js';
 import {
   followedTheatres, homeBase, readDistance, addFollowed, removeFollowed, promoteToPrimary,
-  replacePrimary, refreshDistances, MAX_THEATRES,
+  replacePrimary, refreshDistances, MAX_THEATRES, sharedTheatreIds,
 } from './lib/theatres.js';
 import { geocode, reverseGeocode } from './lib/geocode.js';
 import { bustCache } from './lib/cache.js';
@@ -40,6 +40,14 @@ const h = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(
 // import, forced refreshes. A friend gets a 403; the guest link never reaches
 // these (lib/guest.js allowlist).
 const isOwnerRequest = () => Boolean(currentUser()?.isOwner);
+
+// After a theatre change: the owner's forces a refresh as always. A friend's
+// never forces; it queues an ordinary background refresh only when it brought
+// in a theatre nobody was following, so its showtimes arrive.
+function afterTheatreChange(wasShared, tag) {
+  if (isOwnerRequest()) refreshAll({ force: true }).catch((e) => console.error(`[${tag} refresh]`, e.message));
+  else if (!wasShared) refreshAll({ force: false, reason: 'friend followed a new theatre' }).catch((e) => console.error(`[${tag} refresh]`, e.message));
+}
 const ownerOnly = (req, res, next) => (isOwnerRequest()
   ? next()
   : res.status(403).json({ error: 'Only the owner can do that.' }));
@@ -110,7 +118,6 @@ router.get('/status', (req, res) => {
         unmatched: unmatchedCount(),
         watchlist: get('SELECT COUNT(*) AS n FROM watchlist WHERE user_id = ?', currentUserId()).n,
       },
-      lastRefreshLog: null,
     });
   }
   const log = s.lastRefreshLog;
@@ -146,6 +153,9 @@ router.get('/status', (req, res) => {
     everythingPlayingCollapsed: Boolean(s.everythingPlayingCollapsed),
     lastRefresh: s.lastRefresh,
     refreshing: refreshState.running,
+    // Most recent refresh request (who asked is not recorded; force says whether it re-pulled).
+    lastRefreshRequest: refreshState.lastRequest || null,
+    sharedTheatres: sharedTheatreIds().size,
     matching: Boolean(refreshState.draining),
     // Result of the most recent background matching run (import summary panel).
     lastDrain: refreshState.lastDrain || null,
@@ -247,12 +257,12 @@ router.put('/settings', (req, res) => {
   }
   const before = homeBase(getSettings());
   const next = updateSettings(patch);
-  // Home moved → every cached drive time measures from the wrong origin. Drop
-  // them all and re-measure in the background (one OSRM call per theatre), so
+  // Home moved → this user's cached drive times measure from the wrong origin.
+  // Drop them and re-measure in the background (one OSRM call per theatre), so
   // the times heal in seconds instead of at the next daily refresh.
   const after = homeBase(next);
   if ('home' in patch && (before.lat !== after.lat || before.lng !== after.lng)) {
-    refreshDistances(next).catch((e) => console.error('[home] drive-time refresh', e.message));
+    refreshDistances(next, before).catch((e) => console.error('[home] drive-time refresh', e.message));
   }
   res.json(forCaller(next));
 });
@@ -291,9 +301,10 @@ router.get('/geocode/reverse', h(async (req, res) => {
 // it (drive times for any origin, geocoder lookups), then fall back to the
 // app default and re-measure drive times from there in the background.
 router.delete('/home', h(async (req, res) => {
+  const before = homeBase(getSettings());
   const next = updateSettings({ home: { label: null, lat: null, lng: null } });
   bustCache('nominatim:');
-  refreshDistances(next).catch((e) => console.error('[home] drive-time refresh', e.message));
+  refreshDistances(next, before).catch((e) => console.error('[home] drive-time refresh', e.message));
   res.json({ cleared: true, home: homeBase(next) });
 }));
 
@@ -307,9 +318,10 @@ router.get('/theatres', h(async (req, res) => {
 router.post('/theatre', (req, res) => {
   const { id, name, slug } = req.body || {};
   try {
+    const wasShared = sharedTheatreIds().has(String(id));
     const settings = replacePrimary({ id, name, slug });
-    if (isOwnerRequest()) refreshAll({ force: true }).catch((e) => console.error('[theatre refresh]', e.message));
-    res.json(settings);
+    afterTheatreChange(wasShared, 'theatre');
+    res.json(forCaller(settings));
   } catch (e) {
     res.status(e.status || 500).json({ error: e.message });
   }
@@ -320,16 +332,17 @@ router.post('/theatre', (req, res) => {
 router.post('/theatres/follow', (req, res) => {
   const { id, name, slug } = req.body || {};
   try {
+    const wasShared = sharedTheatreIds().has(String(id));
     const settings = addFollowed({ id, name, slug });
-    if (isOwnerRequest()) refreshAll({ force: true }).catch((e) => console.error('[follow refresh]', e.message));
-    res.json(settings);
+    afterTheatreChange(wasShared, 'follow');
+    res.json(forCaller(settings));
   } catch (e) {
     res.status(e.status || 500).json({ error: e.message });
   }
 });
 
 router.delete('/theatres/follow/:id', (req, res) => {
-  res.json(removeFollowed(req.params.id));
+  res.json(forCaller(removeFollowed(req.params.id)));
 });
 
 // Promote a followed theatre to primary; the old primary stays followed.
@@ -340,8 +353,8 @@ router.post('/theatres/primary', (req, res) => {
     const settings = promoteToPrimary(id);
     // Showtimes for both are already loaded; re-run so the per-theatre horizon
     // log and the primary-driven snapshot history line up with the new roles.
-    if (isOwnerRequest()) refreshAll({ force: true }).catch((e) => console.error('[primary refresh]', e.message));
-    res.json(settings);
+    afterTheatreChange(true, 'primary'); // already followed by this user, so already pulled
+    res.json(forCaller(settings));
   } catch (e) {
     res.status(e.status || 500).json({ error: e.message });
   }

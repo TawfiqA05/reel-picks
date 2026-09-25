@@ -25,7 +25,9 @@ import { upsertRating } from './ratings.js';
 import { localYMD, addDays } from './util.js';
 import { isSettling } from './scoring.js';
 import { computeHorizon, snapshotLineup } from './leaving.js';
-import { followedTheatres, homeBase, theatreDistance, readDistance, shortName } from './theatres.js';
+import {
+  followedTheatres, homeBase, theatreDistance, readDistance, shortName, sharedTheatres, activeUserIds,
+} from './theatres.js';
 
 export const state = { running: false, lastLog: null, lastRequest: null };
 
@@ -258,8 +260,9 @@ async function enrichRatedMovies(log, limit = 12) {
   }
 }
 
-// Resolve the primary theatre to an AMC id on first run (search by name), then
-// return every followed theatre. Returns [] when AMC isn't usable.
+// Resolve the owner's primary theatre to an AMC id on first run (search by
+// name), then return every theatre anyone active follows (theatres.js
+// sharedTheatres: owner's first, capped). Returns [] when AMC isn't usable.
 async function resolveTheatres(log) {
   if (!amc.amcConfigured()) return [];
   const settings = ownerSettings();
@@ -272,7 +275,7 @@ async function resolveTheatres(log) {
         setSetting('theatreName', found[0].name, { userId: OWNER_ID });
       }
     }
-    const theatres = followedTheatres(ownerSettings()).filter((t) => t.id);
+    const theatres = sharedTheatres();
     for (const t of theatres) t.record = (await amc.getTheatre(t.id)) || null;
     return theatres;
   } catch (e) {
@@ -409,10 +412,16 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
         );
       }
 
-      // Drive time from home, once per theatre (cached for a year).
-      const home = homeBase(ownerSettings());
-      for (const t of theatres) {
-        await safe(theatreDistance(t.id, home), (e) => log.errors.push(`Drive time ${t.short}: ${e.message}`));
+      // Drive time from each person's home to the theatres they follow, once
+      // per (theatre, rounded origin) — cached for a year, so a shared origin
+      // or a repeat costs nothing.
+      const pulled = new Set(theatres.map((t) => t.id));
+      for (const uid of activeUserIds()) {
+        const s = getSettings({ userId: uid });
+        const home = homeBase(s);
+        for (const t of followedTheatres(s).filter((x) => pulled.has(x.id))) {
+          await safe(theatreDistance(t.id, home), (e) => log.errors.push(`Drive time ${t.short}${uid === OWNER_ID ? '' : ` (friend ${uid})`}: ${e.message}`));
+        }
       }
     } else if (amc.amcConfigured()) {
       log.errors.push('AMC key set but no theatre found. Set your theatre in Settings.');
