@@ -4,6 +4,7 @@ import { mean, round2 } from './util.js';
 import { getProfileSummary } from './recommend.js';
 import { savings } from './alist.js';
 import { currentUserId } from './user.js';
+import { backfillState, pendingForCurrentUser } from './backfill.js';
 
 // The current user's stats (lib/user.js).
 export function getStats() {
@@ -64,6 +65,9 @@ export function getStats() {
     totalPicksWatched: picks.length,
     savings: savings(settings),
     suggestion,
+    // Imported films still waiting for director/cast (the backfill fills them in).
+    detailsPending: pendingForCurrentUser(),
+    backfilling: backfillState.running,
     profileConfidence: profile.confidence,
   };
 }

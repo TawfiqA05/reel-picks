@@ -6,7 +6,7 @@ import { get, all, run, getSettings, updateSettings, getSetting, setSetting, dat
 import { exportState, importState } from './lib/state.js';
 import { keyStatus } from './env.js';
 import {
-  refreshAll, shouldAutoRefresh, state as refreshState, ingestOne, drainUnmatched, enrichMissingDetails,
+  refreshAll, shouldAutoRefresh, state as refreshState, ingestOne, drainUnmatched,
 } from './lib/refresh.js';
 import {
   getRecommendations, getComingSoon, getMovieDetail, getProfileSummary, wasWeekly4Pick,
@@ -31,6 +31,7 @@ import { bustCache } from './lib/cache.js';
 import { localYMD, addDays, csvField } from './lib/util.js';
 import { isGuest, ownerName } from './lib/guest.js';
 import { currentUserId, currentUser } from './lib/user.js';
+import { startCreditsBackfill, backfillStatus, backfillState } from './lib/backfill.js';
 import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, userName } from './lib/accounts.js';
 
 const router = Router();
@@ -112,7 +113,7 @@ router.get('/status', (req, res) => {
       refreshing: refreshState.running,
       matching: Boolean(refreshState.draining),
       lastDrain: refreshState.lastDrain || null,
-      enriching: Boolean(refreshState.enriching),
+      enriching: backfillState.running,
       counts: {
         ratings: ratingsCount(),
         unmatched: unmatchedCount(),
@@ -155,11 +156,14 @@ router.get('/status', (req, res) => {
     refreshing: refreshState.running,
     // Most recent refresh request (who asked is not recorded; force says whether it re-pulled).
     lastRefreshRequest: refreshState.lastRequest || null,
+    // Credits backfill for rated films (lib/backfill.js) and live TMDB call counts.
+    creditsBackfill: backfillStatus(),
+    tmdbCalls: { ...tmdb.netStats },
     sharedTheatres: sharedTheatreIds().size,
     matching: Boolean(refreshState.draining),
     // Result of the most recent background matching run (import summary panel).
     lastDrain: refreshState.lastDrain || null,
-    enriching: Boolean(refreshState.enriching),
+    enriching: backfillState.running,
     counts: {
       playing: get('SELECT COUNT(*) AS n FROM movies WHERE playing = 1').n,
       upcoming: get('SELECT COUNT(*) AS n FROM movies WHERE upcoming = 1').n,
@@ -379,7 +383,7 @@ router.post('/state', ownerOnly, (req, res) => {
   try {
     const counts = importState(doc);
     refreshAll({ force: true }).catch((e) => console.error('[state refresh]', e.message));
-    enrichMissingDetails().catch((e) => console.error('[enrich]', e.message));
+    startCreditsBackfill('setup import');
     res.json({ imported: counts, refreshing: true });
   } catch (e) {
     res.status(e.status || 500).json({ error: e.message });
@@ -450,7 +454,7 @@ router.post('/ratings/import', (req, res) => {
       upsertLightMovie({ tmdb_id: w.tmdb_id, title: w.title });
       if (restoreWatched(w)) watchedRestored++;
     }
-    enrichMissingDetails().catch((e) => console.error('[enrich]', e.message));
+    startCreditsBackfill('import');
     return res.json({ format: 'reelpicks', ratingsRestored, watchedRestored, skipped, skippedSamples, enriching: tmdb.tmdbConfigured() });
   }
 

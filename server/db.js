@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS movies (
   mpaa          TEXT,            -- e.g. PG-13
   release_date  TEXT,            -- YYYY-MM-DD (TMDB's primary date; often a premiere)
   tmdb_votes    INTEGER,         -- how many votes tmdb_rating rests on
+  details_missing TEXT,          -- 'not_found' when TMDB has no such film (backfill skips it)
   us_release_date TEXT,          -- YYYY-MM-DD, US limited/theatrical release
   scores        TEXT,            -- JSON: raw {imdb,rt,metacritic,rated} from OMDb
   scores_at     TEXT,            -- ISO timestamp of last OMDb score fetch
@@ -532,6 +533,13 @@ function migrateMovieVotes() {
 }
 
 migrateMovieVotes();
+
+// movies.details_missing: set when TMDB says a rated film doesn't exist, so the
+// credits backfill (lib/backfill.js) stops asking. NULL = fine / not checked.
+if (!hasColumn('movies', 'details_missing')) {
+  db.exec('ALTER TABLE movies ADD COLUMN details_missing TEXT');
+  console.log('[db] added movies.details_missing');
+}
 
 // ---- low-level helpers -------------------------------------------------
 

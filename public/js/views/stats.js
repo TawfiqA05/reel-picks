@@ -45,8 +45,14 @@ export async function render(root, params, ctx) {
     page.appendChild(barList(s.topGenres));
   }
   if (s.topDirectors.length) {
-    page.appendChild(sectionTitle('Top directors'));
+    page.appendChild(sectionTitle('Top directors', 'with 3 or more rated films'));
     page.appendChild(barList(s.topDirectors));
+  }
+  // Imported films arrive with genres only; director and cast follow in the
+  // background. Say so while it's happening, so a short list isn't a mystery.
+  if (s.backfilling && s.detailsPending > 0) {
+    page.appendChild(h('div', { class: 'muted small pad' },
+      `Still loading details for ${s.detailsPending} of your film${s.detailsPending === 1 ? '' : 's'}`));
   }
   if (!s.totalRatings) {
     page.appendChild(h('div', { class: 'muted pad' }, 'Rate some movies to unlock genre/director insights and personalized picks.'));

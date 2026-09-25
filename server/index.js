@@ -12,6 +12,7 @@ import { joinPage, expiredPage } from './lib/invitePage.js';
 import { getSetting } from './db.js';
 import { refreshAll, shouldAutoRefresh, state as refreshState } from './lib/refresh.js';
 import { runAs } from './lib/user.js';
+import { startCreditsBackfill } from './lib/backfill.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 
@@ -143,6 +144,8 @@ app.listen(config.port, () => {
       .catch((e) => console.error(`  ✗ Refresh failed (${why}):`, e.message));
   };
   if (shouldAutoRefresh()) autoRefresh('startup');
+  // Pick up any credits backfill a restart interrupted (a no-op when nothing is missing).
+  startCreditsBackfill('startup');
 
   // A long-running process (a deployed instance) would otherwise never refresh
   // again: check every 15 minutes whether the local calendar day has rolled

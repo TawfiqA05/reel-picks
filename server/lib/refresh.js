@@ -12,6 +12,7 @@
 // call count is written to the refresh log.
 import { run, all, get, getSettings, getSharedSettings, setSetting, getSetting } from '../db.js';
 import { runSystem, OWNER_ID } from './user.js';
+import { startCreditsBackfill } from './backfill.js';
 import * as amc from './amc.js';
 import * as tmdb from './tmdb.js';
 import * as omdb from './omdb.js';
@@ -240,24 +241,6 @@ async function resolveUnmatchedRatings(log, limit = 25) {
       }
     } catch (e) {
       log.errors.push(`resolve rating "${r.title}": ${e.message}`);
-    }
-  }
-}
-
-// Gradually fetch full details for rated movies so the director/actor taste
-// profile deepens over time (genre profile works from light records already).
-async function enrichRatedMovies(log, limit = 12) {
-  if (!tmdb.tmdbConfigured()) return;
-  const rows = all(
-    `SELECT DISTINCT r.tmdb_id FROM ratings r JOIN movies m ON m.tmdb_id = r.tmdb_id
-      WHERE m.details_at IS NULL LIMIT ?`,
-    limit,
-  );
-  for (const row of rows) {
-    try {
-      await ingestMovie(row.tmdb_id, log);
-    } catch (e) {
-      log.errors.push(`enrich ${row.tmdb_id}: ${e.message}`);
     }
   }
 }
@@ -517,9 +500,9 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
       log.sources.upcoming = { movies: upIds.length };
     }
 
-    // 6. Housekeeping: resolve pending ratings, deepen profile, drop past showtimes.
+    // 6. Housekeeping: resolve pending ratings, drop past showtimes. Rated films
+    //    still missing credits are fetched by the backfill, started below.
     await resolveUnmatchedRatings(log, 25);
-    await enrichRatedMovies(log, 12);
     run('DELETE FROM showtimes WHERE date < ?', today);
 
     // 7. Publishing horizon + lineup snapshot, per theatre. The horizon is how
@@ -582,6 +565,7 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
     setSetting('lastRefresh', log.finishedAt);
     setSetting('lastRefreshLog', log);
     state.lastLog = log;
+    startCreditsBackfill('refresh');
     return log;
   } finally {
     state.running = false;
@@ -597,38 +581,6 @@ export async function ingestOne(tmdbId) {
   const log = { errors: [] };
   await ingestMovie(tmdbId, log);
   return log;
-}
-
-// Bulk-fetch TMDB details for rated movies that don't have them yet (e.g. after
-// restoring a backup). Details-only so it doesn't burn the OMDb quota.
-export async function enrichMissingDetails({ max = 400 } = {}) {
-  if (state.enriching) return { enriched: 0, busy: true };
-  state.enriching = true;
-  let enriched = 0;
-  try {
-    if (!tmdb.tmdbConfigured()) return { enriched: 0 };
-    const rows = all(
-      `SELECT DISTINCT r.tmdb_id FROM ratings r JOIN movies m ON m.tmdb_id = r.tmdb_id
-        WHERE m.details_at IS NULL LIMIT ?`,
-      max,
-    );
-    let i = 0;
-    const worker = async () => {
-      while (i < rows.length) {
-        const id = rows[i++].tmdb_id;
-        try {
-          await ingestMovie(id, { errors: [] }, { detailsOnly: true });
-          enriched++;
-        } catch {
-          /* skip and continue */
-        }
-      }
-    };
-    await Promise.all(Array.from({ length: 5 }, worker));
-    return { enriched };
-  } finally {
-    state.enriching = false;
-  }
 }
 
 // Background-resolve imported ratings that couldn't be matched at import time.
@@ -664,6 +616,8 @@ export async function drainUnmatched({ max = 800 } = {}) {
     await Promise.all(Array.from({ length: 5 }, worker));
     // Remembered so the import flow can report "N matched" after its poll.
     state.lastDrain = { tried, matched, finishedAt: new Date().toISOString() };
+    // Matched films only have light records; fetch their credits next.
+    startCreditsBackfill('import');
     return { tried, matched };
   } finally {
     state.draining = false;

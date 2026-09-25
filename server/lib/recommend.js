@@ -380,7 +380,9 @@ export function getProfileSummary() {
     overall: Number(profile.overall.toFixed(2)),
     lowData: profile.count < 10,
     topGenres: top(profile.genre),
-    topDirectors: top(profile.director),
+    // Like genres, by number of rated films then average, but only directors
+    // with at least three: one or two films say little about a director.
+    topDirectors: top(Object.fromEntries(Object.entries(profile.director).filter(([, v]) => v.n >= 3))),
     topActors: top(profile.actor, 8),
   };
 }

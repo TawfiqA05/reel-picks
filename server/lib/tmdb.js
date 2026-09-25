@@ -33,9 +33,28 @@ export function img(path, size = 'w500') {
   return path ? `${IMG}/${size}${path}` : null;
 }
 
-function req(key, ttl, path, params, { force = false } = {}) {
+// Live TMDB calls (cache hits don't count): how many, and the most seen in
+// any one-second window. Owner diagnostics, and what the backfill's throttle
+// is checked against.
+export const netStats = { calls: 0, maxPerSecond: 0 };
+const recent = [];
+function countCall() {
+  const now = Date.now();
+  recent.push(now);
+  while (recent.length && recent[0] <= now - 1000) recent.shift();
+  netStats.calls++;
+  netStats.maxPerSecond = Math.max(netStats.maxPerSecond, recent.length);
+}
+
+// `gate` (optional) is awaited just before a LIVE call, never on a cache hit,
+// so a throttled caller only waits when it really goes to the network.
+function req(key, ttl, path, params, { force = false, gate = null } = {}) {
   if (!tmdbConfigured()) throw new Error('TMDB_API_KEY is not set');
-  return cachedJson(`tmdb:${key}`, ttl, () => fetchJson(url(path, params)), { force });
+  return cachedJson(`tmdb:${key}`, ttl, async () => {
+    if (gate) await gate();
+    countCall();
+    return fetchJson(url(path, params));
+  }, { force });
 }
 
 export async function search(title, year) {
@@ -49,11 +68,11 @@ export async function search(title, year) {
 }
 
 // `force` bypasses the 7-day cache (used while a release is settling).
-export async function details(tmdbId, { force = false } = {}) {
+export async function details(tmdbId, { force = false, gate = null } = {}) {
   return req(`movie:${tmdbId}`, 7 * DAY, `/movie/${tmdbId}`, {
     append_to_response: 'videos,credits,release_dates',
     language: 'en-US',
-  }, { force });
+  }, { force, gate });
 }
 
 export async function nowPlaying(page = 1) {
