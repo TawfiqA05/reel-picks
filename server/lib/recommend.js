@@ -369,21 +369,24 @@ function byScore(a, b) {
 
 export function getProfileSummary() {
   const profile = buildProfile(profileRows());
-  const top = (obj, n = 6) =>
+  // Full lists, most-rated first, then by average. Stats shows the first ten
+  // and a "Show all".
+  const top = (obj) =>
     Object.entries(obj)
       .map(([k, v]) => ({ name: k, avg: Number(v.avg.toFixed(2)), n: v.n }))
-      .sort((a, b) => b.n - a.n || b.avg - a.avg)
-      .slice(0, n);
+      .sort((a, b) => b.n - a.n || b.avg - a.avg);
+  const atLeast3 = (obj) => Object.fromEntries(Object.entries(obj).filter(([, v]) => v.n >= 3));
   return {
     count: profile.count,
     confidence: confidence(profile),
     overall: Number(profile.overall.toFixed(2)),
     lowData: profile.count < 10,
     topGenres: top(profile.genre),
-    // Like genres, by number of rated films then average, but only directors
-    // with at least three: one or two films say little about a director.
-    topDirectors: top(Object.fromEntries(Object.entries(profile.director).filter(([, v]) => v.n >= 3))),
-    topActors: top(profile.actor, 8),
+    // Like genres, by number of rated films then average, but only people with
+    // at least three: one or two films say little about a director or an actor
+    // (and a big import would otherwise list thousands of one-film actors).
+    topDirectors: top(atLeast3(profile.director)),
+    topActors: top(atLeast3(profile.actor)),
   };
 }
 

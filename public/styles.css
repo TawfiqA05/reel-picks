@@ -449,6 +449,9 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .bar-row { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 12px; }
 .bar-name { font-weight: 600; }
 .bar-meta { color: var(--muted); font-size: var(--fs-xs); }
+.stat-list { display: flex; flex-direction: column; }
+.stat-list .show-all { align-self: flex-start; margin-top: var(--sp-2); }
+.bar-row[hidden] { display: none; }
 
 /* ---- settings ---- */
 .settings { gap: 14px; }
