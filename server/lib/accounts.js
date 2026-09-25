@@ -65,9 +65,25 @@ export function touchLastSeen(user) {
   }
 }
 
+// A usable-looking token: what newToken() makes (base64url, 43 chars). Anything
+// else is never looked up, and never echoed back into a page.
+export const isTokenShape = (t) => typeof t === 'string' && /^[A-Za-z0-9_-]{20,100}$/.test(t);
+
+// Who an invite is for, without using it up (the Join page). Null for an
+// unknown, used or revoked token.
+export function findInvite(token) {
+  if (!isTokenShape(token)) return null;
+  return get(
+    'SELECT id, name FROM users WHERE invite_token_hash = ? AND id != ? AND revoked_at IS NULL',
+    sha256(token), OWNER_ID,
+  ) || null;
+}
+
 // Redeem an invite token: returns the friend and burns the token, or null.
+// Only the Join button's POST calls this; opening the link never does, so a
+// link-preview bot fetching it can't use it up.
 export function redeemInvite(token) {
-  if (!token || typeof token !== 'string' || token.length > 200) return null;
+  if (!isTokenShape(token)) return null;
   const user = get(
     'SELECT id, name, session_version FROM users WHERE invite_token_hash = ? AND id != ? AND revoked_at IS NULL',
     sha256(token), OWNER_ID,

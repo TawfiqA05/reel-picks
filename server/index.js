@@ -5,9 +5,10 @@ import { fileURLToPath } from 'node:url';
 import { config } from './env.js';
 import router from './routes.js';
 import {
-  isGuest, isOwner, isLocalRequest, guestAllowed, tokenMatches, ownerCookieName, ownerCookieValue, ownerCookieMaxAgeMs, requestUser,
+  isGuest, isOwner, isLocalRequest, guestAllowed, tokenMatches, ownerCookieName, ownerCookieValue, ownerCookieMaxAgeMs, requestUser, ownerName,
 } from './lib/guest.js';
-import { FRIEND_COOKIE, FRIEND_TTL_MS, redeemInvite, signFriendCookie, touchLastSeen } from './lib/accounts.js';
+import { FRIEND_COOKIE, FRIEND_TTL_MS, findInvite, redeemInvite, signFriendCookie, touchLastSeen } from './lib/accounts.js';
+import { joinPage, expiredPage } from './lib/invitePage.js';
 import { getSetting } from './db.js';
 import { refreshAll, shouldAutoRefresh, state as refreshState } from './lib/refresh.js';
 import { runAs } from './lib/user.js';
@@ -33,24 +34,57 @@ app.use((req, res, next) => {
   res.redirect(302, u.pathname + (u.search || ''));
 });
 
-// Friend invite: /?invite=<token> redeems a one-time token (only its hash is
-// stored) into a signed, HttpOnly friend cookie — never the token itself —
-// then redirects to a token-free URL: onboarding for someone new, Picks for
-// someone returning with a re-issued link. The owner opening a link (owner
-// cookie, or at localhost where every request is the owner) doesn't burn it
-// and is sent to Settings, where the friend list is. A used or unknown token
-// just lands on the app with no cookie.
+// Friend invites, in two steps so that merely opening a link changes nothing.
+// Messaging apps fetch every link they see to draw a preview card; when opening
+// the link redeemed it, those fetches used invites up before the friend ever
+// tapped them.
+//
+// GET/HEAD /?invite=<token> shows the Join page (or the expired page) and
+// never redeems or sets a cookie, whatever the user agent. The Join button
+// POSTs the token to /invite/join, same-origin only; that redeems the one-time
+// token (only its hash is stored) into the signed, HttpOnly friend cookie and
+// redirects to onboarding for someone new, Picks for someone returning with a
+// re-issued link. The owner (owner cookie, or at localhost where every request
+// is the owner) is sent to Settings from either step, without using the link.
+const firstParam = (v) => (Array.isArray(v) ? v[0] : v);
+const pageHeaders = (res) => res.set({
+  'Cache-Control': 'no-store',
+  'Referrer-Policy': 'no-referrer', // the token is in the URL
+  'X-Robots-Tag': 'noindex, nofollow',
+});
+
 app.use((req, res, next) => {
-  if (!('invite' in req.query)) return next();
+  if (!('invite' in req.query) || !['GET', 'HEAD'].includes(req.method)) return next();
   if (isOwner(req) || isLocalRequest(req)) return res.redirect(302, '/#/settings');
-  const raw = req.query.invite;
-  const friend = redeemInvite(Array.isArray(raw) ? raw[0] : raw);
-  if (!friend) return res.redirect(302, '/');
+  pageHeaders(res);
+  const token = firstParam(req.query.invite);
+  const friend = findInvite(token);
+  if (!friend) return res.status(410).type('html').send(expiredPage({ owner: ownerName() }));
+  res.type('html').send(joinPage({ owner: ownerName(), token }));
+});
+
+// A form POST from our own Join page: the browser marks it same-origin
+// (Sec-Fetch-Site), or at least sends our own Origin. Anything else — another
+// site's form, a request with no provenance at all — is refused.
+function sameOriginPost(req) {
+  const site = req.get('sec-fetch-site');
+  if (site) return site === 'same-origin';
+  const from = req.get('origin') || req.get('referer');
+  if (!from) return false;
+  try { return new URL(from).host === req.get('host'); } catch { return false; }
+}
+
+app.post('/invite/join', express.urlencoded({ extended: false, limit: '2kb' }), (req, res) => {
+  if (isOwner(req) || isLocalRequest(req)) return res.redirect(303, '/#/settings');
+  pageHeaders(res);
+  if (!sameOriginPost(req)) return res.status(403).type('text').send('This invite has to be accepted from its own page.');
+  const friend = redeemInvite(firstParam(req.body?.token));
+  if (!friend) return res.status(410).type('html').send(expiredPage({ owner: ownerName() }));
   res.cookie(FRIEND_COOKIE, signFriendCookie(friend), {
     httpOnly: true, secure: true, sameSite: 'lax', maxAge: FRIEND_TTL_MS, path: '/',
   });
   const onboarded = getSetting('onboardingDone', { userId: friend.id });
-  res.redirect(302, onboarded ? '/' : '/#/onboarding');
+  res.redirect(303, onboarded ? '/' : '/#/onboarding');
 });
 
 // Read-only guard for the public tunnel: reject guest writes and owner-only
