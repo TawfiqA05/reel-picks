@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS movies (
   tmdb_votes    INTEGER,         -- how many votes tmdb_rating rests on
   details_missing TEXT,          -- 'not_found' when TMDB has no such film (backfill skips it)
   us_release_date TEXT,          -- YYYY-MM-DD, US limited/theatrical release
+  director_id   INTEGER,         -- TMDB person id of director
+  cast_ids      TEXT,            -- JSON array of TMDB person ids, parallel to cast
   scores        TEXT,            -- JSON: raw {imdb,rt,metacritic,rated} from OMDb
   scores_at     TEXT,            -- ISO timestamp of last OMDb score fetch
   first_seen_at TEXT,            -- ISO timestamp we first ingested this movie
@@ -540,6 +542,48 @@ if (!hasColumn('movies', 'details_missing')) {
   db.exec('ALTER TABLE movies ADD COLUMN details_missing TEXT');
   console.log('[db] added movies.details_missing');
 }
+
+// TMDB person ids for the director and billed cast, so Stats can fetch a
+// filmography by id ("More from …"). Older databases gain the columns and are
+// filled from the TMDB detail responses already in the cache, the ones their
+// names came from. No network; films without a cached response get their ids
+// the next time their details are fetched. A copy of the database is written
+// first.
+function migratePersonIds() {
+  if (hasColumn('movies', 'director_id') && hasColumn('movies', 'cast_ids')) return;
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backup = path.join(dataDir, `reelpicks.pre-person-ids-${stamp}.db`);
+  db.exec(`VACUUM INTO '${backup.replace(/'/g, "''")}'`);
+  let filled = 0;
+  db.exec('BEGIN');
+  try {
+    if (!hasColumn('movies', 'director_id')) db.exec('ALTER TABLE movies ADD COLUMN director_id INTEGER');
+    if (!hasColumn('movies', 'cast_ids')) db.exec('ALTER TABLE movies ADD COLUMN cast_ids TEXT');
+    const set = db.prepare('UPDATE movies SET director_id = ?, cast_ids = ? WHERE tmdb_id = ?');
+    const read = db.prepare('SELECT value FROM cache WHERE key = ?');
+    for (const m of db.prepare('SELECT tmdb_id, director, "cast" FROM movies WHERE details_at IS NOT NULL').all()) {
+      const row = read.get(`tmdb:movie:${m.tmdb_id}`);
+      if (!row) continue;
+      let d;
+      try { d = JSON.parse(row.value); } catch { continue; }
+      // Same picks as tmdb.normalizeDetails; ids only where the stored name matches.
+      const dir = (d?.credits?.crew || []).find((c) => c.job === 'Director');
+      const billed = (d?.credits?.cast || []).slice().sort((a, b) => (a.order ?? 99) - (b.order ?? 99)).slice(0, 6);
+      let names = [];
+      try { names = JSON.parse(m.cast || '[]') || []; } catch { names = []; }
+      const byName = new Map(billed.map((c) => [c.name, c.id]));
+      set.run(dir && dir.name === m.director ? dir.id : null, JSON.stringify(names.map((n) => byName.get(n) ?? null)), m.tmdb_id);
+      filled++;
+    }
+    db.exec('COMMIT');
+    console.log(`[db] movies: TMDB person ids for ${filled} film(s) from cache (backup: ${backup})`);
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+migratePersonIds();
 
 // ---- low-level helpers -------------------------------------------------
 

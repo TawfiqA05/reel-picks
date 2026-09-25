@@ -19,6 +19,7 @@ import { getMovie, upsertLightMovie, hydrate } from './lib/movies.js';
 import { setManualMatch, ignoreMatch, unignoreMatch, unmatchedTitles, reviewTitles, keepMatch } from './lib/match.js';
 import { logWatched, undoWatched, getWeek, restoreWatched } from './lib/alist.js';
 import { getStats } from './lib/stats.js';
+import { getStatsMore } from './lib/statsMore.js';
 import { normalizeRatingsCsv, parseCsv, detectFormat, parseBackupCsv } from './lib/csv.js';
 import * as tmdb from './lib/tmdb.js';
 import * as amc from './lib/amc.js';
@@ -31,7 +32,7 @@ import { bustCache } from './lib/cache.js';
 import { localYMD, addDays, csvField } from './lib/util.js';
 import { isGuest, ownerName } from './lib/guest.js';
 import { currentUserId, currentUser } from './lib/user.js';
-import { startCreditsBackfill, backfillStatus, backfillState } from './lib/backfill.js';
+import { startCreditsBackfill, backfillStatus, backfillState, tmdbThrottle } from './lib/backfill.js';
 import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, userName } from './lib/accounts.js';
 
 const router = Router();
@@ -410,8 +411,19 @@ router.post('/ratings', (req, res) => {
     upsertLightMovie({ tmdb_id, title, year, poster, genres: genres || [] });
   }
   upsertRating({ tmdb_id, title, year, rating, source });
-  ingestOne(tmdb_id).catch(() => {}); // deepen taste profile in the background
-  res.json({ ok: true });
+  if (!req.body?.awaitDetails) {
+    ingestOne(tmdb_id).catch(() => {}); // deepen taste profile in the background
+    return res.json({ ok: true });
+  }
+  // A Stats sheet asks to wait for the film's credits (throttled, cached), so
+  // its "You rated" list can show the film straight away; scores follow in
+  // the background as usual.
+  ingestOne(tmdb_id, { detailsOnly: true, gate: tmdbThrottle })
+    .catch(() => {})
+    .finally(() => {
+      ingestOne(tmdb_id).catch(() => {});
+      res.json({ ok: true });
+    });
 });
 
 router.delete('/ratings/:id', (req, res) => {
@@ -643,6 +655,24 @@ router.get('/stats/group', (req, res) => {
   if (!name || name.length > 300) return res.status(400).json({ error: 'name is required.' });
   res.json(getStatsGroup(kind, name));
 });
+
+// The sheet's second section: "More from <person>" (TMDB filmography, cached
+// 7 days for everyone) or "<Genre> playing now". Not on the guest allowlist.
+router.get('/stats/more', h(async (req, res) => {
+  const kind = String(req.query.kind || '');
+  const name = String(req.query.name || '');
+  if (!STATS_GROUP_KINDS.includes(kind)) return res.status(400).json({ error: 'kind must be genre, director or actor.' });
+  if (!name || name.length > 300) return res.status(400).json({ error: 'name is required.' });
+  if (kind !== 'genre' && !tmdb.tmdbConfigured()) return res.status(503).json({ error: "TMDB isn't set up, so there's no filmography to show." });
+  try {
+    res.json(await getStatsMore(kind, name));
+  } catch (e) {
+    console.error('[stats/more]', kind, name, e.message);
+    res.status(502).json({
+      error: kind === 'genre' ? "Couldn't load what's playing right now. Try again later." : "Couldn't load more films from TMDB right now. Try again later.",
+    });
+  }
+}));
 
 router.get('/export', (req, res) => {
   const uid = currentUserId();

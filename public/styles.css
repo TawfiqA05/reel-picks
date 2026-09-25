@@ -468,6 +468,20 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .sheet-year { color: var(--muted); font-weight: 400; }
 .sheet-rating { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
 @media (max-width: 420px) { .sheet-rating .stars { display: none; } }
+/* Two parts: "You rated", then "More from …" / "… playing now". */
+.sheet-part + .sheet-part { margin-top: var(--sp-4); padding-top: var(--sp-3); border-top: 1px solid var(--line); }
+.sheet-head { margin: 0 0 var(--sp-2); font-size: var(--fs-sm); font-weight: 700; color: var(--text-2); letter-spacing: 0.01em; }
+.sheet-status { margin: 0; }
+.sheet-status.sheet-error { color: var(--text-2); }
+.more-films + .more-films, .sheet-more .show-all { margin-top: var(--sp-2); }
+.sheet-films[hidden] { display: none; }
+.more-film { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--sp-2); contain-intrinsic-size: auto 76px; }
+.more-film .more-link { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: var(--sp-3); align-items: center; flex: 1 1 220px; min-width: 0; padding: 4px 6px; border-radius: var(--r-sm); min-height: 44px; }
+.more-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.more-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.more-tools { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); flex: 0 1 auto; margin-left: auto; min-width: 0; }
+/* Narrow: the controls take their own line under the title, lined up with it. */
+@media (max-width: 520px) { .more-tools { flex: 1 1 100%; padding-left: 58px; } }
 .bar-list { list-style: none; margin: 0; padding: 0; }
 .bar-rank { min-width: 1.6em; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
 .bar-row .bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

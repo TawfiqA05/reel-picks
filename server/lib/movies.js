@@ -8,6 +8,7 @@ export function hydrate(m) {
     ...m,
     genres: jparse(m.genres, []),
     cast: jparse(m.cast, []),
+    cast_ids: jparse(m.cast_ids, []),
     scores: jparse(m.scores, null),
   };
 }
@@ -65,18 +66,20 @@ export function upsertFullMovie(d) {
   run(
     `INSERT INTO movies(tmdb_id, imdb_id, title, year, poster, backdrop, genres, director, cast, runtime,
                         synopsis, tmdb_rating, tmdb_votes, trailer_key, mpaa, release_date, us_release_date,
-                        first_seen_at, details_at, updated_at)
-     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        director_id, cast_ids, first_seen_at, details_at, updated_at)
+     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
      ON CONFLICT(tmdb_id) DO UPDATE SET
        imdb_id = excluded.imdb_id, title = excluded.title, year = excluded.year, poster = excluded.poster,
        backdrop = excluded.backdrop, genres = excluded.genres, director = excluded.director, cast = excluded.cast,
        runtime = excluded.runtime, synopsis = excluded.synopsis, tmdb_rating = excluded.tmdb_rating,
        tmdb_votes = excluded.tmdb_votes, us_release_date = excluded.us_release_date,
        trailer_key = excluded.trailer_key, mpaa = excluded.mpaa, release_date = excluded.release_date,
+       director_id = excluded.director_id, cast_ids = excluded.cast_ids,
        details_at = excluded.details_at, updated_at = excluded.updated_at`,
     d.tmdb_id, d.imdb_id, d.title, y(d.year), d.poster, d.backdrop, JSON.stringify(d.genres || []),
     d.director, JSON.stringify(d.cast || []), d.runtime, d.synopsis, d.tmdb_rating, d.tmdb_votes ?? null, d.trailer_key,
-    d.mpaa, d.release_date, d.us_release_date ?? null, firstSeen, now, now,
+    d.mpaa, d.release_date, d.us_release_date ?? null,
+    d.director_id ?? null, JSON.stringify(d.cast_ids || []), firstSeen, now, now,
   );
 }
 

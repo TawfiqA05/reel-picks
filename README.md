@@ -46,6 +46,13 @@ A few smaller things make the lists easier to read:
 - **Opens <date>.** A film that isn't out in the US yet, where every showtime this week
   is an early screening, is labelled "Opens Oct 2". It can't take the hero slot unless
   one of those screenings is within the next two days. It keeps its rank either way.
+- **Stats drill-downs.** Tapping a genre, director or actor on Stats opens the films I
+  rated there, and under them the rest: "More from Phil Lord" lists every other feature
+  they directed or acted in (no TV, no "Self" or uncredited parts, and for actors the
+  little-seen films wait behind "Show smaller films"), and "Drama playing now" lists that
+  genre at my theatres and opening soon. I can rate or watchlist any of them in place,
+  and a rated film moves up into my list. Filmographies come from TMDB, cached for a
+  week and shared between everyone on the instance.
 - **Poster fallbacks.** When a poster is missing or fails to load, the film's title goes
   on a plain gradient tile instead of a broken image.
 

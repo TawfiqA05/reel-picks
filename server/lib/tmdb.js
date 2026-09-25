@@ -96,6 +96,14 @@ export async function popular(page = 1) {
   return data?.results || [];
 }
 
+// A person's film credits (cast and crew), shared by everyone for 7 days.
+// Callers pass the backfill throttle as `gate`.
+export async function personCredits(personId, { gate = null } = {}) {
+  return req(`person:${personId}:movie_credits`, 7 * DAY, `/person/${personId}/movie_credits`, {
+    language: 'en-US',
+  }, { gate });
+}
+
 // Live (uncached) search for the in-app rating screen so results feel instant/fresh.
 export async function liveSearch(query) {
   if (!tmdbConfigured()) throw new Error('TMDB_API_KEY is not set');
@@ -152,12 +160,11 @@ export function pickUsRelease(releaseDates) {
 
 // Convert a full TMDB detail response into our canonical movie shape.
 export function normalizeDetails(d) {
-  const director = (d.credits?.crew || []).find((c) => c.job === 'Director')?.name || null;
-  const cast = (d.credits?.cast || [])
+  const dir = (d.credits?.crew || []).find((c) => c.job === 'Director');
+  const billed = (d.credits?.cast || [])
     .slice()
     .sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
-    .slice(0, 6)
-    .map((c) => c.name);
+    .slice(0, 6);
   return {
     tmdb_id: d.id,
     imdb_id: d.imdb_id || null,
@@ -166,8 +173,12 @@ export function normalizeDetails(d) {
     poster: img(d.poster_path, 'w500'),
     backdrop: img(d.backdrop_path, 'w780'),
     genres: (d.genres || []).map((g) => g.name),
-    director,
-    cast,
+    director: dir?.name || null,
+    cast: billed.map((c) => c.name),
+    // TMDB person ids, so Stats can fetch a filmography by id rather than by
+    // a name that others share. cast_ids runs parallel to cast.
+    director_id: dir?.id ?? null,
+    cast_ids: billed.map((c) => c.id ?? null),
     runtime: d.runtime || null,
     synopsis: d.overview || '',
     tmdb_rating: d.vote_average ?? null,

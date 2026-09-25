@@ -107,7 +107,8 @@ function insertShowtime(s) {
 
 // Fetch TMDB details (once) and OMDb scores (daily / while settling) for a movie.
 // Pass { detailsOnly: true } to skip OMDb (used when bulk-enriching restored
-// ratings — we only need genres/director/cast for the taste profile).
+// ratings — we only need genres/director/cast for the taste profile), and
+// { gate } to send the TMDB call through a throttle (lib/backfill.js).
 // TMDB details are re-pulled (bypassing the 7-day cache) while a movie is
 // settling, and weekly while its TMDB rating is still zero, rests on fewer
 // than MIN_TMDB_VOTES votes, or has an unknown vote count — otherwise a film
@@ -127,7 +128,7 @@ async function ingestMovie(tmdbId, log, opts = {}) {
     );
     if (needDetails || refetch) {
       try {
-        upsertFullMovie(tmdb.normalizeDetails(await tmdb.details(tmdbId, { force: refetch })));
+        upsertFullMovie(tmdb.normalizeDetails(await tmdb.details(tmdbId, { force: refetch, gate: opts.gate || null })));
       } catch (e) {
         log.errors.push(`TMDB details ${tmdbId}: ${e.message}`);
       }
@@ -577,9 +578,9 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
 
 // Fetch details + scores for a single movie on demand (rating a movie, fixing a
 // match, onboarding). Fire-and-forget friendly.
-export async function ingestOne(tmdbId) {
+export async function ingestOne(tmdbId, opts = {}) {
   const log = { errors: [] };
-  await ingestMovie(tmdbId, log);
+  await ingestMovie(tmdbId, log, opts);
   return log;
 }
 

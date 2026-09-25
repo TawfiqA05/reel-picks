@@ -49,8 +49,11 @@ export function pendingForCurrentUser() {
 
 // Spaces live calls MIN_GAP_MS apart and records the busiest second. Only
 // called on a cache miss (tmdb.js req's gate), so cached films cost nothing.
+// Exported as tmdbThrottle for other background TMDB work (Stats' "More
+// from …" filmographies), so every caller shares the one budget.
 let nextAt = 0;
 const lastSecond = [];
+export async function tmdbThrottle() { return gate(); }
 async function gate() {
   // Re-check after sleeping: a timer that wakes early doesn't get to go early.
   for (let wait = nextAt - Date.now(); wait > 0; wait = nextAt - Date.now()) await sleep(wait);

@@ -181,7 +181,8 @@ export function toast(message, type = '', { action = null, duration = action ? 6
 // stays inside it, and focus goes back to whatever opened it on close.
 let modalSeq = 0;
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])';
-export function openModal(contentNode, { title } = {}) {
+// `onClose` runs once, after the dialog starts closing.
+export function openModal(contentNode, { title, onClose } = {}) {
   const opener = document.activeElement;
   const titleId = `modal-title-${++modalSeq}`;
   let closed = false;
@@ -192,6 +193,7 @@ export function openModal(contentNode, { title } = {}) {
     setTimeout(() => overlay.remove(), 200);
     document.removeEventListener('keydown', onKey);
     if (opener && document.contains(opener)) opener.focus?.();
+    onClose?.();
   };
   const onKey = (e) => {
     if (e.key === 'Escape') { close(); return; }

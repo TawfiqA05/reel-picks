@@ -470,13 +470,10 @@ export function wasWeekly4Pick(tmdbId, week = weekStartFriday()) {
   return Boolean(get('SELECT 1 AS x FROM weekly4_log WHERE user_id = ? AND week_start = ? AND tmdb_id = ?', currentUserId(), week, tmdbId));
 }
 
-export function getRecommendations({ guest = false } = {}) {
-  const ctx = buildCtx({ guest });
-  const playing = all('SELECT * FROM movies WHERE playing = 1').map(hydrate);
-
-  // Split the lineup: in the primary's schedule this week → ranked as always;
-  // only at another followed theatre → "Also nearby", never in the ranking.
-  // A movie with no showtimes anywhere (TMDB fallback) stays in the ranking.
+// Split the lineup: in the primary's schedule this week → ranked as always;
+// only at another followed theatre → "Also nearby", never in the ranking.
+// A movie with no showtimes anywhere (TMDB fallback) stays in the ranking.
+function splitLineup(ctx, playing) {
   const hasWeek = (tid, id) => rowsAt(ctx, tid, id, { week: true }).length > 0;
   const main = [];
   const nearby = [];
@@ -488,6 +485,25 @@ export function getRecommendations({ guest = false } = {}) {
     else if (ctx.elsewhereThisWeek.has(m.tmdb_id)) continue;
     else main.push(m);
   }
+  return { main, nearby };
+}
+
+// The films at the current user's theatres this week (the Picks page's list
+// plus "Also nearby") and the Coming Soon films, for Stats' genre sheets.
+// Read only: unlike getRecommendations it records nothing in weekly4_log.
+export function userLineup() {
+  const ctx = buildCtx();
+  const { main, nearby } = splitLineup(ctx, all('SELECT * FROM movies WHERE playing = 1').map(hydrate));
+  return {
+    playing: [...main, ...nearby.map(({ m }) => m)],
+    upcoming: all('SELECT * FROM movies WHERE upcoming = 1').map(hydrate),
+  };
+}
+
+export function getRecommendations({ guest = false } = {}) {
+  const ctx = buildCtx({ guest });
+  const playing = all('SELECT * FROM movies WHERE playing = 1').map(hydrate);
+  const { main, nearby } = splitLineup(ctx, playing);
 
   const evaluated = main.map((m) => evaluate(m, ctx));
   const list = evaluated.sort(byScore);

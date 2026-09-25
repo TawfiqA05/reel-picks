@@ -207,7 +207,9 @@ export function watchlistButton(entry, ctx, { compact = false, onToggle } = {}) 
 // on removes it, and the Clear button next to the stars makes that discoverable
 // instead of a hidden gesture. Clearing deletes the row outright (not a 0-star
 // rating), so the movie stops feeding the taste profile.
-export function starRater(entry, ctx, { value = 0, onRated, size = 20 } = {}) {
+// `awaitDetails` asks the server to finish fetching the film's credits
+// before answering (Stats sheets, which re-list the film by director/cast).
+export function starRater(entry, ctx, { value = 0, onRated, size = 20, awaitDetails = false } = {}) {
   let current = value;
   const clearBtn = h('button', { class: 'link-btn rater-clear', type: 'button', title: 'Remove your rating' }, 'Clear');
 
@@ -217,7 +219,7 @@ export function starRater(entry, ctx, { value = 0, onRated, size = 20 } = {}) {
     if (v === current) return;
     try {
       if (v) {
-        await api.rate({ tmdb_id: entry.tmdb_id, rating: v, title: entry.title, year: entry.year, poster: entry.poster, genres: entry.genres });
+        await api.rate({ tmdb_id: entry.tmdb_id, rating: v, title: entry.title, year: entry.year, poster: entry.poster, genres: entry.genres, awaitDetails: awaitDetails || undefined });
         toast(`Rated ${v}★`, 'success');
       } else {
         await api.unrate(entry.tmdb_id);
