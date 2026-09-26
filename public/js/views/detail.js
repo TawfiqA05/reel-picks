@@ -15,14 +15,6 @@ export async function render(root, params, ctx) {
 
   // Hero: the same backdrop-and-scrim treatment as the #1 pick, so the title
   // and metadata always sit on a dark, readable ground.
-  const trailer = m.trailer_key ? h('div', { class: 'trailer-wrap', id: 'trailer' }, h('div', { class: 'trailer' },
-    h('iframe', {
-      src: `https://www.youtube-nocookie.com/embed/${m.trailer_key}`,
-      title: `${m.title} trailer`, allow: 'accelerometer; autoplay; clipboard-write; compute-pressure; encrypted-media; gyroscope; picture-in-picture',
-      allowfullscreen: true, loading: 'lazy',
-    }),
-  )) : null;
-  if (trailer) watchFrameFocus(trailer);
   const meta = [m.year, fmtRuntime(m.runtime), m.mpaa].filter(Boolean);
   page.appendChild(h('section', { class: 'detail-hero', 'aria-labelledby': 'detail-title' },
     heroMedia(m),
@@ -45,9 +37,9 @@ export async function render(root, params, ctx) {
       d.reason ? h('p', { class: 'hero-reason' }, d.reason) : null,
       h('div', { class: 'hero-actions' },
         guest ? null : watchlistButton({ tmdb_id: m.tmdb_id, title: m.title, watchlisted: d.watchlisted }, ctx),
-        trailer ? h('button', {
-          class: 'chip-btn', type: 'button',
-          onClick: () => trailer.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' }),
+        m.trailer_key ? h('button', {
+          class: 'chip-btn', type: 'button', 'aria-haspopup': 'dialog',
+          onClick: () => openTrailer(m),
         }, icon('play', { size: 16 }), 'Trailer') : null,
       ),
     ),
@@ -60,9 +52,7 @@ export async function render(root, params, ctx) {
   const owner = guest ? (ctx.getStatus()?.ownerName || 'the owner') : null;
   page.appendChild(h('div', { class: 'cards-2' }, publicCard(d), tasteCard(d, owner)));
 
-  // Showtimes first, then the trailer: booking is the thing people come for.
   page.appendChild(showtimesSection(d, ctx));
-  if (trailer) page.appendChild(trailer);
 
   // Synopsis + cast
   if (m.synopsis) page.appendChild(h('p', { class: 'synopsis' }, m.synopsis));
@@ -241,11 +231,30 @@ function openFixMatch(d, ctx) {
   input.focus();
 }
 
+// The trailer plays in a dialog, inside the app. It never starts on its own:
+// the player waits for a tap on play. Closing it (X, Escape, a tap outside)
+// takes the player out at once, so no sound carries on while the dialog fades,
+// and focus goes back to the Trailer button.
+function openTrailer(m) {
+  const frame = h('iframe', {
+    src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(m.trailer_key)}?rel=0&playsinline=1`,
+    title: `${m.title} trailer`, allow: 'accelerometer; clipboard-write; compute-pressure; encrypted-media; gyroscope; picture-in-picture',
+    allowfullscreen: true,
+  });
+  const wrap = h('div', { class: 'trailer-wrap' }, h('div', { class: 'trailer' }, frame));
+  const stopRing = watchFrameFocus(wrap);
+  openModal(wrap, {
+    title: `${m.title}: trailer`,
+    cls: 'trailer-overlay',
+    onClose: () => { stopRing(); frame.src = 'about:blank'; frame.remove(); },
+  });
+}
+
 // Tabbing into the YouTube frame: the browser moves focus into the frame's own
 // document, so the frame never matches :focus and fires no focus event here;
 // the page only sees its window lose focus. Right after a Tab key that means
-// the frame took it: ring it and bring all of it into view (it could otherwise
-// sit under the tab bar). Clicking into the player shows no ring.
+// the frame took it: ring it. Clicking into the player shows no ring. Returns
+// the function that stops watching.
 function watchFrameFocus(wrap) {
   const frame = wrap.querySelector('iframe');
   let tabAt = 0;
@@ -253,15 +262,14 @@ function watchFrameFocus(wrap) {
   const onBlur = () => setTimeout(() => {
     if (document.activeElement !== frame || Date.now() - tabAt > 500) return;
     frame.classList.add('kb-focus');
-    wrap.scrollIntoView({ block: 'nearest' });
   }, 0);
   const onFocus = () => frame.classList.remove('kb-focus');
   document.addEventListener('keydown', onKey);
   window.addEventListener('blur', onBlur);
   window.addEventListener('focus', onFocus);
-  window.addEventListener('hashchange', () => {
+  return () => {
     document.removeEventListener('keydown', onKey);
     window.removeEventListener('blur', onBlur);
     window.removeEventListener('focus', onFocus);
-  }, { once: true });
+  };
 }

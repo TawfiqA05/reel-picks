@@ -53,6 +53,10 @@ A few smaller things make the lists easier to read:
   genre at my theatres and opening soon. I can rate or watchlist any of them in place,
   and a rated film moves up into my list. Filmographies come from TMDB, cached for a
   week and shared between everyone on the instance.
+- **Trailers.** A movie page's Trailer button plays the trailer in a dialog inside the
+  app. It never starts on its own and stops the moment the dialog closes. The pick is
+  TMDB's official English trailer when there is one, and a foreign film with only its
+  own-language trailers still gets one.
 - **Poster fallbacks.** When a poster is missing or fails to load, the film's title goes
   on a plain gradient tile instead of a broken image.
 

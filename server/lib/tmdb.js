@@ -49,12 +49,18 @@ function countCall() {
 
 // `gate` (optional) is awaited just before a LIVE call, never on a cache hit,
 // so a throttled caller only waits when it really goes to the network.
-function req(key, ttl, path, params, { force = false, gate = null } = {}) {
+// `more(data, live)` (optional) can top up a fresh response before it is
+// cached; `live(path, params)` makes another gated, counted call.
+function req(key, ttl, path, params, { force = false, gate = null, more = null } = {}) {
   if (!tmdbConfigured()) throw new Error('TMDB_API_KEY is not set');
-  return cachedJson(`tmdb:${key}`, ttl, async () => {
+  const live = async (p, q) => {
     if (gate) await gate();
     countCall();
-    return fetchJson(url(path, params));
+    return fetchJson(url(p, q));
+  };
+  return cachedJson(`tmdb:${key}`, ttl, async () => {
+    const data = await live(path, params);
+    return more ? more(data, live) : data;
   }, { force });
 }
 
@@ -69,11 +75,26 @@ export async function search(title, year) {
 }
 
 // `force` bypasses the 7-day cache (used while a release is settling).
+// Videos come back in English plus those with no language set. A film with
+// no YouTube video among those (a foreign film with only its own-language
+// trailers) gets one more call for its videos in every language.
 export async function details(tmdbId, { force = false, gate = null } = {}) {
   return req(`movie:${tmdbId}`, 7 * DAY, `/movie/${tmdbId}`, {
     append_to_response: 'videos,credits,release_dates',
     language: 'en-US',
-  }, { force, gate });
+    include_video_language: 'en,null',
+  }, {
+    force,
+    gate,
+    more: async (d, live) => {
+      if ((d?.videos?.results || []).some((v) => v.site === 'YouTube')) return d;
+      try {
+        const all = await live(`/movie/${tmdbId}/videos`, {});
+        if (all?.results?.length) d.videos = all;
+      } catch { /* no trailer is fine; the film itself loaded */ }
+      return d;
+    },
+  });
 }
 
 export async function nowPlaying(page = 1) {
@@ -147,15 +168,16 @@ export function lightMovie(r) {
   };
 }
 
-function pickTrailer(videos) {
-  const vids = videos?.results || [];
-  const yt = vids.filter((v) => v.site === 'YouTube');
-  const pref =
-    yt.find((v) => v.type === 'Trailer' && v.official) ||
-    yt.find((v) => v.type === 'Trailer') ||
-    yt.find((v) => v.type === 'Teaser') ||
-    yt[0];
-  return pref?.key || null;
+// A YouTube trailer, best first: type Trailer over Teaser over anything else,
+// then English, then official, then the newest. Exported for tests.
+export function pickTrailer(videos) {
+  const yt = (videos?.results || []).filter((v) => v.site === 'YouTube' && v.key);
+  const typeRank = (v) => (v.type === 'Trailer' ? 0 : v.type === 'Teaser' ? 1 : 2);
+  const best = yt.sort((a, b) => typeRank(a) - typeRank(b)
+    || Number(b.iso_639_1 === 'en') - Number(a.iso_639_1 === 'en')
+    || Number(Boolean(b.official)) - Number(Boolean(a.official))
+    || String(b.published_at || '').localeCompare(String(a.published_at || '')))[0];
+  return best?.key || null;
 }
 
 function pickMpaa(releaseDates) {
