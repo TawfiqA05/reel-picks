@@ -17,7 +17,7 @@ import { all } from '../db.js';
 import * as tmdb from './tmdb.js';
 import { getMovies, upsertFullMovie } from './movies.js';
 import { getStatsGroup, userLineup } from './recommend.js';
-import { usReleaseDate } from './scoring.js';
+import { usReleaseDate, tmdbIgnoredReason } from './scoring.js';
 import { tmdbThrottle } from './backfill.js';
 import { currentUserId } from './user.js';
 import { localYMD } from './util.js';
@@ -91,6 +91,16 @@ function fromMovie(m, today) {
   };
 }
 
+// The app-wide thin-rating rule (lib/scoring.js): a TMDB rating from fewer
+// than MIN_TMDB_VOTES votes, or on a film not yet out in the US, isn't shown
+// as a number; the sheet says "No TMDB rating yet" instead. A filmography
+// credit only carries TMDB's primary date, often a festival premiere, so the
+// US release date is taken from the stored film when there is one.
+export function countedRating(f, usDate = null, now = new Date()) {
+  const ignored = tmdbIgnoredReason({ ...f, us_release_date: usDate || null }, now);
+  return ignored || !(f.tmdb_rating > 0) ? null : f.tmdb_rating;
+}
+
 const newestFirst = (a, b) => String(b.release_date || '').localeCompare(String(a.release_date || ''))
   || a.title.localeCompare(b.title);
 
@@ -121,9 +131,14 @@ export async function getStatsMore(kind, name) {
     films = pool.filter((c) => isFeature(c) && !seen.has(c.id) && seen.add(c.id)).map((c) => fromCredit(c, today));
   }
 
+  const ids = films.map((f) => f.tmdb_id);
+  const usDates = new Map(ids.length
+    ? all(`SELECT tmdb_id, us_release_date FROM movies WHERE us_release_date IS NOT NULL AND tmdb_id IN (${ids.map(() => '?').join(',')})`, ...ids)
+      .map((r) => [r.tmdb_id, r.us_release_date])
+    : []);
   films = films
     .filter((f) => !listed.has(f.tmdb_id) && !hidden.has(f.tmdb_id))
-    .map((f) => ({ ...f, watchlisted: watch.has(f.tmdb_id), myRating: mine.get(f.tmdb_id) ?? null }))
+    .map((f) => ({ ...f, tmdb_rating: countedRating(f, usDates.get(f.tmdb_id)), watchlisted: watch.has(f.tmdb_id), myRating: mine.get(f.tmdb_id) ?? null }))
     .sort(newestFirst);
   // Actors only: keep a big career's list to films people have heard of.
   const small = (f) => kind === 'actor' && !(f.tmdb_votes >= SMALL_FILM_VOTES);

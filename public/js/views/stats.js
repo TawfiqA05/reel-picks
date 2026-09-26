@@ -221,7 +221,8 @@ function openGroup(kind, it, ctx) {
 
   const moreRow = (f) => {
     const row = h('li', { class: 'sheet-film more-film' });
-    const tmdbLine = f.tmdb_rating > 0 && f.tmdb_votes > 0
+    // The server leaves tmdb_rating null when it rests on too few votes or the film isn't out in the US yet.
+    const tmdbLine = f.tmdb_rating > 0
       ? h('span', { class: 'more-tmdb', 'aria-label': `TMDB ${f.tmdb_rating.toFixed(1)} out of 10` }, `TMDB ${f.tmdb_rating.toFixed(1)}`)
       : h('span', { class: 'more-tmdb' }, 'No TMDB rating yet');
     row.append(
