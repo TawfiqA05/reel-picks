@@ -238,8 +238,13 @@ function openGroup(kind, it, ctx) {
     await loadRated();
     if (!ratedIds.has(f.tmdb_id)) return; // rated, but not counted under this row (e.g. a small role)
     const list = row.parentElement;
+    // Rated from the keyboard: the stars of the next film (or the one before)
+    // take focus, instead of it falling out of the sheet with the row.
+    const hadFocus = row.contains(document.activeElement);
+    const nextStars = (row.nextElementSibling || row.previousElementSibling)?.querySelector('.stars.interactive');
     row.remove();
     if (list && !list.children.length) list.remove();
+    if (hadFocus) (nextStars || more.closest('.modal-card'))?.focus();
     paintSmaller();
     if (!more.querySelector('.more-film')) { status.textContent = emptyLine; status.hidden = false; }
   };

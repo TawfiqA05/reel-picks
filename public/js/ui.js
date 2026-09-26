@@ -94,15 +94,44 @@ export function chip(text, { active = false, onClick, removable = false } = {}) 
 // allowClear: clicking the rating you're already on removes it, reporting 0 to
 // onChange. The returned node carries setValue() so callers can push the display
 // back in sync (e.g. after a failed save).
-export function makeStars({ value = 0, interactive = false, onChange, size = 22, allowClear = false } = {}) {
+// A star rating, 0.5-5 in half stars. `interactive` makes it a control that
+// works by pointer and by keyboard: a slider (named by `label`) whose
+// aria-valuetext always says the value. Arrow keys move it half a star at a
+// time (Home/End jump to the ends) without saving; Enter or Space saves, and
+// Delete or Backspace clears when `allowClear`. Escape or leaving the control
+// puts an unsaved value back. A click saves at once, as always, and clicking
+// the saved value clears it.
+export function makeStars({ value = 0, interactive = false, onChange, size = 22, allowClear = false, label = 'Your rating' } = {}) {
   const wrap = h('div', { class: `stars${interactive ? ' interactive' : ''}`, style: { fontSize: `${size}px` } });
-  const base = h('div', { class: 'stars-base' }, '★★★★★');
-  const fill = h('div', { class: 'stars-fill' }, '★★★★★');
-  let current = value;
-  const set = (v) => { current = v; fill.style.width = `${(v / 5) * 100}%`; };
-  set(value);
+  const base = h('div', { class: 'stars-base', 'aria-hidden': interactive ? 'true' : null }, '★★★★★');
+  const fill = h('div', { class: 'stars-fill', 'aria-hidden': interactive ? 'true' : null }, '★★★★★');
+  let current = value; // saved
+  let shown = value; // on screen: the saved value, or one picked with the keys and not saved yet
+  const words = (v) => (v ? `${v} star${v === 1 ? '' : 's'}` : 'Not rated');
+  const paint = (v) => {
+    shown = v;
+    fill.style.width = `${(v / 5) * 100}%`;
+    if (!interactive) return;
+    wrap.setAttribute('aria-valuenow', String(v));
+    wrap.setAttribute('aria-valuetext', v === current ? words(v) : `${words(v)}, press Enter to save`);
+  };
+  const set = (v) => { current = v; paint(v); };
   wrap.append(base, fill);
   if (interactive) {
+    Object.entries({
+      role: 'slider', tabindex: '0', 'aria-label': label, 'aria-valuemin': '0', 'aria-valuemax': '5',
+    }).forEach(([k, v]) => wrap.setAttribute(k, v));
+  }
+  set(value);
+  if (interactive) {
+    // Saves run one after another: a quick "rate, then clear" (keys or taps)
+    // reaches the server in that order, and each onChange sees the last
+    // one finished.
+    let saving = Promise.resolve();
+    const save = (v) => {
+      set(v);
+      if (onChange) saving = saving.then(() => onChange(v)).catch(() => {});
+    };
     const fromX = (clientX) => {
       const r = base.getBoundingClientRect();
       let ratio = (clientX - r.left) / r.width;
@@ -112,9 +141,34 @@ export function makeStars({ value = 0, interactive = false, onChange, size = 22,
     wrap.addEventListener('click', (e) => {
       let v = fromX(e.clientX);
       if (allowClear && v === current) v = 0;
-      set(v);
-      onChange && onChange(v);
+      save(v);
     });
+    wrap.addEventListener('keydown', (e) => {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      let next = null;
+      switch (e.key) {
+        case 'ArrowRight': case 'ArrowUp': next = Math.min(5, (shown || 0) + 0.5); break;
+        case 'ArrowLeft': case 'ArrowDown': next = shown ? Math.max(0.5, shown - 0.5) : 0; break;
+        case 'Home': next = 0.5; break;
+        case 'End': next = 5; break;
+        case 'Enter': case ' ':
+          if (shown !== current) save(shown);
+          break;
+        case 'Delete': case 'Backspace':
+          if (!allowClear) return;
+          if (current || shown) save(0);
+          break;
+        case 'Escape':
+          if (shown === current) return; // nothing to undo: let a sheet close
+          paint(current);
+          break;
+        default: return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      if (next !== null && next !== shown) paint(next);
+    });
+    wrap.addEventListener('blur', () => { if (shown !== current) paint(current); });
   }
   wrap.setValue = set;
   return wrap;

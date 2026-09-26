@@ -157,9 +157,9 @@ export async function render(root, params, ctx) {
       } catch (e) { stars.setValue(before); toast(e.message, 'error'); }
     };
     const starsFor = (m) => {
-      const stars = makeStars({ value: mine.get(m.tmdb_id) ?? m.myRating ?? 0, interactive: true, size: 22, allowClear: true, onChange: (v) => rate(m, v, stars) });
-      stars.setAttribute('role', 'group');
-      stars.setAttribute('aria-label', `Rate ${m.title}`);
+      const stars = makeStars({
+        value: mine.get(m.tmdb_id) ?? m.myRating ?? 0, interactive: true, size: 22, allowClear: true, onChange: (v) => rate(m, v, stars), label: `Rate ${m.title}`,
+      });
       return stars;
     };
 

@@ -250,7 +250,7 @@ export function starRater(entry, ctx, { value = 0, onRated, size = 20, awaitDeta
     }
   };
 
-  const stars = makeStars({ value, interactive: true, size, allowClear: true, onChange: persist });
+  const stars = makeStars({ value, interactive: true, size, allowClear: true, onChange: persist, label: entry.title ? `Your rating of ${entry.title}` : 'Your rating' });
 
   clearBtn.addEventListener('click', (e) => {
     e.preventDefault();

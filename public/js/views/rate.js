@@ -37,7 +37,7 @@ export async function render(root, params, ctx) {
           h('a', { class: 'search-title', href: `#/movie/${r.tmdb_id}` }, `${r.title}${r.year ? ` (${r.year})` : ''}`),
           h('div', { class: 'muted small' }, (r.genres || []).slice(0, 3).join(' · ')),
         ),
-        makeStars({ value: r.myRating || 0, interactive: true, size: 22, allowClear: true, onChange: (v) => rateMovie(r, v) }),
+        makeStars({ value: r.myRating || 0, interactive: true, size: 22, allowClear: true, onChange: (v) => rateMovie(r, v), label: `Your rating of ${r.title}` }),
       ));
     }
   }
@@ -299,13 +299,13 @@ export async function render(root, params, ctx) {
 
   const ratingRow = (r) => {
     const title = r.title || 'Untitled';
-    return h('div', { class: 'rating-item' },
+    return h('div', { class: 'rating-item', 'data-rating-id': String(r.tmdb_id) },
       r.poster ? h('img', { class: 'ri-poster', src: r.poster, alt: '', loading: 'lazy' }) : h('div', { class: 'ri-poster ph' }),
       h('div', { class: 'ri-info' },
         h('a', { class: 'ri-title', href: `#/movie/${r.tmdb_id}` }, `${title}${r.year ? ` (${r.year})` : ''}`),
         h('div', { class: 'muted small' }, SOURCES[r.source] || r.source),
       ),
-      makeStars({ value: r.rating, interactive: true, size: 18, allowClear: true, onChange: (v) => rateMovie(r, v) }),
+      makeStars({ value: r.rating, interactive: true, size: 18, allowClear: true, onChange: (v) => rateMovie(r, v), label: `Your rating of ${title}` }),
       h('button', {
         class: 'icon-btn round ri-remove', type: 'button', title: 'Remove rating', 'aria-label': `Remove your rating of ${title}`,
         onClick: async () => {
@@ -321,6 +321,13 @@ export async function render(root, params, ctx) {
   };
 
   async function loadRecent() {
+    // Keyboard focus in the list (a film's stars or remove button) survives the
+    // re-load: back on that film's same control, or, when it's gone (cleared),
+    // on the stars of the film now in its place (the filter box when none is).
+    const was = document.activeElement?.closest?.('#rating-list [data-rating-id]');
+    const wasId = was?.dataset.ratingId;
+    const wasIndex = was ? [...was.parentElement.children].indexOf(was) : -1;
+    const wasRemove = Boolean(document.activeElement?.closest?.('.ri-remove'));
     const { ratings } = await api.ratings();
     const head = sectionTitle('Your ratings', `${ratings.length} total`);
     if (!ratings.length) {
@@ -333,6 +340,12 @@ export async function render(root, params, ctx) {
     // Swapped in whole, so the page never drops to empty and loses its place.
     recentWrap.replaceChildren(...[head, ratings.length > 8 ? filter.el : null, list, moreBtn].filter(Boolean));
     filter.set(rows); // applies whatever is typed, then paintRows folds the rest away
+    if (wasId) {
+      const same = list.querySelector(`[data-rating-id="${wasId}"]`);
+      const row = same && !same.hidden ? same : [...list.children].slice(Math.max(0, wasIndex)).find((el) => !el.hidden);
+      const target = row?.querySelector(same && wasRemove ? '.ri-remove' : '.stars.interactive');
+      (target || recentWrap.querySelector('input') || moreBtn)?.focus?.();
+    }
   }
 
   root.replaceChildren(page);

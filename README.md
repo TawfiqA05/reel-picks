@@ -154,6 +154,9 @@ imported, skipped, and left unmatched. IMDb's 1–10 scores convert to half-star
 You can also just search and rate in the app; a quick-rate flow covers about twenty popular
 films in a minute or two. Under all that, my ratings list opens on the newest 60, with
 Show all for the rest and a forgiving filter box that searches every one of them.
+Every star rating works from the keyboard as well: Tab to the stars, arrow keys move
+half a star at a time, Enter or Space saves, Delete or Backspace clears, and a screen
+reader hears the value ("3.5 stars") as it changes.
 
 Letterboxd can also stay in sync on its own. Anyone with an account (me or a friend, never
 the guest link) can put their Letterboxd username in Settings. Once a day, and whenever
