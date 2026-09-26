@@ -31,6 +31,7 @@ with your own keys.
 - Follows up to four extra theatres, shows drive times from home, and flags when a film
   leaving my theatre is still playing at one of them.
 - Tracks A-List usage: money saved versus ticket prices, and whether my picks landed.
+  Marking a film seen on its page turns the button into "Seen · Undo".
 - Shares a read-only guest link so other people can see my picks without touching anything.
 
 A few smaller things make the lists easier to read:

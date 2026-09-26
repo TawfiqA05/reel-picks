@@ -7,10 +7,11 @@ import { fmtRuntime, dayLabel, showtimeChip, watchlistButton, starRater, runwayB
 export async function render(root, params, ctx) {
   clear(root);
   root.appendChild(spinner('Loading…'));
-  const d = await api.movie(params[0]);
+  const guest = ctx.isGuest?.();
+  // This week's watch log, for "Seen · Undo" (the same log Stats lists).
+  const [d, week] = await Promise.all([api.movie(params[0]), guest ? null : api.alist().catch(() => null)]);
   const m = d.movie;
   clear(root);
-  const guest = ctx.isGuest?.();
 
   const page = h('div', { class: 'detail' });
 
@@ -47,7 +48,7 @@ export async function render(root, params, ctx) {
   ));
 
   // Rate + A-List (owner only)
-  if (!guest) page.appendChild(ratingRow(d, m, ctx));
+  if (!guest) page.appendChild(ratingRow(d, m, ctx, week));
 
   // Score breakdown
   const owner = guest ? (ctx.getStatus()?.ownerName || 'the owner') : null;
@@ -66,26 +67,53 @@ export async function render(root, params, ctx) {
   root.appendChild(page);
 }
 
-function ratingRow(d, m, ctx) {
+function ratingRow(d, m, ctx, week) {
   const label = h('span', { class: 'muted' }, d.myRating ? 'Your rating' : 'Rate it');
   const stars = starRater(m, ctx, {
     value: d.myRating || 0,
     size: 30,
     onRated: (v) => { label.textContent = v ? 'Your rating' : 'Rate it'; },
   });
+  const seenSlot = h('div', { class: 'seen-slot' });
 
-  const seenBtn = h('button', { class: 'btn ghost', type: 'button' }, icon('ticket', { size: 16 }), 'Mark seen (A-List)');
-  seenBtn.addEventListener('click', async () => {
-    try {
-      const wk = await api.markWatched({ tmdb_id: m.tmdb_id, title: m.title });
-      toast(`Logged. ${wk.used} of ${wk.limit} A-List this week.`, 'success');
-      ctx.refreshStatus();
-    } catch (e) { toast(e.message, 'error'); }
-  });
+  // Marked seen: "Seen · Undo", with the watch-log entry it undoes. Otherwise
+  // the Mark seen button. `focus` moves focus to the new control after a
+  // press, so a keyboard user isn't left on a button that just went away.
+  const paint = (entry, { focus = false } = {}) => {
+    clear(seenSlot);
+    if (entry) {
+      const undo = h('button', { class: 'link-btn seen-undo', type: 'button', 'aria-label': `Undo marking ${m.title} seen` }, 'Undo');
+      undo.addEventListener('click', async () => {
+        undo.disabled = true;
+        try {
+          await api.undoWatched(entry.id);
+          toast('Removed from your watch log', 'success');
+          paint(null, { focus: true });
+          ctx.refreshStatus();
+        } catch (e) { undo.disabled = false; toast(e.message, 'error'); }
+      });
+      seenSlot.append(h('span', { class: 'seen-state' }, icon('check', { size: 16 }), 'Seen'), h('span', { class: 'seen-dot', 'aria-hidden': 'true' }, '·'), undo);
+      if (focus) undo.focus();
+      return;
+    }
+    const seenBtn = h('button', { class: 'btn ghost', type: 'button' }, icon('ticket', { size: 16 }), 'Mark seen (A-List)');
+    seenBtn.addEventListener('click', async () => {
+      seenBtn.disabled = true;
+      try {
+        const wk = await api.markWatched({ tmdb_id: m.tmdb_id, title: m.title });
+        toast(`Logged. ${wk.used} of ${wk.limit} A-List this week.`, 'success');
+        paint(wk.movies.find((x) => x.tmdb_id === m.tmdb_id), { focus: true });
+        ctx.refreshStatus();
+      } catch (e) { seenBtn.disabled = false; toast(e.message, 'error'); }
+    });
+    seenSlot.append(seenBtn);
+    if (focus) seenBtn.focus();
+  };
+  paint(week?.movies?.find((x) => x.tmdb_id === m.tmdb_id));
 
   return h('div', { class: 'rating-row' },
     h('div', { class: 'rr-left' }, label, stars),
-    seenBtn,
+    seenSlot,
   );
 }
 
