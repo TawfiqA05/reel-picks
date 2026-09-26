@@ -9,7 +9,7 @@ export const NUMBER_RULES = {
   urgencyBoost: { min: 0, max: 20 },
   urgencyWatchlistMultiplier: { min: 1, max: 5 },
   fallbackRecencyWeeks: { min: 1, max: 104, int: true },
-  alistWeeklyLimit: { min: 1, max: 21, int: true },
+  alistWeeklyLimit: { min: 0, max: 31, int: true }, // visits per plan period; 0 = no limit
   alistMonthlyFee: { min: 0, max: 1000 },
   avgTicketPrice: { min: 0, max: 1000 },
   previewsMinutes: { min: 0, max: 60, int: true },

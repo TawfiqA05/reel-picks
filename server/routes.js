@@ -37,6 +37,7 @@ import { startCreditsBackfill, backfillStatus, backfillState, tmdbThrottle } fro
 import { backupStatus, latestBackup, backupsDir } from './lib/backup.js';
 import { overview as togetherOverview, partnerFor, filmsFor, NOT_FOUND } from './lib/together.js';
 import { settingsProblems } from '../public/js/settingsRules.js';
+import { planProblems } from '../public/js/plans.js';
 import { search, playingIds, listRecents, addRecent, removeRecent, clearRecents, restoreRecents } from './lib/search.js';
 import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, userName } from './lib/accounts.js';
 import {
@@ -260,7 +261,7 @@ router.put('/settings', (req, res) => {
   if (!isOwnerRequest()) for (const k of Object.keys(patch)) if (!USER_SETTING_KEYS.has(k)) delete patch[k];
   // Numbers out of range (or not numbers) are refused, never coerced: the
   // Settings page checks the same rules (public/js/settingsRules.js) first.
-  const problems = settingsProblems(patch);
+  const problems = [...settingsProblems(patch), ...planProblems(patch)];
   if (problems.length) return res.status(400).json({ error: `${problems[0].key}: ${problems[0].message}`, problems });
   if (patch.weightPublic != null || patch.weightTaste != null) {
     const wp = Number(patch.weightPublic ?? getSetting('weightPublic')) || 0;

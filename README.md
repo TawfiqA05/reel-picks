@@ -31,7 +31,14 @@ with your own keys.
 - Follows up to four extra theatres, shows drive times from home, and flags when a film
   leaving my theatre is still playing at one of them.
 - Tracks A-List usage: money saved versus ticket prices, and whether my picks landed.
-  Marking a film seen on its page turns the button into "Seen · Undo".
+  Marking a film seen on its page turns the button into "Seen · Undo". Each person picks
+  their own movie plan in Settings: AMC A-List, Regal Unlimited, Cinemark Movie Club,
+  another subscription, or none. A preset fills in the usual visits, fee and ticket price
+  (all editable), and the allowance, savings and wording on Stats and movie pages follow
+  it: Movie Club counts credits per month, Regal Unlimited has no limit, and with no plan
+  Stats shows ticket spend instead of an allowance and savings. Showtimes still come from
+  AMC theaters for everyone. Anyone who had the app before plans existed is on A-List with
+  the values they already had.
 - Shares a read-only guest link so other people can see my picks without touching anything.
 
 A few smaller things make the lists easier to read:

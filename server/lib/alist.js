@@ -1,8 +1,10 @@
-// A-List usage tracker: logs watched movies, counts the 3/week allowance
-// (weeks reset Friday), and computes money saved vs the monthly fee.
+// Movie-plan usage tracker: logs watched movies, counts the plan's allowance
+// (A-List by default; weeks reset Friday, monthly plans on the 1st), and
+// computes money saved vs the monthly fee, or ticket spend with no plan.
 import { run, all, getSettings } from '../db.js';
 import { weekStartFriday, localYMD, round2 } from './util.js';
 import { currentUserId } from './user.js';
+import { planOf } from '../../public/js/plans.js';
 
 // Everything here is the current user's log (lib/user.js). Films brought in
 // from Letterboxd (source 'letterboxd', lib/letterboxd.js) are in the same
@@ -47,7 +49,8 @@ export function savings(settings = getSettings()) {
   const month = new Date().toISOString().slice(0, 7); // YYYY-MM (UTC-ish, fine here)
   const rows = all(`SELECT ticket_price FROM watched WHERE user_id = ? AND substr(watched_at, 1, 7) = ? AND ${ALIST}`, currentUserId(), month);
   const ticketValue = rows.reduce((s, r) => s + (Number(r.ticket_price) || Number(settings.avgTicketPrice) || 0), 0);
-  const fee = Number(settings.alistMonthlyFee) || 0;
+  // No subscription, no fee: "saved" is then just what the tickets cost.
+  const fee = planOf(settings).subscription ? Number(settings.alistMonthlyFee) || 0 : 0;
   return {
     monthTickets: rows.length,
     ticketValue: round2(ticketValue),
@@ -56,20 +59,26 @@ export function savings(settings = getSettings()) {
   };
 }
 
+// This period's usage under the user's movie plan (public/js/plans.js): the
+// A-List week (Friday to Thursday) for a weekly plan, the calendar month for
+// a monthly one. A limit of 0 means no limit, so nothing is "remaining".
 export function getWeek() {
   const settings = getSettings();
+  const plan = planOf(settings);
   const week = weekStartFriday();
+  const month = new Date().toISOString().slice(0, 7); // the same month savings() counts
+  const byMonth = plan.subscription && plan.period === 'month';
   const rows = all(
     `SELECT w.*, m.poster FROM watched w LEFT JOIN movies m ON m.tmdb_id = w.tmdb_id
-      WHERE w.user_id = ? AND w.week_start = ? AND w.${ALIST} ORDER BY w.watched_at DESC`,
-    currentUserId(), week,
+      WHERE w.user_id = ? AND ${byMonth ? 'substr(w.watched_at, 1, 7) = ?' : 'w.week_start = ?'} AND w.${ALIST} ORDER BY w.watched_at DESC`,
+    currentUserId(), byMonth ? month : week,
   );
-  const limit = Number(settings.alistWeeklyLimit) || 4;
+  const limit = plan.limit;
   return {
     weekStart: week,
     used: rows.length,
     limit,
-    remaining: Math.max(0, limit - rows.length),
+    remaining: plan.unlimited ? null : Math.max(0, limit - rows.length),
     movies: rows.map((r) => ({
       id: r.id,
       tmdb_id: r.tmdb_id,
@@ -79,5 +88,6 @@ export function getWeek() {
       in_weekly4: Boolean(r.in_weekly4),
     })),
     savings: savings(settings),
+    plan,
   };
 }

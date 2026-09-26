@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { h, clear, spinner, toast, chip, labeled, sectionTitle, badge, openModal, icon } from '../ui.js';
 import { NUMBER_RULES, HOME_RULES, numberProblem } from '../settingsRules.js';
 import { openHiddenList } from './components.js';
+import { PLANS, PLAN_IDS, planOf, planWords } from '../plans.js';
 
 const GENRES = ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama',
   'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance',
@@ -515,7 +516,7 @@ export async function render(root, params, ctx) {
   if (pushCfg?.enabled && !status?.guest) page.appendChild(notificationsCard(pushCfg.publicKey));
 
   // ---- Letterboxd auto-sync: owner and friends (the guest never gets here).
-  if (!status?.guest) page.appendChild(letterboxdCard(ctx));
+  if (!status?.guest) page.appendChild(letterboxdCard(ctx, planWords(planOf(s))));
 
   page.appendChild(card('Home base',
     h('div', { class: 'row-gap geo-row' }, placeIn, lookupBtn, locBtn),
@@ -631,19 +632,70 @@ export async function render(root, params, ctx) {
   page.appendChild(card('Preferred showtimes', weekday.el, weekend.el,
     h('p', { class: 'muted small' }, 'Picks with a showing inside your windows get a boost, and that showtime is surfaced.')));
 
-  // ---- Pricing
-  const perWeek = h('input', { class: 'input num', type: 'number', step: '1', min: '1', value: String(s.alistWeeklyLimit ?? 4) });
+  // ---- Movie plan & pricing (public/js/plans.js). Picking a plan fills in
+  // its usual terms, which stay editable; "None" has no allowance or fee.
+  let plan = planOf(s).id;
+  let period = planOf(s).period;
+  const perWeek = h('input', { class: 'input num', type: 'number', step: '1', min: '0', value: String(s.alistWeeklyLimit ?? 4) });
   const fee = h('input', { class: 'input num', type: 'number', step: '0.01', value: String(s.alistMonthlyFee ?? 25.99) });
   const ticket = h('input', { class: 'input num', type: 'number', step: '0.01', value: String(s.avgTicketPrice ?? 14.5) });
   const previews = h('input', { class: 'input num', type: 'number', step: '1', value: String(s.previewsMinutes ?? 20) });
-  page.appendChild(card('A-List & pricing',
-    h('div', { class: 'grid-4' },
-      labeled('Reservations / week', perWeek),
-      labeled('Monthly fee ($)', fee),
-      labeled('Avg ticket ($)', ticket),
-      labeled('Preview length (min)', previews),
-    ),
-    h('p', { class: 'muted small' }, 'Your plan\'s terms. AMC varies the allowance by region and raises the fee from time to time. Change them here when it does.'),
+  const periodSel = h('select', { class: 'input', 'aria-label': 'Allowance counts per' },
+    h('option', { value: 'week' }, 'per week'), h('option', { value: 'month' }, 'per month'));
+  periodSel.value = period;
+  periodSel.addEventListener('change', () => { period = periodSel.value; paintPlan(); });
+  const visitsField = labeled('Visits / week', perWeek);
+  const periodField = labeled('Counted', periodSel);
+  const feeField = labeled('Monthly fee ($)', fee);
+  const planNote = h('p', { class: 'muted small' });
+  const planPicker = h('div', { class: 'chips plan-chips', role: 'radiogroup', 'aria-label': 'Your movie plan' });
+  const planChips = PLAN_IDS.map((id) => {
+    const c = h('button', { class: 'chip', type: 'button', role: 'radio', 'data-plan': id }, PLANS[id].name);
+    c.addEventListener('click', () => {
+      if (plan === id) return;
+      plan = id;
+      const d = PLANS[id].defaults;
+      perWeek.value = String(d.limit);
+      fee.value = String(d.fee);
+      ticket.value = String(d.ticket);
+      period = d.period;
+      periodSel.value = period;
+      for (const input of [perWeek, fee, ticket]) input.dispatchEvent(new Event('input')); // clears any error under them
+      paintPlan();
+    });
+    return c;
+  });
+  planPicker.append(...planChips);
+  // Arrow keys move between the plans, as in any radio group.
+  planPicker.addEventListener('keydown', (e) => {
+    const i = planChips.indexOf(document.activeElement);
+    if (i < 0 || !['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(e.key)) return;
+    e.preventDefault();
+    const next = planChips[(i + (e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1) + planChips.length) % planChips.length];
+    next.focus();
+    next.click();
+  });
+  function paintPlan() {
+    const p = PLANS[plan];
+    for (const c of planChips) {
+      const on = c.dataset.plan === plan;
+      c.classList.toggle('active', on);
+      c.setAttribute('aria-checked', String(on));
+      c.tabIndex = on ? 0 : -1;
+    }
+    visitsField.hidden = !p.subscription;
+    feeField.hidden = !p.subscription;
+    periodField.hidden = plan !== 'other';
+    const per = plan === 'other' ? period : p.defaults.period;
+    visitsField.querySelector('.field-label').textContent = `${p.units[0].toUpperCase()}${p.units.slice(1)} / ${per}${plan === 'regal-unlimited' || plan === 'other' ? ' (0 = no limit)' : ''}`;
+    planNote.textContent = p.note;
+  }
+  paintPlan();
+  page.appendChild(card('Movie plan & pricing',
+    planPicker,
+    h('div', { class: 'grid-4 plan-fields' }, visitsField, periodField, feeField, labeled('Avg ticket ($)', ticket), labeled('Preview length (min)', previews)),
+    planNote,
+    h('p', { class: 'muted small' }, 'Showtimes always come from AMC theaters; the plan only changes the allowance, savings and wording.'),
     h('p', { class: 'muted small' }, 'AMC\'s listed showtime is when previews start. Preview length sets the "be there by" time on every showtime (when the film itself begins) and is included in the end time. AMC publishes no preview or program length of its own, so this number is the only source for it.')));
 
   // ---- Advanced boosts
@@ -882,6 +934,8 @@ export async function render(root, params, ctx) {
         excludedGenres: [...exG],
         excludedMpaa: [...exM],
         showtimeWindows: { weekday: weekday.read(), weekend: weekend.read() },
+        moviePlan: plan,
+        planPeriod: plan === 'other' ? period : PLANS[plan].defaults.period,
         alistWeeklyLimit: Number(perWeek.value),
         alistMonthlyFee: Number(fee.value),
         avgTicketPrice: Number(ticket.value),
@@ -944,7 +998,7 @@ function alertsCard() {
 
 // Letterboxd: a username, the last sync's result, Sync now. Saving a name
 // syncs at once, so a misspelled one shows its message right here.
-function letterboxdCard(ctx) {
+function letterboxdCard(ctx, words) {
   const nameIn = h('input', {
     class: 'input', type: 'text', maxlength: '80', placeholder: 'Letterboxd username', 'aria-label': 'Letterboxd username',
     autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false',
@@ -1000,7 +1054,7 @@ function letterboxdCard(ctx) {
     h('div', {}, syncBtn),
     h('p', { class: 'muted small' },
       'Once a day Reel Picks reads your public Letterboxd diary and brings in new star ratings and the films you logged as watched. '
-      + 'Each entry comes in once, and a rating you change here is never overwritten. Films logged on Letterboxd count as seen, not toward your A-List week. '
+      + `Each entry comes in once, and a rating you change here is never overwritten. Films logged on Letterboxd count as seen, ${words.notCounted}. `
       + 'The feed only has your latest 50 or so entries; for your whole history, import ratings.csv on the Rate page. Clear the name and save to unlink.'),
   );
 }

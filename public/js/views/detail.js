@@ -1,6 +1,7 @@
 // Movie detail: hero, rating, score breakdown, showtimes, trailer.
 import { api } from '../api.js';
-import { h, clear, spinner, scorePill, badge, makeStars, toast, openModal, scoreColor, icon } from '../ui.js';
+import { h, clear, spinner, scorePill, badge, makeStars, toast, openModal, scoreColor, icon, money } from '../ui.js';
+import { planOf, planWords, loggedLine } from '../plans.js';
 import { streamSection } from '../stream.js';
 import { fmtRuntime, dayLabel, showtimeChip, watchlistButton, starRater, runwayBadge, handoffLine, backBadge, heroMedia, opensBadge } from './components.js';
 
@@ -47,7 +48,7 @@ export async function render(root, params, ctx) {
     ),
   ));
 
-  // Rate + A-List (owner only)
+  // Rate + Mark seen, worded for the user's movie plan (not the guest)
   if (!guest) page.appendChild(ratingRow(d, m, ctx, week));
 
   // Score breakdown
@@ -96,12 +97,12 @@ function ratingRow(d, m, ctx, week) {
       if (focus) undo.focus();
       return;
     }
-    const seenBtn = h('button', { class: 'btn ghost', type: 'button' }, icon('ticket', { size: 16 }), 'Mark seen (A-List)');
+    const seenBtn = h('button', { class: 'btn ghost', type: 'button' }, icon('ticket', { size: 16 }), planWords(week?.plan || planOf({})).markSeen);
     seenBtn.addEventListener('click', async () => {
       seenBtn.disabled = true;
       try {
         const wk = await api.markWatched({ tmdb_id: m.tmdb_id, title: m.title });
-        toast(`Logged. ${wk.used} of ${wk.limit} A-List this week.`, 'success');
+        toast(loggedLine(wk, money), 'success');
         paint(wk.movies.find((x) => x.tmdb_id === m.tmdb_id), { focus: true });
         ctx.refreshStatus();
       } catch (e) { seenBtn.disabled = false; toast(e.message, 'error'); }

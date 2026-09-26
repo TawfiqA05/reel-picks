@@ -1,9 +1,10 @@
-// Stats: A-List usage, savings, ratings, recommendation hit-rate + tuning tip.
+// Stats: movie-plan usage and savings (or ticket spend), ratings, recommendation hit-rate + tuning tip.
 import { api } from '../api.js';
 import { h, clear, spinner, money, pct, makeStars, toast, sectionTitle, openModal, icon } from '../ui.js';
 import { starRater, watchlistButton, opensBadge } from './components.js';
 import { filterBox } from '../filter.js';
 import { streamLine, CREDIT } from '../stream.js';
+import { planOf, planWords } from '../plans.js';
 
 // Re-draws the page in place after a sheet changed a rating: no spinner, same
 // scroll position, same "Show all" lists open, focus back on the row.
@@ -27,17 +28,30 @@ export async function render(root, params, ctx, { quiet = false } = {}) {
 
   const page = h('div', { class: 'page' });
 
-  page.appendChild(sectionTitle('This A-List week', `Resets Friday · week of ${week.weekStart}`, { level: 1 }));
-  page.appendChild(h('div', { class: 'stat-grid' },
-    bigStat(`${week.used}/${week.limit}`, 'reservations used', `${week.remaining} left`),
+  // The plan's allowance and savings (public/js/plans.js); with no plan,
+  // what the tickets cost instead.
+  const plan = week.plan || planOf({});
+  const words = planWords(plan);
+  const monthly = plan.period === 'month';
+  const monthName = new Date().toLocaleDateString(undefined, { month: 'long' });
+  page.appendChild(sectionTitle(words.statsTitle,
+    !plan.subscription ? `Pay per ticket · week of ${week.weekStart}`
+      : monthly ? `Resets on the 1st · ${monthName}` : `Resets Friday · week of ${week.weekStart}`, { level: 1 }));
+  page.appendChild(h('div', { class: 'stat-grid' }, ...(plan.subscription ? [
+    plan.unlimited
+      ? bigStat(String(week.used), `${plan.units} this ${plan.period}`, 'no limit')
+      : bigStat(`${week.used}/${week.limit}`, `${plan.units} used`, `${week.remaining} left`),
     bigStat(money(week.savings.saved), 'saved this month', `${week.savings.monthTickets} tickets vs ${money(week.savings.alistFee)} fee`),
     bigStat(money(week.savings.ticketValue), 'ticket value seen', 'this month'),
-  ));
-  if (week.movies.length) page.appendChild(watchLog(week.movies, ctx));
+  ] : [
+    bigStat(String(week.used), `ticket${week.used === 1 ? '' : 's'} this week`, 'logged with Mark seen'),
+    bigStat(money(week.savings.ticketValue), 'spent on tickets', `${week.savings.monthTickets} ticket${week.savings.monthTickets === 1 ? '' : 's'} this month`),
+  ])));
+  if (week.movies.length) page.appendChild(watchLog(week.movies, ctx, words));
 
   page.appendChild(sectionTitle('Your year', String(s.year)));
   page.appendChild(h('div', { class: 'stat-grid' },
-    // Only films logged as seen (Mark seen / A-List), not imported ratings.
+    // Only films logged as seen (Mark seen), not imported ratings.
     bigStat(s.seenThisYear, 'seen in theaters', 'logged this year'),
     bigStat(s.totalRatings, 'ratings', 'in your profile'),
     bigStat(s.avgRating != null ? `${s.avgRating}★` : '–', 'average rating', ''),
@@ -78,7 +92,7 @@ export async function render(root, params, ctx, { quiet = false } = {}) {
 // This week's logged entries, each removable. The server has always had the
 // delete; nothing reached it, so an accidental "Mark seen" could only be undone
 // in SQLite. Removal only — dates and rewatches are not editable here.
-function watchLog(movies, ctx) {
+function watchLog(movies, ctx, words) {
   const list = h('div', { class: 'theatre-list' });
   for (const m of movies) {
     list.appendChild(h('div', { class: 'theatre-item' },
@@ -90,7 +104,7 @@ function watchLog(movies, ctx) {
         h('button', {
           class: 'btn ghost small', type: 'button', title: 'Remove from your watch log',
           'aria-label': `Remove ${m.title || 'this movie'} from your watch log`,
-          onClick: () => confirmRemove(m, ctx),
+          onClick: () => confirmRemove(m, ctx, words),
         }, icon('x', { size: 16 })),
       ),
     ));
@@ -98,10 +112,10 @@ function watchLog(movies, ctx) {
   return list;
 }
 
-function confirmRemove(m, ctx) {
+function confirmRemove(m, ctx, words) {
   const modal = openModal(h('div', { class: 'confirm' },
     h('p', {}, `Remove ${m.title || 'this movie'} from your watch log?`),
-    h('p', { class: 'muted small' }, 'It stops counting toward this week\'s three reservations, this month\'s savings, and the pick hit-rate. Your rating, if you left one, is not touched.'),
+    h('p', { class: 'muted small' }, words.removeNote),
     h('div', { class: 'row-gap' },
       h('button', { class: 'btn', onClick: async () => {
         modal.close();

@@ -491,6 +491,7 @@ export const USER_SETTING_KEYS = new Set([
   'watchlistBoost', 'imaxBoost', 'windowFitBoost', 'urgencyBoost', 'urgencyWatchlistMultiplier',
   'onboardingDone', 'everythingPlayingCollapsed', 'watchTogether',
   'setupDone', 'tourDone',
+  'moviePlan', 'planPeriod',
 ]);
 
 // Friends: every per-person table gains user_id (existing rows become user 1,
@@ -752,6 +753,11 @@ export const DEFAULT_SETTINGS = {
   alistWeeklyLimit: 4,
   alistMonthlyFee: 25.99,
   avgTicketPrice: 14.5,
+  // The movie plan those terms belong to (public/js/plans.js): AMC A-List for
+  // everyone who had one before plans existed, so nothing changes for them.
+  // planPeriod is what the allowance counts over; alistWeeklyLimit 0 = no limit.
+  moviePlan: 'amc-alist',
+  planPeriod: 'week',
   previewsMinutes: 20,      // added to runtime for end-time calc
   onboardingDone: false,
   // The first-run welcome setup (theater, ten ratings, what the app does) and
