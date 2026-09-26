@@ -470,7 +470,14 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .ob-buttons { margin-top: 4px; }
 
 /* ---- stats ---- */
-.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+/* Two by two on phones, with an odd last tile across the row instead of half
+   of it; one row of however many there are once there's room. */
+.stat-grid > .big-stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
+@media (min-width: 640px) {
+  .stat-grid { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+  .stat-grid > .big-stat:last-child:nth-child(odd) { grid-column: auto; }
+}
 .big-stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; }
 .bs-value { font-size: var(--fs-xl); font-weight: 800; letter-spacing: -0.02em; }
 .bs-label { color: var(--muted); font-size: var(--fs-sm); margin-top: 2px; }
@@ -494,7 +501,7 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .sheet-film a:hover { background: var(--surface-2); }
 .sheet-thumb { width: 40px; height: 60px; border-radius: 6px; object-fit: cover; background: var(--surface-2); display: block; }
 .sheet-noposter { display: grid; place-items: center; color: var(--muted); border: 1px solid var(--line); }
-.sheet-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.sheet-title { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
 .sheet-year { color: var(--muted); font-weight: 400; }
 .sheet-rating { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
 @media (max-width: 420px) { .sheet-rating .stars { display: none; } }
