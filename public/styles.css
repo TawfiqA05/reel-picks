@@ -54,6 +54,14 @@
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
+/* Whatever gets focus or is scrolled to lands clear of the sticky header, the
+   tab bar and (on Settings) the Save bar, never behind them. */
+html { scroll-padding-top: 76px; scroll-padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+html:has(.save-bar) { scroll-padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+@media (min-width: 900px) {
+  html { scroll-padding-bottom: 24px; }
+  html:has(.save-bar) { scroll-padding-bottom: 100px; }
+}
 body {
   margin: 0;
   background: var(--bg);
@@ -581,6 +589,9 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 
 .toast-host { position: fixed; bottom: calc(92px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: max-content; max-width: calc(100vw - 32px); }
 @media (min-width: 900px) { .toast-host { bottom: var(--sp-7); } }
+/* On Settings a toast sits above the Save bar, not on its button. */
+body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-bottom)); }
+@media (min-width: 900px) { body:has(.save-bar) .toast-host { bottom: 96px; } }
 .toast.has-action { display: flex; align-items: center; gap: var(--sp-3); padding: 6px 6px 6px 16px; border-radius: var(--r-md); pointer-events: auto; text-align: left; }
 .toast-action { flex: 0 0 auto; min-height: 36px; padding: 0 14px; border-radius: var(--r-sm); border: none; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: var(--fs-sm); cursor: pointer; }
 .toast { background: var(--surface-2); border: 1px solid var(--line); color: var(--text); padding: 10px 16px; border-radius: 999px; font-size: var(--fs-sm); font-weight: 600; box-shadow: var(--shadow); opacity: 0; transition: opacity 0.3s, transform 0.3s; transform: translateY(8px); }
