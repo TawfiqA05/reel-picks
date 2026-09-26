@@ -208,7 +208,7 @@ export async function render(root, params, ctx) {
   paintTheatres();
 
   const theatreResults = h('div', { class: 'theatre-results' });
-  const theatreInput = h('input', { class: 'input', type: 'search', placeholder: 'Search AMC theatres (name or city)…' });
+  const theatreInput = h('input', { class: 'input', type: 'search', placeholder: 'Search AMC theatres', 'aria-label': 'Search AMC theatres by name or city' });
   const theatreSearch = async () => {
     if (!keyState.amc) { toast('Add an AMC key first', 'error'); return; }
     clear(theatreResults);
@@ -399,7 +399,7 @@ export async function render(root, params, ctx) {
     setGeoStatus(`Found ${r.label} (${r.lat}, ${r.lng}). Save settings to keep it.`);
   };
 
-  const placeIn = h('input', { class: 'input', type: 'search', placeholder: 'City and state, ZIP, or address, like "Fishers IN"' });
+  const placeIn = h('input', { class: 'input', type: 'search', placeholder: 'City, ZIP or address', 'aria-label': 'Look up a place: city and state, ZIP, or address, like Fishers IN' });
   const lookupBtn = h('button', { class: 'btn' }, 'Look up');
   const lookup = async () => {
     const q = placeIn.value.trim();
@@ -597,7 +597,7 @@ export async function render(root, params, ctx) {
     const before = h('input', { class: 'input time', type: 'time', value: w.before || '23:30' });
     return { el: h('div', { class: 'window-row' },
       h('label', { class: 'switch-row tight' }, en, h('span', {}, label)),
-      h('div', { class: 'row-gap' }, labeled('after', after), labeled('before', before)),
+      h('div', { class: 'grid-2' }, labeled('after', after), labeled('before', before)),
     ), read: () => ({ enabled: en.checked, after: after.value, before: before.value }) };
   };
   const weekday = mkWindow('weekday', 'Weekdays');
