@@ -98,6 +98,9 @@ function renderChrome() {
   // Search is the owner's and friends'; the guest link has none (and the
   // server refuses it). Hidden until status says who this is.
   if (els.searchBtn) els.searchBtn.hidden = !status || guest;
+  // Until status says who this is (or while offline), no Refresh: a friend
+  // and the guest can't use it.
+  els.refreshBtn.hidden = !status;
   // A friend can't force a refresh; the server would refuse it anyway.
   document.querySelector('.shell')?.classList.toggle('friend', !guest && status?.user?.isOwner === false);
 
@@ -106,7 +109,8 @@ function renderChrome() {
 
   const extra = Math.max(0, (status?.theatres?.length || 1) - 1);
   const primary = status?.theatre;
-  els.theatre.textContent = (primary?.short || primary?.name || (guest ? '' : 'Set your theatre')) + (extra ? ` +${extra}` : '');
+  // "Set your theatre" only when status says there is none, not while it's unknown.
+  els.theatre.textContent = (primary?.short || primary?.name || (guest || !status ? '' : 'Set your theatre')) + (extra ? ` +${extra}` : '');
   // Guests can't open Settings, so the label just goes back to Picks.
   els.theatre.setAttribute('href', guest ? '#/home' : '#/settings');
   els.theatre.title = extra
@@ -202,10 +206,25 @@ async function route() {
     await view(main, params, ctx);
   } catch (e) {
     clear(main);
-    main.appendChild(emptyState('alert', 'Something went wrong', e.message,
-      h('button', { class: 'btn', onClick: () => route() }, 'Retry')));
+    main.appendChild(errorState(e));
   }
   window.scrollTo(0, 0);
+}
+
+// The service worker answers API calls with a 503 "You appear to be offline."
+// when there's no network; without a worker, fetch itself throws a TypeError.
+const isOffline = (e) => !navigator.onLine || e instanceof TypeError || (e.status === 503 && /offline/i.test(e.message));
+
+function errorState(e) {
+  const retry = h('button', { class: 'btn', type: 'button', onClick: async () => { await refreshStatus(); route(); } }, 'Retry');
+  if (isOffline(e)) {
+    return emptyState('alert', 'You\'re offline', 'Reel Picks needs a connection to load this page. Retry once you\'re back online.', retry);
+  }
+  if (e.status === 404) {
+    return emptyState('search', 'Not found', e.message === 'Movie not found' ? 'There\'s no movie at this address.' : e.message,
+      h('a', { class: 'btn', href: '#/home' }, 'Go to Picks'));
+  }
+  return emptyState('alert', 'Something went wrong', e.message, retry);
 }
 
 function notFound(root) {

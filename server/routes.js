@@ -226,8 +226,12 @@ router.get('/movies/:id', h(async (req, res) => {
     if (!have || !have.details_at) {
       const log = await ingestOne(id); // cached: TMDB details 7d, OMDb per its own TTL
       if (!getMovie(id)) {
-        return log.errors.length
-          ? res.status(502).json({ error: `Couldn't load this movie from TMDB: ${log.errors[0]}` })
+        // TMDB saying 404 means there's no such film; anything else is TMDB
+        // being unreachable. The raw error (it carries the request URL) stays
+        // in the server log.
+        if (log.errors.length) console.error('[movie]', id, log.errors[0]);
+        return log.errors.length && !/HTTP 404/.test(log.errors[0])
+          ? res.status(502).json({ error: 'Couldn\'t reach TMDB to load this movie. Try again in a moment.' })
           : res.status(404).json({ error: tmdb.tmdbConfigured() ? 'Movie not found' : 'Movie not found locally and TMDB_API_KEY is not set.' });
       }
     }

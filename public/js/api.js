@@ -27,7 +27,7 @@ async function send(method, path, body) {
   const res = await fetch('/api' + path, opts);
   const ct = res.headers.get('content-type') || '';
   const data = ct.includes('application/json') ? await res.json() : await res.text();
-  if (!res.ok) throw new Error((data && data.error) || `Request failed (${res.status})`);
+  if (!res.ok) throw Object.assign(new Error((data && data.error) || `Request failed (${res.status})`), { status: res.status });
   return data;
 }
 

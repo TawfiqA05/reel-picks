@@ -269,7 +269,7 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .empty { text-align: center; padding: 48px 20px; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .empty-icon { color: var(--muted); display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); margin-bottom: var(--sp-2); }
 .empty-title { font-size: var(--fs-xl); color: var(--text); }
-.empty-msg { max-width: 420px; }
+.empty-msg { max-width: 420px; overflow-wrap: anywhere; }
 .spinner { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px 0; color: var(--muted); }
 .spinner-ring { width: 32px; height: 32px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 
