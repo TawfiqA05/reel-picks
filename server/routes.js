@@ -36,7 +36,7 @@ import { startCreditsBackfill, backfillStatus, backfillState, tmdbThrottle } fro
 import { backupStatus, latestBackup, backupsDir } from './lib/backup.js';
 import { overview as togetherOverview, partnerFor, filmsFor, NOT_FOUND } from './lib/together.js';
 import { settingsProblems } from '../public/js/settingsRules.js';
-import { search, listRecents, addRecent, removeRecent, clearRecents, restoreRecents } from './lib/search.js';
+import { search, playingIds, listRecents, addRecent, removeRecent, clearRecents, restoreRecents } from './lib/search.js';
 import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, userName } from './lib/accounts.js';
 import {
   pushEnabled, publicKey, saveSubscription, removeSubscription, hasSubscription, sendWeekly,
@@ -562,6 +562,32 @@ router.post('/search/recents', (req, res) => res.json(addRecent(req.body)));
 router.delete('/search/recents', (req, res) => res.json(removeRecent(req.query.kind, req.query.key)));
 router.post('/search/recents/clear', (req, res) => res.json(clearRecents()));
 router.post('/search/recents/restore', (req, res) => res.json(restoreRecents(req.body)));
+
+// ---- where to stream ------------------------------------------------------
+
+// US streaming, rent and buy options for up to 20 films (TMDB watch providers,
+// data from JustWatch). Each film is cached 3 days and a live call waits its
+// turn on the shared TMDB throttle. With skipPlaying, a film playing at the
+// caller's theaters answers { playing: true } without asking TMDB: search and
+// "More from" only show the line for films that aren't in theaters. Not on
+// the guest allowlist.
+router.get('/providers', h(async (req, res) => {
+  const ids = [...new Set(String(req.query.ids || '').split(',').map(Number))]
+    .filter((n) => Number.isInteger(n) && n > 0).slice(0, 20);
+  if (!ids.length) return res.status(400).json({ error: 'ids required.' });
+  const playing = req.query.skipPlaying ? playingIds() : new Set();
+  const providers = {};
+  for (const id of ids) {
+    if (playing.has(id)) { providers[id] = { playing: true }; continue; }
+    try {
+      providers[id] = await tmdb.watchProviders(id, { gate: tmdbThrottle });
+    } catch (e) {
+      if (e.status !== 404) console.error('[providers]', id, e.message);
+      providers[id] = null;
+    }
+  }
+  res.json({ providers });
+}));
 
 // ---- onboarding --------------------------------------------------------
 

@@ -126,6 +126,28 @@ export async function personCredits(personId, { gate = null } = {}) {
   }, { gate });
 }
 
+// Where a film streams in the US (TMDB watch providers, data from JustWatch),
+// kept per film for 3 days. Only the US part is stored: Stream (subscription,
+// free and with-ads together), Rent and Buy, each in TMDB's display order, and
+// TMDB's page for the film. Null when there is nothing in the US.
+export async function watchProviders(tmdbId, { gate = null } = {}) {
+  if (!tmdbConfigured()) throw new Error('TMDB_API_KEY is not set');
+  return cachedJson(`tmdb:providers:${tmdbId}`, 3 * DAY, async () => {
+    if (gate) await gate();
+    countCall();
+    const us = (await fetchJson(url(`/movie/${tmdbId}/watch/providers`)))?.results?.US;
+    const list = (...groups) => {
+      const seen = new Set();
+      return groups.flat().filter(Boolean)
+        .sort((a, b) => (a.display_priority ?? 99) - (b.display_priority ?? 99))
+        .filter((p) => !seen.has(p.provider_id) && seen.add(p.provider_id))
+        .map((p) => ({ id: p.provider_id, name: p.provider_name, logo: img(p.logo_path, 'w92') }));
+    };
+    const out = { link: us?.link || null, stream: list(us?.flatrate, us?.free, us?.ads), rent: list(us?.rent), buy: list(us?.buy) };
+    return out.stream.length || out.rent.length || out.buy.length ? out : null;
+  });
+}
+
 // Typing makes a cache row per spelling ("inte", "inter", …), so expired
 // ones are swept out, at most once an hour, instead of piling up.
 let sweptAt = 0;

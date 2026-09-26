@@ -422,6 +422,18 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 /* The frame clips an outside ring, so the ring sits just inside its edge. */
 /* Set by js/views/detail.js: a frame never matches :focus once focus is inside it. */
 .trailer iframe.kb-focus { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* Where to watch (js/stream.js): logo rows under the showtimes. */
+.stream-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.stream-row { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: start; }
+.stream-kind { color: var(--text-2); font-size: var(--fs-sm); font-weight: 600; line-height: 40px; }
+.stream-logos { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.stream-logo { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r-sm); object-fit: cover; }
+.stream-noname { background: var(--surface-2); color: var(--text-2); font-weight: 700; }
+.stream-credit { margin: 0; color: var(--muted); font-size: var(--fs-xs); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.stream-more { color: var(--text-2); text-decoration: underline; text-underline-offset: 2px; }
+.stream-line { color: var(--muted); font-size: var(--fs-xs); line-height: 1.35; }
+.more-credit { margin-top: 8px; }
+.sr-credit { padding: 0 2px; }
 .synopsis { font-size: var(--fs-base); line-height: 1.6; color: var(--text-2); margin: 0; }
 .cast { font-size: var(--fs-sm); }
 
@@ -968,9 +980,9 @@ body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-botto
 
 /* Title links: the text stays where it is and the tap area grows to at least
    44px around it (the poster beside most of them links to the same page). */
-.row-title, .pick-title, .ri-title, .search-title, .tg-title, .hidden-title { position: relative; }
+.row-title, .pick-title, .ri-title, .search-title, .tg-title, .hidden-title, .stream-more { position: relative; }
 .ri-title, .search-title { display: block; }
-.row-title::after, .pick-title::after, .ri-title::after, .search-title::after, .tg-title::after, .hidden-title::after {
+.row-title::after, .pick-title::after, .ri-title::after, .search-title::after, .tg-title::after, .hidden-title::after, .stream-more::after {
   content: ''; position: absolute;
   top: min(0px, calc(50% - 22px)); bottom: min(0px, calc(50% - 22px));
   left: min(0px, calc(50% - 22px)); right: min(0px, calc(50% - 22px));

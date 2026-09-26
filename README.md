@@ -57,6 +57,10 @@ A few smaller things make the lists easier to read:
   app. It never starts on its own and stops the moment the dialog closes. The pick is
   TMDB's official English trailer when there is one, and a foreign film with only its
   own-language trailers still gets one.
+- **Where to watch.** Movie pages list where a film streams, rents and sells in the US,
+  with provider logos, from TMDB's watch providers (data from JustWatch). Films that
+  aren't in theaters get a one-line "Stream on …" in search and in "More from". Each
+  film's answer is cached for three days and fetched through the shared TMDB throttle.
 - **Poster fallbacks.** When a poster is missing or fails to load, the film's title goes
   on a plain gradient tile instead of a broken image.
 

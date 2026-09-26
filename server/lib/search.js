@@ -25,7 +25,7 @@ const placeholders = (n) => Array.from({ length: n }, () => '?').join(',');
 
 // Films playing this week at the caller's own theatres. Without AMC the
 // lineup is TMDB's US now-playing list, which has no theatre.
-function playingIds() {
+export function playingIds() {
   const ids = followedTheatres().map((t) => t.id).filter(Boolean);
   const out = new Set();
   if (ids.length) {

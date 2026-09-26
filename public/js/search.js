@@ -5,6 +5,7 @@
 import { api } from './api.js';
 import { h, clear, toast, icon, openModal } from './ui.js';
 import { query as prepQuery } from './fuzzy.js';
+import { streamLine, CREDIT } from './stream.js';
 
 const DEBOUNCE_MS = 300;
 const DWELL_MS = 2000; // results looked at this long count as a search, even if typed over later
@@ -26,9 +27,10 @@ export function openSearch() {
   const clearBtn = h('button', { class: 'filter-clear search-clear', type: 'button', 'aria-label': 'Clear search', hidden: true }, icon('x', { size: 18 }));
   const statusLine = h('p', { class: 'search-status', role: 'status', 'aria-live': 'polite' });
   const body = h('div', { class: 'search-body', id: listId, role: 'listbox', 'aria-label': 'Search results' });
+  const credit = h('p', { class: 'stream-credit sr-credit', hidden: true }, CREDIT);
   const content = h('div', { class: 'search-sheet' },
     h('div', { class: 'filter-field search-field' }, icon('search', { size: 18, cls: 'filter-icon' }), input, clearBtn),
-    statusLine, body);
+    statusLine, body, credit);
 
   let recents = { queries: [], movies: [] };
   let results = null; // { q, list } of the last finished search
@@ -99,7 +101,7 @@ export function openSearch() {
     clearTimeout(dwell);
     const q = input.value;
     if (!prepQuery(q).n) { cancel(); showRecents(); return; }
-    if (prepQuery(q).c.length < MIN_CHARS) { cancel(); clear(body); statusLine.textContent = 'Keep typing…'; setExpanded(false); return; }
+    if (prepQuery(q).c.length < MIN_CHARS) { cancel(); clear(body); credit.hidden = true; statusLine.textContent = 'Keep typing…'; setExpanded(false); return; }
     statusLine.textContent = 'Searching…';
     timer = setTimeout(() => run(q), DEBOUNCE_MS);
   });
@@ -149,6 +151,7 @@ export function openSearch() {
 
   function paintResults(q, list) {
     clear(body);
+    credit.hidden = true;
     active = -1;
     input.removeAttribute('aria-activedescendant');
     if (!list.length) {
@@ -160,16 +163,18 @@ export function openSearch() {
     setExpanded(true);
     clearTimeout(dwell);
     dwell = setTimeout(() => remember(q), DWELL_MS);
+    // Films not in theaters get a small "Stream on …" line, and the JustWatch
+    // credit shows under the list once one does.
     list.forEach((m, i) => {
+      const text = h('span', { class: 'sr-text' },
+        h('span', { class: 'sr-title' }, m.title, m.year ? h('span', { class: 'sr-year' }, yearOf(m.year)) : null),
+        h('span', { class: 'sr-badges' }, ...badges(m)));
       const row = h('a', {
         class: 'sr-row', id: `sr-${i}`, role: 'option', href: `#/movie/${m.tmdb_id}`, tabindex: '-1',
         onClick: (e) => { e.preventDefault(); openMovie(m, q); },
-      },
-      poster(m),
-      h('span', { class: 'sr-text' },
-        h('span', { class: 'sr-title' }, m.title, m.year ? h('span', { class: 'sr-year' }, yearOf(m.year)) : null),
-        h('span', { class: 'sr-badges' }, ...badges(m))));
+      }, poster(m), text);
       body.appendChild(row);
+      if (!m.playing) text.appendChild(streamLine(m.tmdb_id, row, { cls: 'stream-line sr-stream', onShown: () => { credit.hidden = false; } }));
     });
   }
 
@@ -183,6 +188,7 @@ export function openSearch() {
 
   function showRecents() {
     results = null;
+    credit.hidden = true;
     setExpanded(false);
     clear(body);
     active = -1;

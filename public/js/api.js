@@ -99,6 +99,7 @@ export const api = {
   pushCheck: (endpoint) => req('POST', '/push/check', { endpoint }),
   pushSubscribe: (subscription) => req('POST', '/push/subscribe', { subscription }),
   pushUnsubscribe: (endpoint) => req('POST', '/push/unsubscribe', { endpoint }),
+  providers: (ids, { skipPlaying = false } = {}) => req('GET', `/providers?ids=${ids.join(',')}${skipPlaying ? '&skipPlaying=1' : ''}`),
   search: (q, opts) => fetchJson('/search?q=' + encodeURIComponent(q), opts),
   searchRecents: () => req('GET', '/search/recents'),
   addRecentQuery: (query) => req('POST', '/search/recents', { query }),

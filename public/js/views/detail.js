@@ -1,6 +1,7 @@
 // Movie detail: hero, rating, score breakdown, showtimes, trailer.
 import { api } from '../api.js';
 import { h, clear, spinner, scorePill, badge, makeStars, toast, openModal, scoreColor, icon } from '../ui.js';
+import { streamSection } from '../stream.js';
 import { fmtRuntime, dayLabel, showtimeChip, watchlistButton, starRater, runwayBadge, handoffLine, backBadge, heroMedia, opensBadge } from './components.js';
 
 export async function render(root, params, ctx) {
@@ -53,6 +54,8 @@ export async function render(root, params, ctx) {
   page.appendChild(h('div', { class: 'cards-2' }, publicCard(d), tasteCard(d, owner)));
 
   page.appendChild(showtimesSection(d, ctx));
+  // Where to stream it in the US. Not on the guest link, which can't ask TMDB.
+  if (!guest) page.appendChild(streamSection(m.tmdb_id));
 
   // Synopsis + cast
   if (m.synopsis) page.appendChild(h('p', { class: 'synopsis' }, m.synopsis));

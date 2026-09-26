@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { h, clear, spinner, money, pct, makeStars, toast, sectionTitle, openModal, icon } from '../ui.js';
 import { starRater, watchlistButton, opensBadge } from './components.js';
 import { filterBox } from '../filter.js';
+import { streamLine, CREDIT } from '../stream.js';
 
 // Re-draws the page in place after a sheet changed a rating: no spinner, same
 // scroll position, same "Show all" lists open, focus back on the row.
@@ -243,8 +244,14 @@ function openGroup(kind, it, ctx) {
     if (!more.querySelector('.more-film')) { status.textContent = emptyLine; status.hidden = false; }
   };
 
+  // Films from a person's career that aren't in theaters get a small "Stream
+  // on …" line; the section then ends with the JustWatch credit. A genre's
+  // list is what's playing now, so it has none.
+  const credit = h('p', { class: 'stream-credit more-credit', hidden: true }, CREDIT);
   const moreRow = (f) => {
     const row = h('li', { class: 'sheet-film more-film' });
+    const stream = kind === 'genre' ? null
+      : streamLine(f.tmdb_id, row, { cls: 'stream-line more-stream', onShown: () => { credit.hidden = false; } });
     row._fields = [f.title, f.director, ...(f.cast || [])];
     // The server leaves tmdb_rating null when it rests on too few votes or the film isn't out in the US yet.
     const tmdbLine = f.tmdb_rating > 0
@@ -256,6 +263,7 @@ function openGroup(kind, it, ctx) {
         h('span', { class: 'more-text' },
           h('span', { class: 'sheet-title' }, f.title, f.year ? h('span', { class: 'sheet-year' }, ` ${f.year}`) : null),
           h('span', { class: 'more-meta' }, tmdbLine, opensBadge(f)),
+          stream,
         ),
       ),
       h('div', { class: 'more-tools' },
@@ -298,6 +306,7 @@ function openGroup(kind, it, ctx) {
       more.append(smallerBtn, smallerList);
       paintSmaller();
     }
+    more.appendChild(credit);
     if (!m.films.length && !m.smaller.length) status.textContent = m.unknownPerson ? "Couldn't find this person on TMDB." : emptyLine;
     else status.hidden = true;
     refreshFilter();
