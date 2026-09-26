@@ -19,6 +19,7 @@
   --low: #EF6A4F;
   --imax: #7FD6FF;
   --star-empty: #6A6A74;   /* 3:1 on every surface, so a rater's empty stars read as a control */
+  --field-edge: var(--star-empty); /* the same 3:1 grey, for a field's edge on a card */
   --shadow: 0 8px 30px rgba(0, 0, 0, .45);
   --shadow-soft: 0 1px 2px rgba(0, 0, 0, .35), 0 4px 14px rgba(0, 0, 0, .28);
   /* shape */
@@ -266,6 +267,9 @@ main { padding: var(--sp-4); padding-bottom: 104px; }
 
 /* ---- inputs ---- */
 .input { width: 100%; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); color: var(--text); font-size: var(--fs-base); line-height: 22px; min-height: 44px; }
+/* On a card or in a dialog the field's fill is the card's own colour, so the
+   border alone draws its edge: at least 3:1 against the card, like any control. */
+:is(.settings-card, .modal-card, .import-box, .import-guide, .stat-card, .help-card, .stream-card) .input { border-color: var(--field-edge); }
 input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .input:focus { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); }
 .input.big { padding: 13px 15px; font-size: var(--fs-md); line-height: 24px; }
