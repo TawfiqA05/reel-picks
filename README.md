@@ -65,6 +65,9 @@ A few smaller things make the lists easier to read:
   event: the film as the title, AMC's start time in the theater's own time zone, "be
   there by" and the end time in the notes, and the theater's name and address as the
   location. It opens straight in Calendar on an iPhone.
+- **Schedule.** Leaving soon and Coming soon share one tab as two segments, and it
+  reopens the one I used last. Old `#/coming` and `#/leaving` links still land on the
+  right one.
 - **Poster fallbacks.** When a poster is missing or fails to load, the film's title goes
   on a plain gradient tile instead of a broken image.
 
@@ -202,7 +205,7 @@ It's plain Web Push with VAPID keys, no extra dependency. Without `VAPID_PUBLIC_
 ## The guest link
 
 Anyone who reaches the app from outside without a cookie gets the read-only guest view:
-my picks, the full list, Leaving, Coming soon, and movie pages. At localhost it's always
+my picks, the full list, Schedule (Leaving soon and Coming soon), and movie pages. At localhost it's always
 me. Rating, settings, imports, stats and
 everything else are hidden in the UI and rejected at the API. On a deployment,
 `GUEST_MODE=1` turns this on for every request that isn't addressed to localhost.

@@ -135,7 +135,7 @@ function buildPage(data, status, ctx, state, actions) {
   if (lastChance.length) {
     page.appendChild(h('div', { class: 'section-head' },
       sectionTitle('Last chance', `Leaving ${data.theatre?.name || 'your theatre'} soon`),
-      h('a', { class: 'section-link', href: '#/leaving' }, 'See the week', icon('arrowRight', { size: 16 })),
+      h('a', { class: 'section-link', href: '#/schedule/leaving' }, 'See the week', icon('arrowRight', { size: 16 })),
     ));
     const lcGrid = h('div', { class: 'lc-grid' });
     lastChance.forEach((e) => lcGrid.appendChild(lastChanceCard(e, ctx)));

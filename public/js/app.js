@@ -5,8 +5,7 @@ import { watchForUpdates } from './update.js';
 import { openSearch } from './search.js';
 import * as home from './views/home.js';
 import * as detail from './views/detail.js';
-import * as coming from './views/coming.js';
-import * as leaving from './views/leaving.js';
+import * as schedule from './views/schedule.js';
 import * as rate from './views/rate.js';
 import * as watchlist from './views/watchlist.js';
 import * as stats from './views/stats.js';
@@ -17,8 +16,7 @@ import * as onboarding from './views/onboarding.js';
 const routes = {
   home: home.render,
   movie: detail.render,
-  coming: coming.render,
-  leaving: leaving.render,
+  schedule: schedule.render,
   rate: rate.render,
   watchlist: watchlist.render,
   stats: stats.render,
@@ -29,8 +27,7 @@ const routes = {
 
 const NAV = [
   { name: 'home', label: 'Picks', icon: 'film' },
-  { name: 'coming', label: 'Coming', icon: 'calendar' },
-  { name: 'leaving', label: 'Leaving', icon: 'hourglass' },
+  { name: 'schedule', label: 'Schedule', icon: 'calendar' },
   { name: 'rate', label: 'Rate', icon: 'star' },
   { name: 'watchlist', label: 'Watchlist', icon: 'bookmark' },
   { name: 'together', label: 'Together', icon: 'users' },
@@ -52,9 +49,13 @@ const ctx = {
   triggerRefresh: doRefresh,
 };
 
-// Leaving reads only /api/recommendations, which is already on the guest
-// allowlist and already strips drive times and home coordinates for guests.
-const GUEST_ROUTES = new Set(['home', 'coming', 'leaving', 'movie']);
+// Schedule's Leaving segment reads only /api/recommendations, which is already
+// on the guest allowlist and already strips drive times and home coordinates
+// for guests.
+const GUEST_ROUTES = new Set(['home', 'schedule', 'movie']);
+// Coming and Leaving were tabs of their own; their old addresses open the
+// matching Schedule segment.
+const MOVED = { coming: '#/schedule/coming', leaving: '#/schedule/leaving' };
 
 async function refreshStatus() {
   try {
@@ -193,7 +194,8 @@ async function doRefresh() {
 
 async function route() {
   const { name, params } = parseHash();
-  // Guests are confined to picks / coming soon / movie detail.
+  if (MOVED[name]) { location.replace(MOVED[name]); return; }
+  // Guests are confined to picks / schedule / movie detail.
   if (Boolean(status?.guest) && !GUEST_ROUTES.has(name)) {
     if (location.hash !== '#/home') { location.hash = '#/home'; return; }
   }

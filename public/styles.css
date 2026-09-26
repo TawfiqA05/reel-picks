@@ -185,6 +185,12 @@ main { padding: var(--sp-4); padding-bottom: 104px; }
   main { padding: var(--sp-6) var(--sp-6) var(--sp-9); }
 }
 
+/* ---- Schedule: the Leaving soon / Coming soon switch (views/schedule.js) ---- */
+.sched-seg { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--line); width: 100%; max-width: 420px; margin: var(--sp-1) 0 var(--sp-2); }
+.sched-item { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 var(--sp-4); border-radius: 999px; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
+.sched-item:hover { color: var(--text); }
+.sched-item.active { background: var(--surface-3); color: var(--text); box-shadow: var(--shadow-soft); }
+
 /* ---- section titles ---- */
 .section-title { display: flex; align-items: baseline; gap: 10px; margin: 22px 2px 12px; flex-wrap: wrap; }
 .section-title h1, .section-title h2 { font-size: var(--fs-lg); }
