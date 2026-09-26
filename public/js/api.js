@@ -87,5 +87,6 @@ export const api = {
   keepMatch: (amc_movie_id) => req('POST', '/match/keep', { amc_movie_id }),
   exportUrl: () => '/api/export',
   stateUrl: () => '/api/state',
+  backupUrl: () => '/api/backup/latest',
   importState: (doc) => req('POST', '/state', doc),
 };

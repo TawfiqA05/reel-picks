@@ -33,6 +33,7 @@ import { localYMD, addDays, csvField } from './lib/util.js';
 import { isGuest, ownerName } from './lib/guest.js';
 import { currentUserId, currentUser } from './lib/user.js';
 import { startCreditsBackfill, backfillStatus, backfillState, tmdbThrottle } from './lib/backfill.js';
+import { backupStatus, latestBackup, backupsDir } from './lib/backup.js';
 import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, userName } from './lib/accounts.js';
 
 const router = Router();
@@ -147,6 +148,8 @@ router.get('/status', (req, res) => {
     // Deployment diagnostics: is the DB on the volume, and what clock does
     // showtime math use? (Containers default to UTC unless TZ is set.)
     data: { dir: dataDir, dbBytes, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || process.env.TZ || null },
+    // Automatic backups (lib/backup.js): the newest copy, and a failure since it.
+    backup: backupStatus(dataDir),
     theatre: { ...theatres[0] },
     theatres,
     maxTheatres: MAX_THEATRES,
@@ -373,6 +376,16 @@ router.get('/state', (req, res) => {
   const doc = exportState();
   res.setHeader('Content-Disposition', `attachment; filename="reelpicks-setup-${localYMD()}.json"`);
   res.json(doc);
+});
+
+// The newest automatic backup (nightly or pre-migration), as a SQLite file.
+// Owner only: it holds everyone's data. Guests never reach it (not on the
+// lib/guest.js allowlist).
+router.get('/backup/latest', ownerOnly, (req, res) => {
+  const b = latestBackup(backupsDir(dataDir));
+  if (!b) return res.status(404).json({ error: 'No backup yet. The first one is taken at 3am.' });
+  res.set('Cache-Control', 'no-store');
+  res.download(b.file, b.name);
 });
 
 // Apply a full-setup document, then rebuild everything derived: a forced

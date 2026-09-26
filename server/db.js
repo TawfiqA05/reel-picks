@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { currentUserId } from './lib/user.js';
+import { preMigrationBackup } from './lib/backup.js';
 
 // DATA_DIR lets the SQLite database live on a persistent volume in production
 // (e.g. a mounted /data). Locally it defaults to ./data next to the app.
@@ -234,15 +235,13 @@ function hasColumn(table, column) {
 // Multi-theatre: lineup snapshots and departures gained a theatre_id. Older
 // databases get the column added and their existing rows stamped with the
 // theatre that was configured at the time (there was only ever one). A copy
-// of the database is written next to it before anything is altered.
+// of the database is written to data/backups (lib/backup.js) before anything is altered.
 function migrateTheatreColumns() {
   const needSnapshots = !hasColumn('lineup_snapshots', 'theatre_id');
   const needDepartures = !hasColumn('departures', 'theatre_id');
   if (!needSnapshots && !needDepartures) return;
 
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backup = path.join(dataDir, `reelpicks.pre-theatres-${stamp}.db`);
-  db.exec(`VACUUM INTO '${backup.replace(/'/g, "''")}'`);
+  const backup = preMigrationBackup(db, dataDir, 'theatres');
 
   const row = db.prepare("SELECT value FROM settings WHERE key = 'theatreId'").get();
   let primary = '';
@@ -281,6 +280,7 @@ migrateTheatreColumns();
 // matched film is years older than AMC's release date) so it's shown for
 // review instead of being accepted silently. NULL = fine / reviewed.
 if (!hasColumn('matches', 'review')) {
+  preMigrationBackup(db, dataDir, 'matches-review');
   db.exec('ALTER TABLE matches ADD COLUMN review TEXT');
   console.log('[db] added matches.review');
 }
@@ -296,6 +296,7 @@ function migrateShowtimeCacheKeys() {
     "SELECT key, value, fetched_at, ttl FROM cache WHERE key LIKE 'amc:showtimes:%' AND key NOT LIKE 'amc:showtimes:v2:%'",
   ).all();
   if (!rows.length) return;
+  preMigrationBackup(db, dataDir, 'cache-keys');
   let moved = 0;
   db.exec('BEGIN');
   try {
@@ -333,7 +334,7 @@ migrateShowtimeCacheKeys();
 // with SQLite's 'localtime' (the process TZ, the same clock weekStartFriday
 // reads), keeps the EARLIEST row of each same-day group, and carries a
 // weekly-4 flag from any of its duplicates onto the survivor. A copy of the
-// database is written next to it before anything is altered. Fresh databases
+// database is written to data/backups before anything is altered. Fresh databases
 // already have the column from the schema and only need the index.
 function migrateWatchedDaily() {
   const needRebuild = !hasColumn('watched', 'watched_date');
@@ -343,9 +344,7 @@ function migrateWatchedDaily() {
   if (!needRebuild && !needIndex) return;
 
   if (needRebuild) {
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backup = path.join(dataDir, `reelpicks.pre-watched-daily-${stamp}.db`);
-    db.exec(`VACUUM INTO '${backup.replace(/'/g, "''")}'`);
+    const backup = preMigrationBackup(db, dataDir, 'watched-daily');
 
     const before = db.prepare('SELECT COUNT(*) AS n FROM watched').get().n;
     db.exec('BEGIN');
@@ -412,7 +411,7 @@ export const USER_SETTING_KEYS = new Set([
 // the owner) and its uniqueness becomes per user; the owner's per-user
 // settings are copied into user_settings (the shared rows are left in place,
 // so the pre-migration backup and an older build still read them). A copy of
-// the database is written next to it first. Idempotent: each piece checks
+// the database is written to data/backups first. Idempotent: each piece checks
 // whether it is already done, and a fully migrated database writes nothing.
 function migrateUsers() {
   const need = {
@@ -434,9 +433,7 @@ function migrateUsers() {
 
   let backup = null;
   if (structural || needSettings) {
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    backup = path.join(dataDir, `reelpicks.pre-users-${stamp}.db`);
-    db.exec(`VACUUM INTO '${backup.replace(/'/g, "''")}'`);
+    backup = preMigrationBackup(db, dataDir, 'users');
   }
 
   // Rebuild a table whose primary key has to change, keeping row order.
@@ -486,7 +483,7 @@ function migrateUsers() {
         SELECT 1, key, value FROM settings WHERE key IN (${marks})`).run(...keys);
     }
     db.exec('COMMIT');
-    if (backup) console.log(`[db] per-user data: existing rows are now the owner's (user 1) (backup: ${backup})`);
+    if (structural || needSettings) console.log(`[db] per-user data: existing rows are now the owner's (user 1) (backup: ${backup})`);
   } catch (err) {
     db.exec('ROLLBACK');
     throw err;
@@ -506,9 +503,7 @@ function migrateMovieVotes() {
   const needVotes = !hasColumn('movies', 'tmdb_votes');
   const needUs = !hasColumn('movies', 'us_release_date');
   if (!needVotes && !needUs) return;
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backup = path.join(dataDir, `reelpicks.pre-votes-${stamp}.db`);
-  db.exec(`VACUUM INTO '${backup.replace(/'/g, "''")}'`);
+  const backup = preMigrationBackup(db, dataDir, 'votes');
   let filled = 0;
   db.exec('BEGIN');
   try {
@@ -539,6 +534,7 @@ migrateMovieVotes();
 // movies.details_missing: set when TMDB says a rated film doesn't exist, so the
 // credits backfill (lib/backfill.js) stops asking. NULL = fine / not checked.
 if (!hasColumn('movies', 'details_missing')) {
+  preMigrationBackup(db, dataDir, 'details-missing');
   db.exec('ALTER TABLE movies ADD COLUMN details_missing TEXT');
   console.log('[db] added movies.details_missing');
 }
@@ -551,9 +547,7 @@ if (!hasColumn('movies', 'details_missing')) {
 // first.
 function migratePersonIds() {
   if (hasColumn('movies', 'director_id') && hasColumn('movies', 'cast_ids')) return;
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backup = path.join(dataDir, `reelpicks.pre-person-ids-${stamp}.db`);
-  db.exec(`VACUUM INTO '${backup.replace(/'/g, "''")}'`);
+  const backup = preMigrationBackup(db, dataDir, 'person-ids');
   let filled = 0;
   db.exec('BEGIN');
   try {

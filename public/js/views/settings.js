@@ -578,18 +578,29 @@ export async function render(root, params, ctx) {
       toast(e instanceof SyntaxError ? 'That file isn\'t valid JSON. Use the file from "Export full setup".' : e.message, 'error');
     }
   });
+  // Automatic backups (owner only): nightly at 3am and before schema changes.
+  const bk = status?.backup;
+  const mb = (n) => `${(n / 1048576).toFixed(1)} MB`;
+  const backupLine = !isOwner ? null : h('div', bk?.lastError ? { class: 'small', style: { color: 'var(--low)' } } : { class: 'muted small' },
+    bk?.lastError
+      ? `Last backup attempt failed (${new Date(bk.lastError.at).toLocaleString()}): ${bk.lastError.message}`
+      : bk?.last
+        ? `Last automatic backup ${new Date(bk.last.at).toLocaleString()}, ${mb(bk.last.bytes)}. One is taken every night at 3am; the last 14 are kept.`
+        : 'No automatic backup yet. One is taken every night at 3am; the last 14 are kept.');
   page.appendChild(card('Data',
     h('div', { class: 'row-gap wrap' },
       h('a', { class: 'btn ghost', href: api.stateUrl() }, isOwner ? '⬇ Export full setup' : '⬇ Export my data'),
       isOwner ? h('button', { class: 'btn ghost', onClick: () => stateFile.click() }, '⬆ Import full setup') : null,
       isOwner ? stateFile : null,
       h('a', { class: 'btn ghost', href: api.exportUrl() }, '⬇ Export backup CSV'),
+      isOwner && bk?.last ? h('a', { class: 'btn ghost', href: api.backupUrl() }, '⬇ Download latest backup') : null,
       isOwner ? h('button', { class: 'btn ghost', onClick: () => ctx.triggerRefresh() }, icon('refresh', { size: 16 }), 'Refresh now') : null,
       h('a', { class: 'btn ghost', href: '#/onboarding' }, icon('zap', { size: 16 }), 'Re-run quick rate'),
     ),
     h('p', { class: 'muted small' }, isOwner
       ? 'Full setup carries settings, theatres, home base, ratings, watchlist, watch history, AMC match decisions, and hidden films. Everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'
       : 'Your export carries your own settings, theatres, home base, ratings, watchlist, watch history and hidden films.'),
+    backupLine,
     status?.lastRefreshLog?.errors?.length
       ? h('details', { class: 'log' }, h('summary', {}, `Last refresh: ${status.lastRefreshLog.errors.length} warning(s)`),
         ...status.lastRefreshLog.errors.map((e) => h('div', { class: 'muted small' }, `• ${e}`)))

@@ -9,10 +9,11 @@ import {
 } from './lib/guest.js';
 import { FRIEND_COOKIE, FRIEND_TTL_MS, findInvite, redeemInvite, signFriendCookie, touchLastSeen } from './lib/accounts.js';
 import { joinPage, expiredPage } from './lib/invitePage.js';
-import { getSetting } from './db.js';
+import { getSetting, db, dataDir } from './db.js';
 import { refreshAll, shouldAutoRefresh, state as refreshState } from './lib/refresh.js';
 import { runAs } from './lib/user.js';
 import { startCreditsBackfill } from './lib/backfill.js';
+import { startNightlyBackups } from './lib/backup.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 
@@ -146,6 +147,8 @@ app.listen(config.port, () => {
   if (shouldAutoRefresh()) autoRefresh('startup');
   // Pick up any credits backfill a restart interrupted (a no-op when nothing is missing).
   startCreditsBackfill('startup');
+  // Nightly database backup at 3am local time (lib/backup.js).
+  startNightlyBackups(db, dataDir);
 
   // A long-running process (a deployed instance) would otherwise never refresh
   // again: check every 15 minutes whether the local calendar day has rolled

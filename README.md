@@ -189,6 +189,11 @@ The repo ships a Dockerfile. It's one process serving both API and frontend with
 SQLite file. I run it on Railway with a persistent volume mounted at `/data`, which is
 where the Dockerfile points `DATA_DIR`. Railway builds from `main` on every push.
 
+Every night at 3am (the server's `TZ`) it writes a consistent copy of the database to
+`/data/backups/reelpicks-YYYY-MM-DD.db` and keeps the last 14; it also takes one right
+before any schema migration. The owner can download the newest from Settings → Data,
+and `/api/status` shows its time and size under `backup`.
+
 Variables to set:
 
 - `TMDB_API_KEY`, `OMDB_API_KEY`, `AMC_API_KEY`: the keys above.
