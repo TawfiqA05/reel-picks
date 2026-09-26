@@ -766,6 +766,9 @@ export async function render(root, params, ctx) {
     h('div', {}, h('button', { class: 'btn ghost', type: 'button', onClick: () => ctx.startTour() }, icon('help', { size: 16 }), 'Replay tour')),
   ));
 
+  // ---- Alerts (owner only): the last 10 problems and recoveries.
+  if (isOwner) page.appendChild(alertsCard());
+
   page.appendChild(card('Data',
     h('div', { class: 'row-gap wrap' },
       h('a', { class: 'btn ghost', href: api.stateUrl() }, isOwner ? '⬇ Export full setup' : '⬇ Export my data'),
@@ -876,6 +879,35 @@ export async function render(root, params, ctx) {
 
 // ---- Friends (owner only): invite links, revoke, re-issue. A link is shown
 // once, right after it's made; the server keeps only a hash of it.
+// Owner alerts (server/lib/alerts.js): a failed refresh, nightly or off-site
+// backup, or a day with no showtimes at the primary theater. Newest first.
+function alertsCard() {
+  const note = h('p', { class: 'muted small' });
+  const list = h('ul', { class: 'alert-list' });
+  const when = (iso) => new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  api.alerts().then((r) => {
+    const failing = r.failing.map((f) => f.label.toLowerCase());
+    note.textContent = [
+      failing.length ? `Failing now: ${failing.join(', ')}.` : 'Everything is working.',
+      !r.pushEnabled ? 'Push notifications are off on this server, so alerts only show here.'
+        : r.devices ? `Alerts also go to ${r.devices === 1 ? 'the device' : `all ${r.devices} devices`} you turned notifications on for.`
+          : 'Turn on notifications above to get these on your phone too.',
+    ].join(' ');
+    if (!r.alerts.length) { list.replaceWith(h('p', { class: 'muted small' }, 'No alerts yet.')); return; }
+    for (const a of r.alerts) {
+      list.appendChild(h('li', { class: `alert-item ${a.kind}` },
+        icon(a.kind === 'problem' ? 'alert' : 'check', { size: 16, label: a.kind === 'problem' ? 'Problem' : 'Back to normal' }),
+        h('div', { class: 'alert-main' },
+          h('div', { class: 'alert-msg' }, a.message),
+          h('div', { class: 'muted small' }, `${a.label} · ${when(a.at)}`)),
+      ));
+    }
+  }).catch((e) => { note.textContent = e.message; });
+  return card('Alerts',
+    h('p', { class: 'muted small' }, 'If the daily refresh or a backup fails, or no showtimes come back for your primary theater, you get one alert that day, and one more when it works again. Friends never see these.'),
+    note, list);
+}
+
 // Letterboxd: a username, the last sync's result, Sync now. Saving a name
 // syncs at once, so a misspelled one shows its message right here.
 function letterboxdCard(ctx) {

@@ -10,7 +10,8 @@ import { config } from '../env.js';
 import { cachedJson, fetchJson } from './cache.js';
 import { localYMD } from './util.js';
 
-const BASE = 'https://api.amctheatres.com';
+// RP_AMC_BASE points test servers at a stand-in AMC (never set it deployed).
+const BASE = (process.env.RP_AMC_BASE || '').trim() || 'https://api.amctheatres.com';
 const DAY = 86400;
 
 export function amcConfigured() {

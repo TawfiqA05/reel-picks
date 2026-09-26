@@ -42,6 +42,7 @@ import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, user
 import {
   pushEnabled, publicKey, saveSubscription, removeSubscription, hasSubscription, sendWeekly,
 } from './lib/push.js';
+import { recentAlerts, failingNow } from './lib/alerts.js';
 import { syncStatus as letterboxdStatus, setUsername as setLetterboxdUser, syncUser as syncLetterboxd } from './lib/letterboxd.js';
 
 const router = Router();
@@ -913,6 +914,18 @@ const pushOn = (req, res, next) => {
   if (!pushEnabled()) return res.status(404).json({ error: 'Notifications aren\'t set up on this server.' });
   next();
 };
+
+// ---- owner alerts (lib/alerts.js) ------------------------------------------
+// The last 10 alerts and what's failing now, for the owner's Settings card.
+// Friends get a 403; the guest link never reaches it (lib/guest.js).
+router.get('/alerts', ownerOnly, (req, res) => {
+  res.json({
+    alerts: recentAlerts(10),
+    failing: failingNow(),
+    pushEnabled: pushEnabled(),
+    devices: get('SELECT COUNT(*) AS n FROM push_subs WHERE user_id = ?', currentUserId()).n,
+  });
+});
 
 router.get('/push/config', (req, res) => {
   if (currentUser()?.guest) return res.status(403).json({ error: 'This shared link is read only.' });

@@ -144,7 +144,7 @@ export function hasSubscription(userId, endpoint) {
 // 'ok', 'gone' (404/410: the subscription is dead and has been deleted),
 // 'rejected' (the push service said no, so nothing was shown) or 'unknown'
 // (a network error or timeout: it may have been delivered).
-async function sendOne(sub, payload, keys) {
+async function sendOne(sub, payload, keys, topic = 'weekly-picks') {
   try {
     const res = await fetch(sub.endpoint, {
       method: 'POST',
@@ -154,7 +154,7 @@ async function sendOne(sub, payload, keys) {
         'Content-Type': 'application/octet-stream',
         TTL: String(TTL_SECONDS),
         Urgency: 'normal',
-        Topic: 'weekly-picks',
+        Topic: topic,
       },
       body: encrypt(payload, sub.p256dh, sub.auth),
       signal: AbortSignal.timeout(15000),
@@ -170,6 +170,17 @@ async function sendOne(sub, payload, keys) {
     console.error('[push] send failed:', e.message);
     return 'unknown';
   }
+}
+
+// One message to every device one person turned notifications on for (the
+// owner's alerts, lib/alerts.js). Returns { enabled, devices, sent }.
+export async function sendToUser(userId, message, { topic } = {}) {
+  const keys = vapid();
+  if (!keys) return { enabled: false, devices: 0, sent: 0 };
+  const subs = all('SELECT endpoint, p256dh, auth FROM push_subs WHERE user_id = ?', userId);
+  const payload = JSON.stringify(message);
+  const results = await Promise.all(subs.map((s) => sendOne(s, payload, keys, topic)));
+  return { enabled: true, devices: subs.length, sent: results.filter((r) => r === 'ok').length };
 }
 
 let sending = false;

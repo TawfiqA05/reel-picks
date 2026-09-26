@@ -99,6 +99,7 @@ export const api = {
   together: () => req('GET', '/together'),
   togetherWith: (id) => req('GET', `/together/${encodeURIComponent(id)}`),
   pushConfig: () => req('GET', '/push/config'),
+  alerts: () => req('GET', '/alerts'),
   pushCheck: (endpoint) => req('POST', '/push/check', { endpoint }),
   pushSubscribe: (subscription) => req('POST', '/push/subscribe', { subscription }),
   pushUnsubscribe: (endpoint) => req('POST', '/push/unsubscribe', { endpoint }),

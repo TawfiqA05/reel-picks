@@ -114,15 +114,19 @@ export function runNightlyBackup(db, dataDir, now = new Date()) {
 }
 
 // Checks once a minute. A failed attempt is not retried until the next hour,
-// so a full disk logs once an hour rather than every minute.
-export function startNightlyBackups(db, dataDir) {
+// so a full disk logs once an hour rather than every minute. `onResult` hears
+// about every attempt, (null) after a success or (message) after a failure
+// (the owner alerts, lib/alerts.js, wired up in index.js).
+export function startNightlyBackups(db, dataDir, { onResult = null } = {}) {
   let failedHour = null;
   const tick = () => {
     try {
       const now = new Date();
       const hour = `${ymd(now)}T${now.getHours()}`;
       if (failedHour === hour || !nightlyDue(backupsDir(dataDir), now)) return;
-      failedHour = runNightlyBackup(db, dataDir, now) ? null : hour;
+      const ok = runNightlyBackup(db, dataDir, now);
+      failedHour = ok ? null : hour;
+      onResult?.(ok ? null : (backupState.lastError?.message || 'unknown error'));
     } catch (err) {
       console.error(`[backup] nightly check failed: ${err.message}`);
     }

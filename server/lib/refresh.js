@@ -14,6 +14,7 @@ import { run, all, get, getSettings, getSharedSettings, setSetting, getSetting }
 import { runSystem, OWNER_ID } from './user.js';
 import { startCreditsBackfill } from './backfill.js';
 import { sendWeeklyIfDue } from './push.js';
+import { raiseLater, resolveLater } from './alerts.js';
 import * as amc from './amc.js';
 import * as tmdb from './tmdb.js';
 import * as omdb from './omdb.js';
@@ -334,6 +335,10 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
         // copy instead — silent inside cachedJson, so count them here.
         const staleDays = [];
         let staleError = null;
+        // Live AMC calls this run: answered, or failed (error or stale).
+        let liveOk = 0;
+        let liveFailed = 0;
+        let liveError = null;
         for (let i = 0; i < days; i++) {
           const date = addDays(start, i);
           const meta = {};
@@ -343,6 +348,8 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
             staleDays.push({ date: localYMD(date), fetchedAt: meta.fetchedAt });
             staleError = meta.error;
           }
+          if (meta.source === 'live') liveOk++;
+          else if (meta.source === 'stale' || meta.source === 'error') { liveFailed++; liveError = liveError || meta.error; }
           if (Array.isArray(sts)) {
             for (const s of sts) {
               s.theatre_id = s.theatre_id || t.id;
@@ -362,7 +369,7 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
         const calls = amc.apiStats.calls - callsBefore;
         src.theatres.push({
           id: t.id, name: t.name, short: t.short, isPrimary: t.isPrimary, ok, showtimes: collected.length, movies: mine.size, calls,
-          staleDays: staleDays.length, staleError,
+          staleDays: staleDays.length, staleError, liveOk, liveFailed, liveError,
         });
         src.showtimes += collected.length;
         src.calls += calls;
@@ -568,7 +575,11 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
     setSetting('lastRefreshLog', log);
     state.lastLog = log;
     startCreditsBackfill('refresh');
+    reportHealth(log);
     return log;
+  } catch (e) {
+    raiseLater('refresh', `The refresh stopped with an error: ${e.message}`);
+    throw e;
   } finally {
     state.running = false;
     const queued = state.rerun;
@@ -577,6 +588,41 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
     // Friday's first refresh has just put the new week's four in place.
     else sendWeeklyIfDue().catch((e) => console.error('[push]', e.message));
   }
+}
+
+// Owner alerts (lib/alerts.js) from a finished refresh's log:
+//   refresh     AMC is configured and every live call for the primary theater
+//               failed, or AMC rejected the theater lookup; or TMDB's release
+//               lists failed
+//   showtimes   AMC answered for the primary theater, with no showtimes at all
+// Calls served from the 24h cache prove nothing either way. Without an AMC key
+// the app runs on TMDB alone by design, so showtimes are never checked.
+export function refreshProblems(log) {
+  const out = { refresh: null, showtimes: undefined };
+  const amcSrc = log.sources?.amc;
+  const primary = amcSrc?.theatres?.find((t) => t.isPrimary) || amcSrc?.theatres?.[0] || null;
+  if (amc.amcConfigured()) {
+    if (!primary) {
+      const why = log.errors.find((e) => /^AMC key rejected|^AMC theatre lookup|^AMC key set but no theatre/.test(e));
+      if (why) out.refresh = why;
+    } else if (primary.liveFailed > 0 && primary.liveOk === 0) {
+      out.refresh = `AMC didn't answer for ${primary.name || primary.short}: ${String(primary.liveError || 'no response').replace(/ for https?:\/\/\S+/, '')}`;
+    } else {
+      // AMC answered (or its cache is fresh): an empty primary is a real "no showtimes".
+      out.showtimes = primary.showtimes > 0 ? null : `AMC returned no showtimes for ${primary.name || primary.short}.`;
+    }
+  }
+  if (!out.refresh && tmdb.tmdbConfigured()) {
+    const t = log.errors.find((e) => /^TMDB (upcoming|now_playing): /.test(e));
+    if (t) out.refresh = t.replace(/^TMDB (upcoming|now_playing): /, 'TMDB didn\'t answer: ');
+  }
+  return out;
+}
+
+function reportHealth(log) {
+  const p = refreshProblems(log);
+  if (p.refresh) raiseLater('refresh', p.refresh); else resolveLater('refresh');
+  if (p.showtimes) raiseLater('showtimes', p.showtimes); else if (p.showtimes === null) resolveLater('showtimes');
 }
 
 // Fetch details + scores for a single movie on demand (rating a movie, fixing a

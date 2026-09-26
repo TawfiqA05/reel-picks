@@ -226,6 +226,14 @@ and it skips anyone who already got this week's.
 It's plain Web Push with VAPID keys, no extra dependency. Without `VAPID_PUBLIC_KEY` and
 `VAPID_PRIVATE_KEY` the feature is off and the switch never appears.
 
+The same devices get my owner alerts, which friends never do. If the daily AMC/TMDB
+refresh fails, the nightly backup fails, or AMC answers with no showtimes at all for my
+primary theater, my devices get one push with a one-line reason. It's at most one alert
+per problem per day, however many times it fails, and one "back to normal" when it works
+again. The last 10 alerts, and anything failing right now, are in an owner-only Alerts
+card in Settings, which also works with push turned off. `RP_AMC_BASE` points a test
+server at a stand-in AMC; never set it on a real deployment.
+
 ## The guest link
 
 Anyone who reaches the app from outside without a cookie gets the read-only guest view,

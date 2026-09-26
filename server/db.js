@@ -279,6 +279,26 @@ CREATE TABLE IF NOT EXISTS letterboxd_seen (
   PRIMARY KEY (user_id, guid)
 );
 
+-- Owner alerts (lib/alerts.js): every alert and "back to normal" message, for
+-- the owner's Settings card, and each problem's current state, which is what
+-- limits alerts to one per problem per day.
+CREATE TABLE IF NOT EXISTS owner_alerts (
+  id      INTEGER PRIMARY KEY AUTOINCREMENT,
+  problem TEXT NOT NULL,     -- refresh | showtimes | backup | offsite
+  kind    TEXT NOT NULL,     -- problem | recovered
+  message TEXT NOT NULL,
+  at      TEXT NOT NULL,
+  pushed  INTEGER            -- devices the push reached
+);
+CREATE TABLE IF NOT EXISTS alert_state (
+  problem        TEXT PRIMARY KEY,
+  failing        INTEGER NOT NULL DEFAULT 0,
+  alerted        INTEGER NOT NULL DEFAULT 0,  -- this failure sent an alert
+  since          TEXT,
+  last_alert_day TEXT,       -- local YYYY-MM-DD of the last alert sent
+  last_reason    TEXT
+);
+
 -- The weekly push, claimed per person per A-List week before it is sent, so
 -- a restart or redeploy never sends it twice.
 CREATE TABLE IF NOT EXISTS push_sent (
