@@ -205,6 +205,15 @@ US region fixed it.
 `RP_DISABLE_REFRESH=1` turns every refresh into a no-op. It's for test servers that must
 never call AMC. Don't set it on a real deployment, or showtimes stop updating.
 
+A deploy reaches phones that already have the app open. The service worker checks for
+a new version when the app opens, when it comes back to the foreground, and every 30
+minutes. A new version takes over as soon as it installs, and the page reloads onto it
+once, unless a sheet is open or a save is in flight. Then it shows "Update ready" with a
+Refresh button and reloads at the next quiet moment. App code always comes from the
+server when online, and the offline copy holds exactly one version. Bump `CACHE` in
+`public/sw.js` with every frontend change, and add any new file under `public/js/` to
+its `CORE` list, so offline has it too.
+
 Migrations that reshape data write a copy of the database next to it first
 (`reelpicks.pre-<change>-<time>.db`), and running them a second time changes nothing.
 

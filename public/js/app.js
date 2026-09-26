@@ -1,6 +1,7 @@
 // App shell, hash router, chrome (header + bottom nav), and refresh polling.
 import { api } from './api.js';
 import { h, clear, toast, spinner, emptyState, icon } from './ui.js';
+import { watchForUpdates } from './update.js';
 import * as home from './views/home.js';
 import * as detail from './views/detail.js';
 import * as coming from './views/coming.js';
@@ -247,10 +248,9 @@ async function boot() {
   window.addEventListener('hashchange', route);
   route();
 
-  // Register the service worker (PWA install/offline). Non-fatal if it fails.
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  }
+  // Service worker (PWA install/offline) and getting new deploys onto this
+  // page. Non-fatal if it fails.
+  watchForUpdates();
 }
 
 boot();

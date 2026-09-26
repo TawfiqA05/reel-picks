@@ -1,5 +1,24 @@
 // Thin fetch wrapper around the Reel Picks JSON API.
+
+// Saves in flight (anything but GET), so an app update never reloads the page
+// under one (js/update.js).
+let writes = 0;
+const settled = new Set();
+export const writesInFlight = () => writes;
+export const onWritesSettled = (fn) => settled.add(fn);
+
 async function req(method, path, body) {
+  if (method === 'GET') return send(method, path, body);
+  writes++;
+  try {
+    return await send(method, path, body);
+  } finally {
+    writes--;
+    if (!writes) for (const fn of settled) setTimeout(fn, 0);
+  }
+}
+
+async function send(method, path, body) {
   const opts = { method, headers: {} };
   if (body !== undefined) {
     opts.headers['Content-Type'] = 'application/json';

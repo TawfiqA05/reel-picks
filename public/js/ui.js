@@ -152,6 +152,7 @@ export function sectionTitle(text, sub, { level = 2 } = {}) {
 let toastHost;
 // action: { label, onClick } adds a button (Undo) and keeps the toast up for
 // six seconds instead of the usual two and a half.
+// duration 0 keeps the toast up until its action is tapped.
 export function toast(message, type = '', { action = null, duration = action ? 6000 : 2600 } = {}) {
   if (!toastHost) {
     toastHost = h('div', { class: 'toast-host', role: 'status', 'aria-live': 'polite' });
@@ -172,7 +173,7 @@ export function toast(message, type = '', { action = null, duration = action ? 6
   );
   toastHost.appendChild(t);
   requestAnimationFrame(() => t.classList.add('show'));
-  timer = setTimeout(dismiss, duration);
+  if (duration > 0) timer = setTimeout(dismiss, duration);
   return { dismiss };
 }
 
