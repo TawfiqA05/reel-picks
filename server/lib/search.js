@@ -63,10 +63,12 @@ const boosted = (r) => r.playing || r.rating != null || r.watchlisted;
 export const wellKnown = (r) => (r.votes ?? 0) >= KNOWN_VOTES || (r.popularity ?? 0) >= KNOWN_POPULARITY;
 
 // 0: the title fits what was typed, and the film is well known or boosted
-// for this person. 1: well known, but only TMDB saw a match (an alternate or
-// original-language title). 2: obscure (few votes, little interest), which
-// never outranks a well-known film however exactly it matches.
-const tierOf = (r) => (!(wellKnown(r) || boosted(r)) ? 2 : r.match === 'tmdb' ? 1 : 0);
+// for this person. 1: the title fits, but the film is obscure (few votes,
+// little interest), so it never outranks a well-known film however exactly it
+// matches. 2 and 3: only TMDB saw a match, on an alternate or original-language
+// title ("Kickboxer 3" for "only the brav"), which ranks below every film whose
+// own title fits; well-known or boosted first among those.
+const tierOf = (r) => (r.match === 'tmdb' ? 2 : 0) + (wellKnown(r) || boosted(r) ? 0 : 1);
 
 // How the words fit counts, but fame counts more: a whole-title match is
 // worth about as much as ten times the votes. Playing at my theatres and my
