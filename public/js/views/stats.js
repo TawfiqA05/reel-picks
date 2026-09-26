@@ -88,8 +88,9 @@ function watchLog(movies, ctx) {
       h('div', { class: 'ti-actions' },
         h('button', {
           class: 'btn ghost small', type: 'button', title: 'Remove from your watch log',
+          'aria-label': `Remove ${m.title || 'this movie'} from your watch log`,
           onClick: () => confirmRemove(m, ctx),
-        }, '✕'),
+        }, icon('x', { size: 16 })),
       ),
     ));
   }

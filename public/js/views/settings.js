@@ -196,7 +196,7 @@ export async function render(root, params, ctx) {
         t.isPrimary ? null : h('div', { class: 'ti-actions' },
           h('button', { class: 'btn ghost small', title: 'Rank by this theatre instead', onClick: () =>
             act(() => api.setPrimaryTheatre(t.id), `${t.short} is now your primary theatre`) }, 'Make primary'),
-          h('button', { class: 'btn ghost small', title: 'Stop following', onClick: () => confirmUnfollow(t) }, '✕'),
+          h('button', { class: 'btn ghost small', title: 'Stop following', 'aria-label': `Stop following ${t.name}`, onClick: () => confirmUnfollow(t) }, icon('x', { size: 16 })),
         ),
       ));
     }
