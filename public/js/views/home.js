@@ -4,6 +4,7 @@ import { h, clear, emptyState, sectionTitle, icon, toast } from '../ui.js';
 import { weeklyCard, heroPick, movieRow, lastChanceCard, dayPicker, openHiddenList } from './components.js';
 import { filterBox } from '../filter.js';
 import { homeSection } from './athome.js';
+import { openWhatToWatch } from '../wsw.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -120,6 +121,13 @@ function buildPage(data, status, ctx, state, actions) {
   const pickGrid = h('div', { class: 'pick-grid' });
   if (data.weekly4.length) page.appendChild(heroSlot);
   if (days.length) page.appendChild(dayPicker(days, state.day, (d) => { state.day = d; paint(); }));
+  // "What should I watch?" (js/wsw.js): three questions, three films. Under
+  // the hero, which on phones runs up to the header.
+  if (!guest) {
+    page.appendChild(h('div', { class: 'wsw-bar' },
+      h('button', { id: 'wsw-btn', class: 'btn ghost wsw-btn', type: 'button', 'aria-haspopup': 'dialog', onClick: () => openWhatToWatch(ctx) },
+        icon('sparkle', { size: 18 }), 'What should I watch?')));
+  }
   if (data.weekly4.length > 1) {
     page.appendChild(sectionTitle(guest ? `The rest of ${owner}'s four` : 'The rest of your four',
       data.profile.lowData && !guest ? 'Leaning on public scores. Rate more to make it yours.' : `${data.theatre?.name || ''}`));

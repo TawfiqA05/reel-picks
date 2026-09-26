@@ -267,7 +267,7 @@ function buildShell() {
         ),
         h('div', { class: 'header-actions' },
           h('a', { id: 'theatre-name', class: 'theatre-name', href: '#/settings' }, ''),
-          h('button', { id: 'search-btn', class: 'icon-btn round', type: 'button', hidden: true, 'aria-label': 'Search movies', title: 'Search (/)', 'aria-haspopup': 'dialog', onClick: () => openSearch() }, icon('search', { size: 20 })),
+          h('button', { id: 'search-btn', class: 'icon-btn round', type: 'button', hidden: true, 'aria-label': 'Search movies', title: 'Search (/)', 'aria-haspopup': 'dialog', onClick: () => openSearch(ctx) }, icon('search', { size: 20 })),
           h('button', { id: 'help-btn', class: 'icon-btn round', type: 'button', hidden: true, 'aria-label': 'Take the tour', title: 'Help: take the tour', onClick: () => startTour(ctx) }, icon('help', { size: 20 })),
           h('button', { id: 'refresh-btn', class: 'icon-btn round', type: 'button', 'aria-label': 'Refresh showtimes and scores', title: 'Refresh', onClick: doRefresh }, icon('refresh', { size: 20 })),
           h('span', { id: 'user-chip', class: 't-chip user-chip', hidden: true }),
@@ -301,7 +301,7 @@ async function boot() {
     if (e.target.closest?.('input, textarea, select, [contenteditable="true"], .modal-overlay')) return;
     if (!status || status.guest) return;
     e.preventDefault();
-    openSearch();
+    openSearch(ctx);
   });
   route();
 

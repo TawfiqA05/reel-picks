@@ -40,6 +40,7 @@ import { settingsProblems } from '../public/js/settingsRules.js';
 import { planProblems } from '../public/js/plans.js';
 import { servicesProblems, cleanServices } from '../public/js/services.js';
 import { homePicks } from './lib/home.js';
+import { suggest } from './lib/suggest.js';
 import { search, playingIds, listRecents, addRecent, removeRecent, clearRecents, restoreRecents } from './lib/search.js';
 import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, userName } from './lib/accounts.js';
 import {
@@ -923,6 +924,18 @@ const pushOn = (req, res, next) => {
 // ---- At home (lib/home.js) -----------------------------------------------------
 // The caller's own 4 streaming picks this week. Not on the guest allowlist.
 router.get('/home-picks', (req, res) => res.json(homePicks()));
+
+// ---- What should I watch? (lib/suggest.js) ----------------------------------
+// Three films for the caller's answers. A POST because it carries the ids
+// already shown this session. Not on the guest allowlist.
+router.post('/suggest', h(async (req, res) => {
+  try {
+    res.json(await suggest(req.body || {}));
+  } catch (e) {
+    if (e.status === 400) return res.status(400).json({ error: e.message });
+    throw e;
+  }
+}));
 
 // ---- off-site backup (lib/offsite.js) ---------------------------------------
 // Owner only. With BACKUP_S3_* unset: { enabled: false }, and nothing to press.

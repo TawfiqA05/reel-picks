@@ -30,6 +30,8 @@ function steps(status) {
       text: 'Not interested? Hide it and it won\'t come back. You can undo in Settings.' },
     { route: 'home', targets: [['#at-home .section-head', '#at-home .home-card'], ['#at-home .section-head', '#at-home .home-setup'], ['#at-home .section-head']], title: 'At home',
       text: 'Staying in? Your 4 best matches this week on the streaming services you have, scored the same way.' },
+    { route: 'home', targets: [['#wsw-btn']], title: 'What should I watch?',
+      text: 'Can\'t decide? Answer three quick questions and get three films that fit, at the theater or at home. It\'s in Search too.' },
     { route: 'schedule', targets: tab('schedule').map((s) => [s]), title: 'Schedule',
       text: 'What\'s leaving soon (last chance) and what\'s opening soon.' },
     { route: null, targets: [['#search-btn']], title: 'Search',

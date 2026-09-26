@@ -49,6 +49,14 @@ with your own keys.
   Not for me. The list is worked out once a week (from Friday) and stays put; every
   candidate is confirmed with TMDB's watch providers, and all of it goes through the shared
   TMDB throttle and cache. No services chosen means a one-tap prompt to pick them.
+- Answers "What should I watch?" from a button on Picks and in the search sheet. Three
+  one-tap questions, each skippable: where (Theater, At home, Either), how long (Under 2h,
+  Any length) and the mood (Funny, Intense, Feel-good, Mind-bending, Scary, Romantic,
+  Surprise me). Out come three films that fit, from what's playing at my theaters and what's
+  on my services, scored like the picks and each with a reason from my own ratings. "Show
+  me 3 more" never repeats a film while the sheet is open, and Seen it (a rating),
+  Watchlist and Not for me work right there. With no ratings yet it leans on popularity,
+  so a brand-new friend still gets well-known films that fit the mood.
 - Shares a read-only guest link so other people can see my picks without touching anything.
 
 A few smaller things make the lists easier to read:

@@ -504,6 +504,18 @@ export function userLineup() {
   };
 }
 
+// "What should I watch?" (lib/suggest.js): every film at the user's theaters
+// this week, scored exactly as the Picks page scores it (evaluate(), same
+// context), with the movie record beside it. Read only: nothing is recorded.
+export function scoredLineup() {
+  const ctx = buildCtx();
+  const { main, nearby } = splitLineup(ctx, all('SELECT * FROM movies WHERE playing = 1').map(hydrate));
+  return [
+    ...main.map((m) => ({ m, e: evaluate(m, ctx) })),
+    ...nearby.map(({ m, t }) => ({ m, e: evaluate(m, ctx, t.id) })),
+  ];
+}
+
 export function getRecommendations({ guest = false } = {}) {
   const ctx = buildCtx({ guest });
   const playing = all('SELECT * FROM movies WHERE playing = 1').map(hydrate);

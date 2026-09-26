@@ -6,6 +6,7 @@ import { api } from './api.js';
 import { h, clear, toast, icon, openModal } from './ui.js';
 import { query as prepQuery } from './fuzzy.js';
 import { streamLine, CREDIT } from './stream.js';
+import { openWhatToWatch } from './wsw.js';
 
 const DEBOUNCE_MS = 300;
 const DWELL_MS = 2000; // results looked at this long count as a search, even if typed over later
@@ -15,7 +16,7 @@ const yearOf = (y) => (y ? ` ${y}` : '');
 
 let open = null; // one sheet at a time
 
-export function openSearch() {
+export function openSearch(ctx = null) {
   if (open) { open.input.focus(); return; }
 
   const listId = 'search-list';
@@ -28,9 +29,11 @@ export function openSearch() {
   const statusLine = h('p', { class: 'search-status', role: 'status', 'aria-live': 'polite' });
   const body = h('div', { class: 'search-body', id: listId, role: 'listbox', 'aria-label': 'Search results' });
   const credit = h('p', { class: 'stream-credit sr-credit', hidden: true }, CREDIT);
+  // Not sure what to look for? "What should I watch?" (js/wsw.js) instead.
+  const wswBtn = ctx ? h('button', { class: 'link-btn search-wsw', type: 'button', 'aria-haspopup': 'dialog' }, icon('sparkle', { size: 16 }), 'Not sure? What should I watch?') : null;
   const content = h('div', { class: 'search-sheet' },
     h('div', { class: 'filter-field search-field' }, icon('search', { size: 18, cls: 'filter-icon' }), input, clearBtn),
-    statusLine, body, credit);
+    wswBtn, statusLine, body, credit);
 
   let recents = { queries: [], movies: [] };
   let results = null; // { q, list } of the last finished search
@@ -55,6 +58,7 @@ export function openSearch() {
   });
   open = { input };
   modal.card.classList.add('search-card');
+  wswBtn?.addEventListener('click', () => { modal.close(); openWhatToWatch(ctx); });
   input.focus();
 
   // ---- keep the sheet inside what's visible above an on-screen keyboard
