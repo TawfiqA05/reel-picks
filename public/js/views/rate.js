@@ -3,6 +3,9 @@
 import { api } from '../api.js';
 import { h, clear, makeStars, toast, sectionTitle, chip, icon } from '../ui.js';
 
+// Where a rating came from, as the list names it.
+const SOURCES = { letterboxd: 'Letterboxd', imdb: 'IMDb', manual: 'Rated here', onboarding: 'Quick rate', reelpicks: 'Backup' };
+
 export async function render(root, params, ctx) {
   clear(root);
   const page = h('div', { class: 'page' });
@@ -280,19 +283,25 @@ export async function render(root, params, ctx) {
     }
     const list = h('div', { class: 'rating-list' });
     for (const r of ratings.slice(0, 60)) {
+      const title = r.title || 'Untitled';
       list.appendChild(h('div', { class: 'rating-item' },
         r.poster ? h('img', { class: 'ri-poster', src: r.poster, alt: '', loading: 'lazy' }) : h('div', { class: 'ri-poster ph' }),
         h('div', { class: 'ri-info' },
-          h('a', { class: 'ri-title', href: `#/movie/${r.tmdb_id}` }, `${r.title || 'Untitled'}${r.year ? ` (${r.year})` : ''}`),
-          h('div', { class: 'muted small' }, r.source),
+          h('a', { class: 'ri-title', href: `#/movie/${r.tmdb_id}` }, `${title}${r.year ? ` (${r.year})` : ''}`),
+          h('div', { class: 'muted small' }, SOURCES[r.source] || r.source),
         ),
         makeStars({ value: r.rating, interactive: true, size: 18, allowClear: true, onChange: (v) => rateMovie(r, v) }),
-        h('button', { class: 'link-btn', title: 'Remove', onClick: async () => {
-          await api.unrate(r.tmdb_id);
-          toast('Removed');
-          ctx.refreshStatus();
-          loadRecent();
-        } }, '✕'),
+        h('button', {
+          class: 'icon-btn round ri-remove', type: 'button', title: 'Remove rating', 'aria-label': `Remove your rating of ${title}`,
+          onClick: async () => {
+            try {
+              await api.unrate(r.tmdb_id);
+              toast(`Removed your rating of ${title}`);
+              ctx.refreshStatus();
+              loadRecent();
+            } catch (e) { toast(e.message, 'error'); }
+          },
+        }, icon('x', { size: 18 })),
       ));
     }
     recentWrap.appendChild(list);

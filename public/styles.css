@@ -444,6 +444,16 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .ri-poster.ph { background: var(--surface-2); }
 .ri-info { flex: 1; min-width: 0; }
 .ri-title { font-weight: 600; font-size: var(--fs-base); }
+.ri-remove { color: var(--muted); background: none; border-color: transparent; }
+.ri-remove:hover { color: var(--text); }
+/* Phones: the stars go under the title, so a long title keeps its width. */
+@media (max-width: 480px) {
+  .rating-item { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; column-gap: 12px; row-gap: 2px; align-items: center; }
+  .rating-item > .ri-poster { grid-row: 1 / span 2; }
+  .rating-item > .ri-info { grid-column: 2; }
+  .rating-item > .stars { grid-column: 2; grid-row: 2; justify-self: start; }
+  .rating-item > .ri-remove { grid-column: 3; grid-row: 1 / span 2; }
+}
 
 /* ---- onboarding ---- */
 .onboard { display: flex; flex-direction: column; gap: 14px; align-items: center; }
