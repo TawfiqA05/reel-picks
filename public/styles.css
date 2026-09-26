@@ -488,6 +488,16 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
 .cal-btn:hover { border-color: var(--text-2); color: var(--text); }
 .cal-link { display: inline-flex; align-items: center; gap: 6px; padding: 0; color: var(--text-2); text-decoration: underline; text-underline-offset: 2px; vertical-align: middle; }
 .cal-link:hover { color: var(--text); }
+/* In the hero's seat line the link runs as text: a 44px touch box would make
+   its line taller than the rest when the sentence wraps. The tap area grows
+   around it instead, the way the title links do. */
+.seat-line .cal-link { display: inline; min-height: 0; min-width: 0; position: relative; white-space: nowrap; vertical-align: baseline; }
+.seat-line .cal-link .icon { vertical-align: -3px; margin-right: 4px; }
+.seat-line .cal-link::after {
+  content: ''; position: absolute;
+  top: min(0px, calc(50% - 22px)); bottom: min(0px, calc(50% - 22px));
+  left: min(0px, calc(50% - 22px)); right: min(0px, calc(50% - 22px));
+}
 .tg-times li { display: inline-flex; align-items: stretch; gap: 4px; }
 .st-time { font-weight: 600; }
 .st-seat { color: var(--text-2); font-size: var(--fs-xs); font-weight: 600; white-space: nowrap; }
