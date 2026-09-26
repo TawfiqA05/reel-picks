@@ -40,7 +40,7 @@ with your own keys.
   AMC theaters for everyone. Anyone who had the app before plans existed is on A-List with
   the values they already had.
 - Has an "At home" segment on Picks for nights in. Each person picks the streaming
-  services they have in Settings (Netflix, Max, Disney+, Hulu, Prime Video, Apple TV+,
+  services they have in Settings (Netflix, HBO Max, Disney+, Hulu, Prime Video, Apple TV+,
   Peacock, Paramount+, and "Free with ads" for Tubi, Pluto TV and the like), and gets their
   4 best matches this week from films included with them in the US, never rentals. Films
   are scored with the same taste model and weights as the theater picks, need 50+ TMDB

@@ -47,7 +47,7 @@ const names = (all, n = 3) => {
   return list.length > n ? `${shown.join(', ')} +${list.length - n}` : shown.join(', ');
 };
 
-// "Stream on Netflix, Max" or, with nothing to stream, "Rent or buy on …".
+// "Stream on Netflix, HBO Max" or, with nothing to stream, "Rent or buy on …".
 export function summary(p) {
   if (!p || p.playing) return null;
   if (p.stream?.length) return `Stream on ${names(p.stream)}`;

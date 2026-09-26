@@ -18,7 +18,7 @@
 // still gets well-known films that fit the mood.
 import { scoredLineup } from './recommend.js';
 import {
-  personal, done, excludedBySettings, scoreFilm, reasonFor, streamingCandidates, filmData, ensureDetails, confirmService, weeklyList,
+  personal, done, excludedBySettings, scoreFilm, reasonFor, streamingCandidates, filmData, ensureDetails, confirmService, weeklyList, currentLabel,
 } from './home.js';
 import { becauseLine } from './because.js';
 import { getMovie } from './movies.js';
@@ -95,7 +95,7 @@ export async function suggest(body) {
       if (skip(e.tmdb_id) || pool.has(e.tmdb_id)) continue;
       const m = getMovie(e.tmdb_id);
       if (!m) continue;
-      pool.set(e.tmdb_id, { id: e.tmdb_id, where: 'home', m, final: e.final, votes: m.tmdb_votes || 0, ready: true, reason: e.reason, service: e.service });
+      pool.set(e.tmdb_id, { id: e.tmdb_id, where: 'home', m, final: e.final, votes: m.tmdb_votes || 0, ready: true, reason: e.reason, service: currentLabel(e.service) });
     }
     // ...then, for a mood, that mood's films on their services, checked when chosen.
     if (MOODS[ask.mood]) {

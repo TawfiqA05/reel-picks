@@ -10,7 +10,7 @@
 // "free" rather than "flatrate", so those are what counts for them.
 export const SERVICES = [
   { key: 'netflix', name: 'Netflix', providers: [8, 1796] },
-  { key: 'max', name: 'Max', providers: [1899, 1825] },
+  { key: 'max', name: 'HBO Max', providers: [1899, 1825] },
   { key: 'disney', name: 'Disney+', providers: [337] },
   { key: 'hulu', name: 'Hulu', providers: [15] },
   { key: 'prime', name: 'Prime Video', providers: [9, 2100] },
@@ -28,7 +28,7 @@ export function cleanServices(keys) {
   return SERVICE_KEYS.filter((k) => want.has(k));
 }
 
-// "Netflix and Max", "Netflix, Max and Hulu".
+// "Netflix and HBO Max", "Netflix, HBO Max and Hulu".
 export function servicesPhrase(keys) {
   const names = cleanServices(keys).map((k) => serviceByKey(k).name);
   if (names.length <= 1) return names[0] || '';

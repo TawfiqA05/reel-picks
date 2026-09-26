@@ -54,7 +54,7 @@ function meta(e) {
   return bits.filter(Boolean).join(' · ');
 }
 
-// The service a film is on: its logo (named for screen readers) and "On Max".
+// The service a film is on: its logo (named for screen readers) and "On HBO Max".
 export function serviceTag(service) {
   if (!service) return null;
   return h('span', { class: 'service-tag' },

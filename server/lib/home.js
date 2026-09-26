@@ -144,7 +144,7 @@ export async function confirmService(id, serviceKeys) {
   for (const key of serviceKeys) {
     const svc = serviceByKey(key);
     const offered = svc.free ? (wp.free || []) : (wp.flatrate || []);
-    // The service's own listing first (Max itself, not Max as an Amazon channel).
+    // The service's own listing first (HBO Max itself, not HBO Max as an Amazon channel).
     const hit = svc.providers.map((pid) => offered.find((x) => x.id === pid)).find(Boolean);
     if (hit) return { key, name: svc.name, provider: hit.name, logo: hit.logo };
   }
@@ -232,6 +232,14 @@ function stored(uid, week, keys) {
   try { return JSON.parse(row.ranked); } catch { return null; }
 }
 
+// A stored entry's service under today's name for it (a list saved before a
+// rename, "Max" to "HBO Max", still shows the new name).
+export function currentLabel(service) {
+  if (!service) return service;
+  const svc = serviceByKey(service.key);
+  return svc ? { ...service, name: svc.name } : service;
+}
+
 // Card data for one stored entry.
 export function homeCard(entry, p) {
   const m = getMovie(entry.tmdb_id) || {};
@@ -247,7 +255,7 @@ export function homeCard(entry, p) {
     tmdb_votes: m.tmdb_votes ?? null,
     final: entry.final,
     reason: entry.reason,
-    service: entry.service,
+    service: currentLabel(entry.service),
     watchlisted: p.watch.has(entry.tmdb_id),
     myRating: null,
   };
