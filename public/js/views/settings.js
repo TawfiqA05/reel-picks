@@ -1,6 +1,7 @@
 // Settings: keys status, theatre, weights, filters, showtime windows, pricing, data.
 import { api } from '../api.js';
 import { h, clear, spinner, toast, chip, labeled, sectionTitle, badge, openModal, icon } from '../ui.js';
+import { NUMBER_RULES, HOME_RULES, numberProblem } from '../settingsRules.js';
 
 const GENRES = ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama',
   'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance',
@@ -754,33 +755,77 @@ export async function render(root, params, ctx) {
   ));
 
   // ---- Save
+  // Every number is checked before anything is sent (the server checks the
+  // same rules, js/settingsRules.js). A bad one gets its message under its
+  // field's row and nothing is saved; typing in the field clears it.
+  const numbers = [
+    ['alistWeeklyLimit', perWeek], ['alistMonthlyFee', fee], ['avgTicketPrice', ticket], ['previewsMinutes', previews],
+    ['watchlistBoost', wlB], ['imaxBoost', imB], ['windowFitBoost', wfB], ['urgencyWatchlistMultiplier', uMult],
+    ['fallbackRecencyWeeks', recencyInput], ['goodMatchMinScore', gmScore],
+    ['lastChanceMinScore', lcScore], ['lastChanceMinGapDays', lcGap], ['lastChanceMaxEntries', lcMax],
+  ];
+  const clearError = (input) => {
+    const id = input.getAttribute('aria-describedby');
+    if (id) document.getElementById(id)?.remove();
+    input.removeAttribute('aria-invalid');
+    input.removeAttribute('aria-describedby');
+  };
+  const showError = (input, message) => {
+    clearError(input);
+    const label = input.closest('.field')?.querySelector('.field-label')?.textContent || '';
+    const id = `err-${Math.random().toString(36).slice(2, 8)}`;
+    const note = h('p', { class: 'form-error', id }, label ? `${label}: ${message}` : message);
+    // Under the row the field sits in, after any message already there.
+    let at = input.closest('.settings-card > *');
+    while (at.nextElementSibling?.classList.contains('form-error')) at = at.nextElementSibling;
+    at.after(note);
+    input.setAttribute('aria-invalid', 'true');
+    input.setAttribute('aria-describedby', id);
+    input.addEventListener('input', () => clearError(input), { once: true });
+  };
+  const validate = () => {
+    const bad = [];
+    const check = (input, message) => { if (message) { showError(input, message); bad.push(input); } else clearError(input); };
+    // Owner-only cards aren't on a friend's page; their fields aren't checked.
+    for (const [key, input] of numbers) if (input.isConnected) check(input, numberProblem(NUMBER_RULES[key], input.value));
+    const blank = (i) => i.value.trim() === '';
+    if (blank(homeLat) !== blank(homeLng)) check(blank(homeLat) ? homeLat : homeLng, 'Enter both latitude and longitude, or leave both blank.');
+    else for (const [k, input] of [['lat', homeLat], ['lng', homeLng]]) check(input, blank(input) ? null : numberProblem(HOME_RULES[k], input.value));
+    for (const input of page.querySelectorAll('.window-row input[type=time]')) check(input, input.value ? null : 'Enter a time.');
+    return bad;
+  };
+
   const save = async () => {
     const p = Number(wRange.value) / 100;
-    // Out-of-range multiplier is clamped; show the value that is actually saved.
-    uMult.value = String(Math.max(1, Number(uMult.value) || 1));
+    const bad = validate();
+    if (bad.length) {
+      bad[0].focus();
+      toast(bad.length === 1 ? 'One setting needs fixing. Nothing was saved.' : `${bad.length} settings need fixing. Nothing was saved.`, 'error');
+      return;
+    }
     paintU();
     try {
       await api.saveSettings({
         weightPublic: p,
         weightTaste: 1 - p,
         preferImax: imaxToggle.checked,
-        fallbackRecencyWeeks: Number(recencyInput.value) || 8,
+        fallbackRecencyWeeks: Number(recencyInput.value),
         excludedGenres: [...exG],
         excludedMpaa: [...exM],
         showtimeWindows: { weekday: weekday.read(), weekend: weekend.read() },
-        alistWeeklyLimit: Math.max(1, Math.round(Number(perWeek.value) || 4)),
-        alistMonthlyFee: Number(fee.value) || 0,
-        avgTicketPrice: Number(ticket.value) || 0,
-        previewsMinutes: Number(previews.value) || 0,
-        watchlistBoost: Number(wlB.value) || 0,
-        imaxBoost: Number(imB.value) || 0,
-        windowFitBoost: Number(wfB.value) || 0,
+        alistWeeklyLimit: Number(perWeek.value),
+        alistMonthlyFee: Number(fee.value),
+        avgTicketPrice: Number(ticket.value),
+        previewsMinutes: Number(previews.value),
+        watchlistBoost: Number(wlB.value),
+        imaxBoost: Number(imB.value),
+        windowFitBoost: Number(wfB.value),
         urgencyBoost: Number(uRange.value) || 0,
-        urgencyWatchlistMultiplier: Math.max(1, Number(uMult.value) || 1),
-        goodMatchMinScore: Number(gmScore.value) || 0,
-        lastChanceMinScore: Number(lcScore.value) || 0,
-        lastChanceMinGapDays: Number(lcGap.value) || 3,
-        lastChanceMaxEntries: Number(lcMax.value) || 3,
+        urgencyWatchlistMultiplier: Number(uMult.value),
+        goodMatchMinScore: Number(gmScore.value),
+        lastChanceMinScore: Number(lcScore.value),
+        lastChanceMinGapDays: Number(lcGap.value),
+        lastChanceMaxEntries: Number(lcMax.value),
         // Blank fields are sent as null; the server falls back to its default.
         home: {
           label: homeLabelIn.value.trim() || null,

@@ -253,6 +253,9 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field-label { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+/* A value Settings won't save: the field turns red and its message sits under the row. */
+.input[aria-invalid="true"] { border-color: var(--low); }
+.form-error { margin: 0; color: var(--low); font-size: var(--fs-sm); }
 
 /* ---- banners / alerts ---- */
 .banner, .alert { display: flex; align-items: center; gap: 12px; padding: 13px 15px; border-radius: var(--r-md); margin: 8px 0; }

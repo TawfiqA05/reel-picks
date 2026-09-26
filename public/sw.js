@@ -15,7 +15,7 @@ const CACHE = 'reelpicks-v40';
 const CORE = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
   '/js/app.js', '/js/api.js', '/js/ui.js', '/js/icons.js', '/js/update.js',
-  '/js/fuzzy.js', '/js/filter.js', '/js/search.js',
+  '/js/fuzzy.js', '/js/filter.js', '/js/search.js', '/js/settingsRules.js',
   '/js/views/components.js', '/js/views/home.js', '/js/views/detail.js',
   '/js/views/coming.js', '/js/views/leaving.js', '/js/views/rate.js', '/js/views/onboarding.js',
   '/js/views/watchlist.js', '/js/views/stats.js', '/js/views/settings.js', '/js/views/together.js',

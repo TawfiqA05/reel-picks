@@ -35,6 +35,7 @@ import { currentUserId, currentUser } from './lib/user.js';
 import { startCreditsBackfill, backfillStatus, backfillState, tmdbThrottle } from './lib/backfill.js';
 import { backupStatus, latestBackup, backupsDir } from './lib/backup.js';
 import { overview as togetherOverview, partnerFor, filmsFor, NOT_FOUND } from './lib/together.js';
+import { settingsProblems } from '../public/js/settingsRules.js';
 import { search, listRecents, addRecent, removeRecent, clearRecents, restoreRecents } from './lib/search.js';
 import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, userName } from './lib/accounts.js';
 import {
@@ -249,6 +250,10 @@ router.put('/settings', (req, res) => {
   const patch = { ...(req.body || {}) };
   // Friends change only their own keys; the shared ones are the owner's.
   if (!isOwnerRequest()) for (const k of Object.keys(patch)) if (!USER_SETTING_KEYS.has(k)) delete patch[k];
+  // Numbers out of range (or not numbers) are refused, never coerced: the
+  // Settings page checks the same rules (public/js/settingsRules.js) first.
+  const problems = settingsProblems(patch);
+  if (problems.length) return res.status(400).json({ error: `${problems[0].key}: ${problems[0].message}`, problems });
   if (patch.weightPublic != null || patch.weightTaste != null) {
     const wp = Number(patch.weightPublic ?? getSetting('weightPublic')) || 0;
     const wt = Number(patch.weightTaste ?? getSetting('weightTaste')) || 0;
