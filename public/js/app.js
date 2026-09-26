@@ -159,6 +159,9 @@ function updateNavActive(name) {
     const on = el.dataset.name === name;
     el.classList.toggle('active', on);
     if (on) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
+    // A tab left for another page (the back button, a link in the page) lets
+    // go of focus, so its focus ring can't linger there like a highlight.
+    if (!on && el === document.activeElement) el.blur();
   });
 }
 
