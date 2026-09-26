@@ -18,7 +18,7 @@
   --ok: #F2C14E;
   --low: #EF6A4F;
   --imax: #7FD6FF;
-  --star-empty: #3A3A42;
+  --star-empty: #6A6A74;   /* 3:1 on every surface, so a rater's empty stars read as a control */
   --shadow: 0 8px 30px rgba(0, 0, 0, .45);
   --shadow-soft: 0 1px 2px rgba(0, 0, 0, .35), 0 4px 14px rgba(0, 0, 0, .28);
   /* shape */
@@ -260,6 +260,7 @@ main { padding: var(--sp-4); padding-bottom: 104px; }
 
 /* ---- inputs ---- */
 .input { width: 100%; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); color: var(--text); font-size: var(--fs-base); line-height: 22px; min-height: 44px; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .input:focus { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); }
 .input.big { padding: 13px 15px; font-size: var(--fs-md); line-height: 24px; }
 .input.time { width: 100%; }
@@ -328,7 +329,7 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .list { display: flex; flex-direction: column; gap: 8px; }
 .list-row { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 12px 10px 10px; }
 .list-row:hover { background: var(--surface-2); }
-.list-row.excluded, .list-row.seen { opacity: 0.5; }
+.list-row.excluded, .list-row.seen { opacity: 0.8; }
 .row-poster { flex: 0 0 auto; }
 .row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .row-head { display: flex; align-items: center; gap: 10px; width: 100%; }
@@ -806,8 +807,8 @@ body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-botto
 .note .note-link { color: var(--accent); font-weight: 700; white-space: nowrap; }
 
 /* ---- no-score movies: the number rests on a default, say so ---- */
-.badge.noscore { background: color-mix(in srgb, var(--muted) 16%, transparent); color: var(--muted); border: 1px dashed color-mix(in srgb, var(--muted) 50%, transparent); }
-.score-pill.unscored { border-style: dashed; opacity: 0.85; }
+.badge.noscore { background: color-mix(in srgb, var(--muted) 10%, transparent); color: var(--muted); border: 1px dashed color-mix(in srgb, var(--muted) 50%, transparent); }
+.score-pill.unscored { border-style: dashed; }
 .diag-table td.warn { color: var(--low); font-weight: 700; }
 /* Phones: each theatre becomes a small card of labelled values. */
 @media (max-width: 599px) {
@@ -896,7 +897,7 @@ body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-botto
 .is-leaving { opacity: 0; transform: scale(.98); transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out); pointer-events: none; }
 .badge.moved { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
 .badge.hidden { background: var(--surface-3); color: var(--text-2); }
-.list-row.is-hidden { opacity: .55; }
+.list-row.is-hidden { opacity: .8; }
 .list-row.is-hidden:hover, .list-row.is-hidden:focus-within { opacity: .9; }
 .hidden-line { color: var(--muted); font-size: var(--fs-sm); margin: var(--sp-2) 2px 0; }
 .hidden-line .link-btn { padding: 0; min-height: 44px; }
