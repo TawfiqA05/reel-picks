@@ -470,6 +470,10 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .search-info { flex: 1; min-width: 0; }
 .search-title { font-weight: 600; }
 .rating-list { display: flex; flex-direction: column; gap: 6px; }
+.rating-list + .show-all { margin-top: var(--sp-3); }
+/* Hundreds of ratings: past the first 60, rows off screen skip layout and
+   paint until scrolled to. */
+.rating-item:nth-child(n+61) { content-visibility: auto; contain-intrinsic-size: auto 60px; }
 .rating-item { display: flex; align-items: center; gap: 12px; padding: 7px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); }
 .ri-poster { width: 34px; height: 51px; object-fit: cover; border-radius: 5px; }
 .ri-poster.ph { background: var(--surface-2); }

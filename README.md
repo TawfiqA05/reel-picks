@@ -145,7 +145,8 @@ watched is not rating it. Only star ratings export. Wrong files get a specific
 explanation instead of a generic error, and after an import you see exactly what was
 imported, skipped, and left unmatched. IMDb's 1–10 scores convert to half-star ratings.
 You can also just search and rate in the app; a quick-rate flow covers about twenty popular
-films in a minute or two.
+films in a minute or two. Under all that, my ratings list opens on the newest 60, with
+Show all for the rest and a forgiving filter box that searches every one of them.
 
 ## Friends
 

@@ -2,6 +2,7 @@
 // ratings list.
 import { api } from '../api.js';
 import { h, clear, makeStars, toast, sectionTitle, chip, icon } from '../ui.js';
+import { filterBox } from '../filter.js';
 
 // Where a rating came from, as the list names it.
 const SOURCES = { letterboxd: 'Letterboxd', imdb: 'IMDb', manual: 'Rated here', onboarding: 'Quick rate', reelpicks: 'Backup' };
@@ -270,41 +271,68 @@ export async function render(root, params, ctx) {
   page.appendChild(fileInput);
 
   // ---- Your ratings --------------------------------------------------------
+  // The newest SHOWN, then "Show all (N)" for the rest. The filter box looks
+  // through every rating, shown or not, with the same forgiving matching as
+  // the Watchlist's. Rows are built once per load and only shown or hidden
+  // after that, so typing stays quick with hundreds of ratings. A re-load
+  // (after a rating changes) keeps what's typed and whether all are showing.
+  const SHOWN = 60;
   const recentWrap = h('div', {});
   page.appendChild(recentWrap);
+  let showAll = false;
+  let rows = [];
+  const filter = filterBox({ label: 'Filter your ratings', placeholder: 'Filter your ratings', onChange: ({ query }) => paintRows(query) });
+  const moreBtn = h('button', { class: 'btn ghost small show-all', type: 'button', 'aria-controls': 'rating-list' });
+  moreBtn.addEventListener('click', () => {
+    showAll = !showAll;
+    paintRows(filter.active);
+    if (!showAll) moreBtn.scrollIntoView({ block: 'nearest' });
+  });
+  function paintRows(query) {
+    // With a query the filter decides every row; without one, the rows past
+    // the first SHOWN follow the button.
+    if (!query) for (let i = SHOWN; i < rows.length; i++) rows[i].el.hidden = !showAll;
+    moreBtn.hidden = Boolean(query) || rows.length <= SHOWN;
+    moreBtn.textContent = showAll ? 'Show fewer' : `Show all (${rows.length})`;
+    moreBtn.setAttribute('aria-expanded', String(showAll));
+  }
+
+  const ratingRow = (r) => {
+    const title = r.title || 'Untitled';
+    return h('div', { class: 'rating-item' },
+      r.poster ? h('img', { class: 'ri-poster', src: r.poster, alt: '', loading: 'lazy' }) : h('div', { class: 'ri-poster ph' }),
+      h('div', { class: 'ri-info' },
+        h('a', { class: 'ri-title', href: `#/movie/${r.tmdb_id}` }, `${title}${r.year ? ` (${r.year})` : ''}`),
+        h('div', { class: 'muted small' }, SOURCES[r.source] || r.source),
+      ),
+      makeStars({ value: r.rating, interactive: true, size: 18, allowClear: true, onChange: (v) => rateMovie(r, v) }),
+      h('button', {
+        class: 'icon-btn round ri-remove', type: 'button', title: 'Remove rating', 'aria-label': `Remove your rating of ${title}`,
+        onClick: async () => {
+          try {
+            await api.unrate(r.tmdb_id);
+            toast(`Removed your rating of ${title}`);
+            ctx.refreshStatus();
+            loadRecent();
+          } catch (e) { toast(e.message, 'error'); }
+        },
+      }, icon('x', { size: 18 })),
+    );
+  };
 
   async function loadRecent() {
     const { ratings } = await api.ratings();
-    clear(recentWrap);
-    recentWrap.appendChild(sectionTitle('Your ratings', `${ratings.length} total`));
+    const head = sectionTitle('Your ratings', `${ratings.length} total`);
     if (!ratings.length) {
-      recentWrap.appendChild(h('div', { class: 'muted pad' }, 'No ratings yet.'));
+      rows = [];
+      recentWrap.replaceChildren(head, h('div', { class: 'muted pad' }, 'No ratings yet.'));
       return;
     }
-    const list = h('div', { class: 'rating-list' });
-    for (const r of ratings.slice(0, 60)) {
-      const title = r.title || 'Untitled';
-      list.appendChild(h('div', { class: 'rating-item' },
-        r.poster ? h('img', { class: 'ri-poster', src: r.poster, alt: '', loading: 'lazy' }) : h('div', { class: 'ri-poster ph' }),
-        h('div', { class: 'ri-info' },
-          h('a', { class: 'ri-title', href: `#/movie/${r.tmdb_id}` }, `${title}${r.year ? ` (${r.year})` : ''}`),
-          h('div', { class: 'muted small' }, SOURCES[r.source] || r.source),
-        ),
-        makeStars({ value: r.rating, interactive: true, size: 18, allowClear: true, onChange: (v) => rateMovie(r, v) }),
-        h('button', {
-          class: 'icon-btn round ri-remove', type: 'button', title: 'Remove rating', 'aria-label': `Remove your rating of ${title}`,
-          onClick: async () => {
-            try {
-              await api.unrate(r.tmdb_id);
-              toast(`Removed your rating of ${title}`);
-              ctx.refreshStatus();
-              loadRecent();
-            } catch (e) { toast(e.message, 'error'); }
-          },
-        }, icon('x', { size: 18 })),
-      ));
-    }
-    recentWrap.appendChild(list);
+    const list = h('div', { class: 'rating-list', id: 'rating-list' });
+    rows = ratings.map((r) => ({ el: list.appendChild(ratingRow(r)), fields: [r.title || 'Untitled'] }));
+    // Swapped in whole, so the page never drops to empty and loses its place.
+    recentWrap.replaceChildren(...[head, ratings.length > 8 ? filter.el : null, list, moreBtn].filter(Boolean));
+    filter.set(rows); // applies whatever is typed, then paintRows folds the rest away
   }
 
   root.replaceChildren(page);
