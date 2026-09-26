@@ -18,6 +18,8 @@ import { pushEnabled, sendWeeklyIfDue } from './lib/push.js';
 import { syncAllDue as syncLetterboxdDue } from './lib/letterboxd.js';
 import { raiseLater, resolveLater } from './lib/alerts.js';
 import { startWeeklyOffsite, offsiteEnabled } from './lib/offsite.js';
+import { warmHomePicks } from './lib/home.js';
+import { activeUserIds } from './lib/theatres.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 
@@ -173,6 +175,8 @@ app.listen(config.port, () => {
   // per week).
   setInterval(() => {
     letterboxd();
+    // This week's "At home" picks, ready before anyone opens Picks (lib/home.js).
+    warmHomePicks(activeUserIds()).catch((e) => console.error('[home]', e.message));
     if (refreshState.running) return;
     if (shouldAutoRefresh()) autoRefresh('new day');
     else sendWeeklyIfDue().catch((e) => console.error('[push]', e.message));

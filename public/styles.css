@@ -334,6 +334,18 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .alert-main { min-width: 0; overflow-wrap: anywhere; }
 .offsite { display: flex; flex-direction: column; gap: 10px; }
 .offsite > p { margin: 0; }
+/* At home (js/views/athome.js) */
+.home-picks { display: flex; flex-direction: column; gap: var(--sp-3); }
+.home-picks .section-head { align-items: baseline; }
+.home-body { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.home-status { margin: 0; }
+.service-tag { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--text-2); }
+.service-logo { width: 20px; height: 20px; border-radius: 5px; flex: 0 0 auto; }
+.home-setup { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--sp-4); }
+.home-setup > div { flex: 1 1 260px; min-width: 0; }
+.home-setup p { margin: 4px 0 0; }
+.services-sheet { display: flex; flex-direction: column; gap: var(--sp-3); }
+.services-sheet p { margin: 0; }
 
 /* ---- banners / alerts ---- */
 .banner, .alert { display: flex; align-items: center; gap: 12px; padding: 13px 15px; border-radius: var(--r-md); margin: 8px 0; }
@@ -1005,6 +1017,7 @@ body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-botto
 @media (min-width: 900px) {
   /* minmax(0, ...) so no card's content can widen its own column. */
   .pick-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4); }
+  .home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pick-card { padding: var(--sp-4); gap: var(--sp-4); }
   .poster-card { width: 124px; height: 186px; flex-basis: 124px; }
 }

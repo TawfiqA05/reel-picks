@@ -4,6 +4,8 @@ import { h, clear, spinner, toast, chip, labeled, sectionTitle, badge, openModal
 import { NUMBER_RULES, HOME_RULES, numberProblem } from '../settingsRules.js';
 import { openHiddenList } from './components.js';
 import { PLANS, PLAN_IDS, planOf, planWords } from '../plans.js';
+import { servicesPicker } from './athome.js';
+import { servicesPhrase } from '../services.js';
 
 const GENRES = ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama',
   'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance',
@@ -514,6 +516,25 @@ export async function render(root, params, ctx) {
 
   // ---- Weekly picks notifications: only when the server has VAPID keys.
   if (pushCfg?.enabled && !status?.guest) page.appendChild(notificationsCard(pushCfg.publicKey));
+
+  // ---- Streaming services, for "At home" on Picks (js/views/athome.js).
+  // Each tap saves; the week's home picks are worked out again for the new set.
+  if (!status?.guest) {
+    const svcNote = h('p', { class: 'muted small', role: 'status', 'aria-live': 'polite' });
+    let saving = Promise.resolve();
+    const picker = servicesPicker(s.streamingServices || [], (keys) => {
+      saving = saving.then(async () => {
+        try {
+          await api.saveSettings({ streamingServices: keys });
+          svcNote.textContent = keys.length ? `Saved. Picks will come from ${servicesPhrase(keys)}.` : 'Saved. No services: At home asks you to choose.';
+        } catch (e) { toast(e.message, 'error'); }
+      });
+    });
+    page.appendChild(card('Streaming services',
+      picker,
+      svcNote,
+      h('p', { class: 'muted small' }, 'At home on Picks shows your 4 best matches each week from films included with these (US, never rentals), scored like your theater picks. "Free with ads" covers Tubi, Pluto TV, The Roku Channel and Plex.')));
+  }
 
   // ---- Letterboxd auto-sync: owner and friends (the guest never gets here).
   if (!status?.guest) page.appendChild(letterboxdCard(ctx, planWords(planOf(s))));

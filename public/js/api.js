@@ -102,6 +102,7 @@ export const api = {
   alerts: () => req('GET', '/alerts'),
   offsite: () => req('GET', '/offsite'),
   offsiteUpload: () => req('POST', '/offsite/upload'),
+  homePicks: () => req('GET', '/home-picks'),
   pushCheck: (endpoint) => req('POST', '/push/check', { endpoint }),
   pushSubscribe: (subscription) => req('POST', '/push/subscribe', { subscription }),
   pushUnsubscribe: (endpoint) => req('POST', '/push/unsubscribe', { endpoint }),

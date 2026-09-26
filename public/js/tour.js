@@ -28,6 +28,8 @@ function steps(status) {
       text: 'Save movies you want to see. They get a boost and you\'ll get a heads-up before they leave.' },
     { route: 'home', targets: [['.pick-card .not-for-me'], ['.hero-pick .not-for-me']], title: 'Not for me',
       text: 'Not interested? Hide it and it won\'t come back. You can undo in Settings.' },
+    { route: 'home', targets: [['#at-home .section-head', '#at-home .home-card'], ['#at-home .section-head', '#at-home .home-setup'], ['#at-home .section-head']], title: 'At home',
+      text: 'Staying in? Your 4 best matches this week on the streaming services you have, scored the same way.' },
     { route: 'schedule', targets: tab('schedule').map((s) => [s]), title: 'Schedule',
       text: 'What\'s leaving soon (last chance) and what\'s opening soon.' },
     { route: null, targets: [['#search-btn']], title: 'Search',

@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { h, clear, emptyState, sectionTitle, icon, toast } from '../ui.js';
 import { weeklyCard, heroPick, movieRow, lastChanceCard, dayPicker, openHiddenList } from './components.js';
 import { filterBox } from '../filter.js';
+import { homeSection } from './athome.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -128,6 +129,10 @@ function buildPage(data, status, ctx, state, actions) {
   } else {
     page.appendChild(h('div', { class: 'muted pad' }, 'Nothing to recommend. You may have rated or filtered everything playing.'));
   }
+
+  // At home: the 4 best matches on the person's streaming services this week
+  // (js/views/athome.js). Not on the guest link.
+  if (!guest) page.appendChild(homeSection(ctx));
 
   // Last chance — only rendered when something genuinely qualifies, so it isn't
   // sitting empty on the weeks when nothing is leaving.

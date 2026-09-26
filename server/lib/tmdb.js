@@ -138,10 +138,12 @@ export async function personCredits(personId, { gate = null } = {}) {
 // Where a film streams in the US (TMDB watch providers, data from JustWatch),
 // kept per film for 3 days. Only the US part is stored: Stream (subscription,
 // free and with-ads together), Rent and Buy, each in TMDB's display order, and
-// TMDB's page for the film. Null when there is nothing in the US.
+// TMDB's page for the film. `flatrate` (included with a subscription) and
+// `free` (free or with ads) keep Stream's two halves apart for the "At home"
+// picks. Null when there is nothing in the US.
 export async function watchProviders(tmdbId, { gate = null } = {}) {
   if (!tmdbConfigured()) throw new Error('TMDB_API_KEY is not set');
-  return cachedJson(`tmdb:providers:${tmdbId}`, 3 * DAY, async () => {
+  return cachedJson(`tmdb:providers:v2:${tmdbId}`, 3 * DAY, async () => {
     if (gate) await gate();
     countCall();
     const us = (await fetchJson(url(`/movie/${tmdbId}/watch/providers`)))?.results?.US;
@@ -152,9 +154,28 @@ export async function watchProviders(tmdbId, { gate = null } = {}) {
         .filter((p) => !seen.has(p.provider_id) && seen.add(p.provider_id))
         .map((p) => ({ id: p.provider_id, name: p.provider_name, logo: img(p.logo_path, 'w92') }));
     };
-    const out = { link: us?.link || null, stream: list(us?.flatrate, us?.free, us?.ads), rent: list(us?.rent), buy: list(us?.buy) };
+    const out = {
+      link: us?.link || null, stream: list(us?.flatrate, us?.free, us?.ads), rent: list(us?.rent), buy: list(us?.buy),
+      flatrate: list(us?.flatrate), free: list(us?.free, us?.ads),
+    };
     return out.stream.length || out.rent.length || out.buy.length ? out : null;
   });
+}
+
+// Films a streaming service carries in the US, most popular first (or best
+// rated, with `sort`), 20 a page: TMDB's discover, filtered by watch provider
+// and how it's offered ('flatrate', or 'ads|free'), and optionally genres
+// (TMDB genre ids, any of them). TMDB's provider filter is loose,
+// so callers confirm each film with watchProviders(). Shared by everyone and
+// cached 6 days, so each week's picks start from a fresh list.
+export async function discoverStreaming(providerIds, { monetization = 'flatrate', sort = 'popularity.desc', minVotes = 50, page = 1, genres = null, gate = null } = {}) {
+  const ids = [...providerIds].sort((a, b) => a - b).join('|');
+  const withGenres = genres?.length ? [...genres].sort((a, b) => a - b).join('|') : undefined; // any of them
+  const data = await req(`discover:stream:${ids}:${monetization}:${sort}:${minVotes}:${withGenres || ''}:${page}`, 6 * DAY, '/discover/movie', {
+    watch_region: 'US', with_watch_providers: ids, with_watch_monetization_types: monetization, with_genres: withGenres,
+    'vote_count.gte': minVotes, sort_by: sort, include_adult: 'false', include_video: 'false', language: 'en-US', page,
+  }, { gate });
+  return (data?.results || []).map((r) => ({ ...lightMovie(r), popularity: r.popularity ?? 0 }));
 }
 
 // Typing makes a cache row per spelling ("inte", "inter", …), so expired

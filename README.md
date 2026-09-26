@@ -39,6 +39,16 @@ with your own keys.
   Stats shows ticket spend instead of an allowance and savings. Showtimes still come from
   AMC theaters for everyone. Anyone who had the app before plans existed is on A-List with
   the values they already had.
+- Has an "At home" segment on Picks for nights in. Each person picks the streaming
+  services they have in Settings (Netflix, Max, Disney+, Hulu, Prime Video, Apple TV+,
+  Peacock, Paramount+, and "Free with ads" for Tubi, Pluto TV and the like), and gets their
+  4 best matches this week from films included with them in the US, never rentals. Films
+  are scored with the same taste model and weights as the theater picks, need 50+ TMDB
+  votes, and skip anything rated, seen or hidden. Each card has the service's logo, the
+  match score, a one-line reason ("Because you loved Interstellar") and Rate, Watchlist and
+  Not for me. The list is worked out once a week (from Friday) and stays put; every
+  candidate is confirmed with TMDB's watch providers, and all of it goes through the shared
+  TMDB throttle and cache. No services chosen means a one-tap prompt to pick them.
 - Shares a read-only guest link so other people can see my picks without touching anything.
 
 A few smaller things make the lists easier to read:

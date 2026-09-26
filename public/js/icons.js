@@ -21,6 +21,7 @@ const PATHS = {
   ticket: '<path d="M3 8.5V6.5A1.5 1.5 0 0 1 4.5 5h15A1.5 1.5 0 0 1 21 6.5v2a3.5 3.5 0 0 0 0 7v2a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-2a3.5 3.5 0 0 0 0-7z"/><path d="M14.5 5v2M14.5 11v2M14.5 17v2"/>',
   pin: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
   check: '<path d="M4.5 12.5l5 5L19.5 7"/>',
+  tv: '<rect x="3" y="6.5" width="18" height="12.5" rx="2.2"/><path d="m8.5 3 3.5 3.5L15.5 3"/>',
   target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
   zap: '<path d="M13 2.5 4 14h7l-1 7.5L19 10h-7z"/>',
   handoff: '<path d="M4 4v7a4 4 0 0 0 4 4h12"/><path d="m15 10 5 5-5 5"/>',

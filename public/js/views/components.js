@@ -281,7 +281,7 @@ function rateInline(entry, ctx) {
 // Owner controls under a card or row: the rater on the left, the watchlist
 // toggle and "Not for me" on the right. The row wraps, so on a narrow card the
 // stars take their own line and the buttons stay together.
-function ownerTools(entry, ctx, { onHide = null } = {}) {
+export function ownerTools(entry, ctx, { onHide = null } = {}) {
   if (ctx.isGuest?.()) return null;
   return h('div', { class: 'owner-tools' },
     rateInline(entry, ctx),

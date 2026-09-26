@@ -299,6 +299,17 @@ CREATE TABLE IF NOT EXISTS alert_state (
   last_reason    TEXT
 );
 
+-- "At home" picks (lib/home.js): this week's ranked, confirmed streaming
+-- films for each person, kept so the picks stay put all week. One row per
+-- person; a new week or a new set of services replaces it.
+CREATE TABLE IF NOT EXISTS home_picks (
+  user_id      INTEGER PRIMARY KEY,
+  week_start   TEXT NOT NULL,     -- the Friday the week began
+  services_key TEXT NOT NULL,     -- the services it was worked out for
+  computed_at  TEXT,
+  ranked       TEXT NOT NULL      -- JSON [{ tmdb_id, final, reason, service }]
+);
+
 -- The weekly push, claimed per person per A-List week before it is sent, so
 -- a restart or redeploy never sends it twice.
 CREATE TABLE IF NOT EXISTS push_sent (
@@ -491,7 +502,7 @@ export const USER_SETTING_KEYS = new Set([
   'watchlistBoost', 'imaxBoost', 'windowFitBoost', 'urgencyBoost', 'urgencyWatchlistMultiplier',
   'onboardingDone', 'everythingPlayingCollapsed', 'watchTogether',
   'setupDone', 'tourDone',
-  'moviePlan', 'planPeriod',
+  'moviePlan', 'planPeriod', 'streamingServices',
 ]);
 
 // Friends: every per-person table gains user_id (existing rows become user 1,
@@ -758,6 +769,9 @@ export const DEFAULT_SETTINGS = {
   // planPeriod is what the allowance counts over; alistWeeklyLimit 0 = no limit.
   moviePlan: 'amc-alist',
   planPeriod: 'week',
+  // Streaming services this person has (public/js/services.js keys), for the
+  // "At home" picks and "What should I watch?". Empty until they choose.
+  streamingServices: [],
   previewsMinutes: 20,      // added to runtime for end-time calc
   onboardingDone: false,
   // The first-run welcome setup (theater, ten ratings, what the app does) and

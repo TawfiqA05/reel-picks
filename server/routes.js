@@ -38,6 +38,8 @@ import { backupStatus, latestBackup, backupsDir } from './lib/backup.js';
 import { overview as togetherOverview, partnerFor, filmsFor, NOT_FOUND } from './lib/together.js';
 import { settingsProblems } from '../public/js/settingsRules.js';
 import { planProblems } from '../public/js/plans.js';
+import { servicesProblems, cleanServices } from '../public/js/services.js';
+import { homePicks } from './lib/home.js';
 import { search, playingIds, listRecents, addRecent, removeRecent, clearRecents, restoreRecents } from './lib/search.js';
 import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, userName } from './lib/accounts.js';
 import {
@@ -261,7 +263,7 @@ router.put('/settings', (req, res) => {
   if (!isOwnerRequest()) for (const k of Object.keys(patch)) if (!USER_SETTING_KEYS.has(k)) delete patch[k];
   // Numbers out of range (or not numbers) are refused, never coerced: the
   // Settings page checks the same rules (public/js/settingsRules.js) first.
-  const problems = [...settingsProblems(patch), ...planProblems(patch)];
+  const problems = [...settingsProblems(patch), ...planProblems(patch), ...servicesProblems(patch)];
   if (problems.length) return res.status(400).json({ error: `${problems[0].key}: ${problems[0].message}`, problems });
   if (patch.weightPublic != null || patch.weightTaste != null) {
     const wp = Number(patch.weightPublic ?? getSetting('weightPublic')) || 0;
@@ -273,6 +275,7 @@ router.put('/settings', (req, res) => {
   // Urgency: a non-negative point value and a multiplier of at least 1, so what
   // is stored is what ranking uses and what the Settings page shows.
   for (const k of ['setupDone', 'tourDone']) if (k in patch) patch[k] = Boolean(patch[k]);
+  if ('streamingServices' in patch) patch.streamingServices = cleanServices(patch.streamingServices);
   if ('urgencyBoost' in patch) patch.urgencyBoost = Math.max(0, Number(patch.urgencyBoost) || 0);
   if ('urgencyWatchlistMultiplier' in patch) patch.urgencyWatchlistMultiplier = Math.max(1, Number(patch.urgencyWatchlistMultiplier) || 1);
   // `home` must be a (possibly partial) { label, lat, lng } object. Merge it
@@ -916,6 +919,10 @@ const pushOn = (req, res, next) => {
   if (!pushEnabled()) return res.status(404).json({ error: 'Notifications aren\'t set up on this server.' });
   next();
 };
+
+// ---- At home (lib/home.js) -----------------------------------------------------
+// The caller's own 4 streaming picks this week. Not on the guest allowlist.
+router.get('/home-picks', (req, res) => res.json(homePicks()));
 
 // ---- off-site backup (lib/offsite.js) ---------------------------------------
 // Owner only. With BACKUP_S3_* unset: { enabled: false }, and nothing to press.
