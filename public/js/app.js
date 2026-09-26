@@ -111,6 +111,7 @@ function renderChrome() {
   const primary = status?.theatre;
   // "Set your theatre" only when status says there is none, not while it's unknown.
   els.theatre.textContent = (primary?.short || primary?.name || (guest || !status ? '' : 'Set your theatre')) + (extra ? ` +${extra}` : '');
+  els.theatre.hidden = !els.theatre.textContent;
   // Guests can't open Settings, so the label just goes back to Picks.
   els.theatre.setAttribute('href', guest ? '#/home' : '#/settings');
   els.theatre.title = extra
