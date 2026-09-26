@@ -12,6 +12,7 @@ import * as stats from './views/stats.js';
 import * as together from './views/together.js';
 import * as settings from './views/settings.js';
 import * as onboarding from './views/onboarding.js';
+import * as welcome from './views/welcome.js';
 
 const routes = {
   home: home.render,
@@ -23,6 +24,7 @@ const routes = {
   together: together.render,
   settings: settings.render,
   onboarding: onboarding.render,
+  welcome: welcome.render,
 };
 
 const NAV = [
@@ -275,6 +277,9 @@ function buildShell() {
 async function boot() {
   buildShell();
   await refreshStatus();
+  // A new friend (or anyone with under 5 ratings) who hasn't finished or
+  // skipped the welcome setup starts there, whatever the link said.
+  if (welcome.needsSetup(status)) history.replaceState(null, '', '#/welcome');
   if (!location.hash) location.hash = '#/home';
   window.addEventListener('hashchange', route);
   // "/" opens search from anywhere that isn't a text field.

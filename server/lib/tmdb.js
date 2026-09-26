@@ -118,6 +118,15 @@ export async function popular(page = 1) {
   return data?.results || [];
 }
 
+// The films the most people have rated on TMDB (Inception, The Dark Knight,
+// …): ones a new user has most likely seen. Cached 7 days.
+export async function wellKnown(page = 1, { gate = null } = {}) {
+  const data = await req(`well_known:${page}`, 7 * DAY, '/discover/movie', {
+    sort_by: 'vote_count.desc', include_adult: 'false', include_video: 'false', page, language: 'en-US',
+  }, { gate });
+  return data?.results || [];
+}
+
 // A person's film credits (cast and crew), shared by everyone for 7 days.
 // Callers pass the backfill throttle as `gate`.
 export async function personCredits(personId, { gate = null } = {}) {

@@ -442,6 +442,7 @@ export const USER_SETTING_KEYS = new Set([
   'weightPublic', 'weightTaste', 'preferImax',
   'watchlistBoost', 'imaxBoost', 'windowFitBoost', 'urgencyBoost', 'urgencyWatchlistMultiplier',
   'onboardingDone', 'everythingPlayingCollapsed', 'watchTogether',
+  'setupDone', 'tourDone',
 ]);
 
 // Friends: every per-person table gains user_id (existing rows become user 1,
@@ -695,6 +696,11 @@ export const DEFAULT_SETTINGS = {
   avgTicketPrice: 14.5,
   previewsMinutes: 20,      // added to runtime for end-time calc
   onboardingDone: false,
+  // The first-run welcome setup (theater, ten ratings, what the app does) and
+  // the guided tour after it: finished or skipped, each never shows again on
+  // its own. Replay tour in Settings still opens the tour.
+  setupDone: false,
+  tourDone: false,
   // A friend's "Let <owner> plan movies with me" switch (lib/together.js).
   // Off until they turn it on; the owner has no switch and is always available.
   watchTogether: false,

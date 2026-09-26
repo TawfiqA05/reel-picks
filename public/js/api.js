@@ -65,7 +65,7 @@ export const api = {
   importCsv: (csv) => req('POST', '/ratings/import', { csv }),
   searchRatings: (q) => req('GET', '/ratings/search?q=' + encodeURIComponent(q)),
 
-  onboardingMovies: () => req('GET', '/onboarding/movies'),
+  onboardingMovies: ({ known = false } = {}) => req('GET', `/onboarding/movies${known ? '?known=1' : ''}`),
   onboardingRate: (ratings) => req('POST', '/onboarding/rate', { ratings }),
   onboardingDone: () => req('POST', '/onboarding/done'),
 

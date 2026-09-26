@@ -117,6 +117,8 @@ router.get('/status', (req, res) => {
       maxTheatres: MAX_THEATRES,
       home: homeBase(s),
       onboardingDone: Boolean(s.onboardingDone),
+      setupDone: Boolean(s.setupDone),
+      tourDone: Boolean(s.tourDone),
       everythingPlayingCollapsed: Boolean(s.everythingPlayingCollapsed),
       lastRefresh: s.lastRefresh,
       refreshing: refreshState.running,
@@ -162,6 +164,8 @@ router.get('/status', (req, res) => {
     maxTheatres: MAX_THEATRES,
     home: homeBase(s),
     onboardingDone: Boolean(s.onboardingDone),
+    setupDone: Boolean(s.setupDone),
+    tourDone: Boolean(s.tourDone),
     everythingPlayingCollapsed: Boolean(s.everythingPlayingCollapsed),
     lastRefresh: s.lastRefresh,
     refreshing: refreshState.running,
@@ -264,6 +268,7 @@ router.put('/settings', (req, res) => {
   }
   // Urgency: a non-negative point value and a multiplier of at least 1, so what
   // is stored is what ranking uses and what the Settings page shows.
+  for (const k of ['setupDone', 'tourDone']) if (k in patch) patch[k] = Boolean(patch[k]);
   if ('urgencyBoost' in patch) patch.urgencyBoost = Math.max(0, Number(patch.urgencyBoost) || 0);
   if ('urgencyWatchlistMultiplier' in patch) patch.urgencyWatchlistMultiplier = Math.max(1, Number(patch.urgencyWatchlistMultiplier) || 1);
   // `home` must be a (possibly partial) { label, lat, lng } object. Merge it
@@ -614,9 +619,13 @@ router.get('/providers', h(async (req, res) => {
 
 // ---- onboarding --------------------------------------------------------
 
+// ?known=1 (the welcome setup): the most-rated films of all time instead of
+// this week's popular ones, which are mostly too new to have been seen.
 router.get('/onboarding/movies', h(async (req, res) => {
   if (!tmdb.tmdbConfigured()) return res.status(400).json({ error: 'TMDB_API_KEY is not set.' });
-  const pop = [...(await tmdb.popular(1)), ...(await tmdb.popular(2))];
+  const pop = req.query.known
+    ? [...(await tmdb.wellKnown(1, { gate: tmdbThrottle })), ...(await tmdb.wellKnown(2, { gate: tmdbThrottle }))]
+    : [...(await tmdb.popular(1)), ...(await tmdb.popular(2))];
   const rated = ratedIds();
   const seen = new Set();
   const list = [];

@@ -159,7 +159,10 @@ Opening the link doesn't sign anyone in. It shows a small Join page, and only th
 button uses the invite. That matters because iMessage, Slack and friends fetch every
 link they see to draw a preview, and those fetches used to burn invites before anyone
 tapped them. After Join, my friend gets a signed cookie that lasts a year and lands in
-the quick-rate onboarding. The Join page also tells iPhone users to open the link in
+a short welcome setup: pick a theater, rate at least ten films (search, a Letterboxd or
+IMDb import, and a grid of films most people have seen), and one screen on what the
+app does. Anyone with fewer than five ratings gets it too, until they finish or skip
+it; the guided tour follows. The Join page also tells iPhone users to open the link in
 Safari so they stay signed in.
 
 Each person has their own ratings, watchlist, hidden films, A-List log, theatres, home
