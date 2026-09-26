@@ -71,6 +71,12 @@ A few smaller things make the lists easier to read:
   right one.
 - **Poster fallbacks.** When a poster is missing or fails to load, the film's title goes
   on a plain gradient tile instead of a broken image.
+- **Guided tour.** The first time anyone opens Picks they get a short tour: a spotlight
+  on the real thing on screen (the four, the stars, Watchlist, Not for me, Schedule,
+  Search, Together for friends, Stats, Settings) and a small card with Next, Back and
+  Skip tour. It works with arrow keys, Enter and Escape, never closes on a stray tap,
+  and holds still for reduced motion. Finishing or skipping is remembered per person;
+  Replay tour in Settings and the ? at the top bring it back.
 
 ## Quick start
 
@@ -209,7 +215,9 @@ It's plain Web Push with VAPID keys, no extra dependency. Without `VAPID_PUBLIC_
 
 ## The guest link
 
-Anyone who reaches the app from outside without a cookie gets the read-only guest view:
+Anyone who reaches the app from outside without a cookie gets the read-only guest view,
+under one banner ("You're viewing Tawfiq's picks. Ask him for an invite to get your own.")
+instead of the setup and tour:
 my picks, the full list, Schedule (Leaving soon and Coming soon), and movie pages. At localhost it's always
 me. Rating, settings, imports, stats and
 everything else are hidden in the UI and rejected at the API. On a deployment,

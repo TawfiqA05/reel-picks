@@ -3,6 +3,7 @@ import { api } from './api.js';
 import { h, clear, toast, spinner, emptyState, icon } from './ui.js';
 import { watchForUpdates } from './update.js';
 import { openSearch } from './search.js';
+import { startTour, shouldAutoTour, tourActive } from './tour.js';
 import * as home from './views/home.js';
 import * as detail from './views/detail.js';
 import * as schedule from './views/schedule.js';
@@ -49,6 +50,7 @@ const ctx = {
   navigate: (hash) => { location.hash = hash; },
   rerender: () => route(),
   triggerRefresh: doRefresh,
+  startTour: () => startTour(ctx),
 };
 
 // Schedule's Leaving segment reads only /api/recommendations, which is already
@@ -82,6 +84,7 @@ function chromeEls() {
     settingsBtn: document.querySelector('#settings-btn'),
     refreshBtn: document.querySelector('#refresh-btn'),
     searchBtn: document.querySelector('#search-btn'),
+    helpBtn: document.querySelector('#help-btn'),
     nav: document.querySelector('#bottom-nav'),
   };
 }
@@ -92,12 +95,17 @@ function renderChrome() {
   const guest = Boolean(status?.guest);
   document.querySelector('.shell')?.classList.toggle('guest', guest);
   // Who's signed in, beside Settings. The guest link has its own banner.
+  // On phones it shrinks to the first letter, which leaves room for the ?.
   if (els.userChip) {
     const name = !guest && status?.user?.name ? status.user.name : '';
-    els.userChip.textContent = name;
+    els.userChip.replaceChildren(
+      h('span', { class: 'uc-initial', 'aria-hidden': 'true' }, [...name][0] || ''),
+      h('span', { class: 'uc-name' }, name));
     els.userChip.hidden = !name;
     els.userChip.title = name ? `Signed in as ${name}` : '';
   }
+  // The tour, again (js/tour.js). Not on the guest link.
+  if (els.helpBtn) els.helpBtn.hidden = !status || guest;
   // Search is the owner's and friends'; the guest link has none (and the
   // server refuses it). Hidden until status says who this is.
   if (els.searchBtn) els.searchBtn.hidden = !status || guest;
@@ -107,8 +115,9 @@ function renderChrome() {
   // A friend can't force a refresh; the server would refuse it anyway.
   document.querySelector('.shell')?.classList.toggle('friend', !guest && status?.user?.isOwner === false);
 
+  // The guest link's one piece of guidance, in place of the setup and tour.
   const banner = document.querySelector('#guest-banner');
-  if (banner) banner.textContent = guest ? `${status?.ownerName || 'Owner'}'s picks, read only` : '';
+  if (banner) banner.textContent = guest ? `You're viewing ${status?.ownerName || 'the owner'}'s picks. Ask him for an invite to get your own.` : '';
 
   const extra = Math.max(0, (status?.theatres?.length || 1) - 1);
   const primary = status?.theatre;
@@ -214,6 +223,9 @@ async function route() {
     main.appendChild(errorState(e));
   }
   window.scrollTo(0, 0);
+  // Anyone who hasn't seen the tour gets it once, on Picks (right after the
+  // welcome setup for someone new).
+  if (name === 'home' && location.hash.startsWith('#/home') && shouldAutoTour(status) && !welcome.needsSetup(status) && !tourActive()) startTour(ctx);
 }
 
 // The service worker answers API calls with a 503 "You appear to be offline."
@@ -256,6 +268,7 @@ function buildShell() {
         h('div', { class: 'header-actions' },
           h('a', { id: 'theatre-name', class: 'theatre-name', href: '#/settings' }, ''),
           h('button', { id: 'search-btn', class: 'icon-btn round', type: 'button', hidden: true, 'aria-label': 'Search movies', title: 'Search (/)', 'aria-haspopup': 'dialog', onClick: () => openSearch() }, icon('search', { size: 20 })),
+          h('button', { id: 'help-btn', class: 'icon-btn round', type: 'button', hidden: true, 'aria-label': 'Take the tour', title: 'Help: take the tour', onClick: () => startTour(ctx) }, icon('help', { size: 20 })),
           h('button', { id: 'refresh-btn', class: 'icon-btn round', type: 'button', 'aria-label': 'Refresh showtimes and scores', title: 'Refresh', onClick: doRefresh }, icon('refresh', { size: 20 })),
           h('span', { id: 'user-chip', class: 't-chip user-chip', hidden: true }),
           h('a', { id: 'settings-btn', class: 'icon-btn round', href: '#/settings', 'aria-label': 'Settings', title: 'Settings' },

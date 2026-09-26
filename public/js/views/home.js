@@ -1,7 +1,7 @@
 // Home: "Your 4 this week" + leaving-soon alerts + the full ranked lineup.
 import { api } from '../api.js';
-import { h, clear, spinner, emptyState, sectionTitle, icon, toast, openModal } from '../ui.js';
-import { weeklyCard, heroPick, movieRow, lastChanceCard, dayPicker } from './components.js';
+import { h, clear, emptyState, sectionTitle, icon, toast } from '../ui.js';
+import { weeklyCard, heroPick, movieRow, lastChanceCard, dayPicker, openHiddenList } from './components.js';
 import { filterBox } from '../filter.js';
 
 export async function render(root, params, ctx) {
@@ -161,7 +161,7 @@ function buildPage(data, status, ctx, state, actions) {
   if (hiddenCount) {
     page.appendChild(h('div', { class: 'hidden-line' },
       `${hiddenCount} hidden · `,
-      h('button', { class: 'link-btn', type: 'button', onClick: () => openHiddenList(actions) }, 'Show hidden')));
+      h('button', { class: 'link-btn', type: 'button', onClick: () => openHiddenList((m) => actions.unhide(m)) }, 'Show hidden')));
   }
 
   // Movies only at another followed theatre this week. Never part of the
@@ -236,36 +236,6 @@ function buildPage(data, status, ctx, state, actions) {
   paint();
   paintCollapse();
   return page;
-}
-
-// Every hidden film, each with its way back.
-async function openHiddenList(actions) {
-  const body = h('div', { class: 'hidden-list' }, spinner());
-  const modal = openModal(body, { title: 'Hidden films' });
-  try {
-    const { movies } = await api.hidden();
-    clear(body);
-    if (!movies.length) { body.appendChild(h('p', { class: 'muted' }, 'Nothing is hidden.')); return; }
-    body.appendChild(h('p', { class: 'muted small' }, 'These stay out of your picks until you unhide them. Their scores are unchanged.'));
-    for (const m of movies) {
-      const row = h('div', { class: 'hidden-row' },
-        h('a', { class: 'hidden-title', href: `#/movie/${m.tmdb_id}`, onClick: () => modal.close() }, m.title || `Movie ${m.tmdb_id}`),
-        h('button', {
-          class: 'btn ghost small', type: 'button', 'aria-label': `Unhide ${m.title}`,
-          onClick: async (e) => {
-            e.currentTarget.disabled = true;
-            await actions.unhide({ tmdb_id: m.tmdb_id, title: m.title });
-            row.remove();
-            if (!body.querySelector('.hidden-row')) modal.close();
-          },
-        }, 'Unhide'),
-      );
-      body.appendChild(row);
-    }
-  } catch (e) {
-    clear(body);
-    body.appendChild(h('p', { class: 'muted' }, e.message));
-  }
 }
 
 // Placeholder shapes in the layout's own proportions while the picks load, so

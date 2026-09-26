@@ -2,6 +2,7 @@
 import { api } from '../api.js';
 import { h, clear, spinner, toast, chip, labeled, sectionTitle, badge, openModal, icon } from '../ui.js';
 import { NUMBER_RULES, HOME_RULES, numberProblem } from '../settingsRules.js';
+import { openHiddenList } from './components.js';
 
 const GENRES = ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama',
   'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance',
@@ -581,6 +582,28 @@ export async function render(root, params, ctx) {
     h('p', { class: 'muted small' }, 'Filtered movies still appear in the full list, greyed out.'),
   ));
 
+  // ---- Hidden films: everything marked "Not for me", each with Unhide.
+  const hiddenCount = h('p', { class: 'muted small' }, 'Checking…');
+  const showHidden = h('button', { class: 'btn ghost', type: 'button' }, 'Show hidden films');
+  const paintHidden = async () => {
+    try {
+      const n = (await api.hidden()).movies.length;
+      hiddenCount.textContent = n
+        ? `${n} film${n === 1 ? '' : 's'} marked Not for me. They stay out of your picks until you unhide them.`
+        : 'Nothing is hidden. Films you mark Not for me land here, and you can bring them back any time.';
+      showHidden.hidden = !n;
+    } catch { hiddenCount.textContent = ''; }
+  };
+  showHidden.addEventListener('click', () => openHiddenList(async (m) => {
+    try {
+      await api.unhide(m.tmdb_id);
+      toast(`${m.title} is back in your picks.`, 'success');
+    } catch (e) { toast(e.message, 'error'); }
+    paintHidden();
+  }));
+  paintHidden();
+  page.appendChild(card('Hidden films', hiddenCount, h('div', {}, showHidden)));
+
   // ---- Now-playing fallback (only used when no AMC key)
   const recencyInput = h('input', { class: 'input num', type: 'number', min: '1', step: '1', value: String(s.fallbackRecencyWeeks ?? 8) });
   if (isOwner) page.appendChild(card('Now-playing fallback',
@@ -734,6 +757,12 @@ export async function render(root, params, ctx) {
       : bk?.last
         ? `Last automatic backup ${new Date(bk.last.at).toLocaleString()}, ${mb(bk.last.bytes)}. One is taken every night at 3am; the last 14 are kept.`
         : 'No automatic backup yet. One is taken every night at 3am; the last 14 are kept.');
+  // ---- Help: the guided tour again (js/tour.js).
+  page.appendChild(card('Help',
+    h('p', { class: 'muted small' }, 'A quick walk through Picks, Schedule, Search and the rest. The ? at the top opens it too.'),
+    h('div', {}, h('button', { class: 'btn ghost', type: 'button', onClick: () => ctx.startTour() }, icon('help', { size: 16 }), 'Replay tour')),
+  ));
+
   page.appendChild(card('Data',
     h('div', { class: 'row-gap wrap' },
       h('a', { class: 'btn ghost', href: api.stateUrl() }, isOwner ? '⬇ Export full setup' : '⬇ Export my data'),

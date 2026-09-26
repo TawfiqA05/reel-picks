@@ -1,6 +1,6 @@
 // Reusable movie cards shared across Home / Coming Soon / Watchlist.
 import { api } from '../api.js';
-import { h, clear, poster, scorePill, badge, makeStars, toast, icon, scoreColor } from '../ui.js';
+import { h, clear, poster, scorePill, badge, makeStars, toast, icon, scoreColor, spinner, openModal } from '../ui.js';
 
 export function fmtRuntime(min) {
   if (!min) return null;
@@ -671,4 +671,35 @@ export function posterTile(movie, { corner, caption, sub, tags } = {}) {
     h('div', { class: 'tile-cap' }, caption || movie.title),
     sub ? h('div', { class: 'tile-sub' }, sub) : null,
   );
+}
+
+// Every hidden ("Not for me") film, each with its way back: from the Picks
+// page and from Settings. `unhide(film)` does the work (and says so).
+export async function openHiddenList(unhide) {
+  const body = h('div', { class: 'hidden-list' }, spinner());
+  const modal = openModal(body, { title: 'Hidden films' });
+  try {
+    const { movies } = await api.hidden();
+    clear(body);
+    if (!movies.length) { body.appendChild(h('p', { class: 'muted' }, 'Nothing is hidden.')); return; }
+    body.appendChild(h('p', { class: 'muted small' }, 'These stay out of your picks until you unhide them. Their scores are unchanged.'));
+    for (const m of movies) {
+      const row = h('div', { class: 'hidden-row' },
+        h('a', { class: 'hidden-title', href: `#/movie/${m.tmdb_id}`, onClick: () => modal.close() }, m.title || `Movie ${m.tmdb_id}`),
+        h('button', {
+          class: 'btn ghost small', type: 'button', 'aria-label': `Unhide ${m.title}`,
+          onClick: async (e) => {
+            e.currentTarget.disabled = true;
+            await unhide({ tmdb_id: m.tmdb_id, title: m.title });
+            row.remove();
+            if (!body.querySelector('.hidden-row')) modal.close();
+          },
+        }, 'Unhide'),
+      );
+      body.appendChild(row);
+    }
+  } catch (e) {
+    clear(body);
+    body.appendChild(h('p', { class: 'muted' }, e.message));
+  }
 }

@@ -727,6 +727,15 @@ body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-botto
 .shell.friend #refresh-btn { display: none; }
 .user-chip { color: var(--text-2); max-width: 10em; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
 .user-chip[hidden] { display: none; }
+.uc-initial { display: none; }
+/* Phones: the name shrinks to its first letter in a round badge (the full name
+   is still there for screen readers and on hover), leaving room for the ?. */
+@media (max-width: 480px) {
+  .header-actions { gap: 6px; }
+  .user-chip { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; font-weight: 700; font-size: var(--fs-sm); }
+  .uc-initial { display: inline; }
+  .uc-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
 .shell.guest .nav-item[data-name="rate"],
 .shell.guest .nav-item[data-name="watchlist"],
 .shell.guest .nav-item[data-name="stats"],
@@ -1187,3 +1196,27 @@ a.tg-time:hover { border-color: color-mix(in srgb, var(--accent) 50%, transparen
 }
 @media (min-width: 900px) and (max-width: 1179px) { .seg-item { padding: 0 var(--sp-3); } }
 @media (min-width: 900px) and (max-width: 999px) { .theatre-name { display: none; } }
+
+/* ---- guided tour (js/tour.js) ---- */
+.tour-layer { position: fixed; inset: 0; z-index: 250; }
+.tour-spot {
+  position: fixed; border-radius: var(--r-md); pointer-events: none;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 9999px color-mix(in srgb, #000 72%, transparent);
+  transition: top 280ms var(--ease-out), left 280ms var(--ease-out), width 280ms var(--ease-out), height 280ms var(--ease-out), opacity 150ms;
+}
+.tour-spot[hidden] { display: none; }
+.tour-layer:has(.tour-spot[hidden]) { background: color-mix(in srgb, #000 72%, transparent); }
+.tour-card {
+  position: fixed; display: flex; flex-direction: column; gap: 8px;
+  background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: var(--r-lg);
+  padding: 16px; box-shadow: var(--shadow);
+  transition: top 280ms var(--ease-out), left 280ms var(--ease-out), opacity 150ms;
+}
+.tour-card:focus { outline: none; }
+.tour-layer.moving .tour-card, .tour-layer.moving .tour-spot { opacity: .35; }
+.tour-count { margin: 0; color: var(--muted); font-size: var(--fs-xs); font-weight: 600; letter-spacing: .02em; }
+.tour-title { font-size: var(--fs-md); }
+.tour-text { margin: 0; color: var(--text-2); }
+.tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.tour-moves { display: flex; gap: 8px; margin-left: auto; }
+.tour-skip { padding-left: 0; }
