@@ -404,7 +404,7 @@ export const USER_SETTING_KEYS = new Set([
   'excludedGenres', 'excludedMpaa',
   'weightPublic', 'weightTaste', 'preferImax',
   'watchlistBoost', 'imaxBoost', 'windowFitBoost', 'urgencyBoost', 'urgencyWatchlistMultiplier',
-  'onboardingDone', 'everythingPlayingCollapsed',
+  'onboardingDone', 'everythingPlayingCollapsed', 'watchTogether',
 ]);
 
 // Friends: every per-person table gains user_id (existing rows become user 1,
@@ -658,6 +658,9 @@ export const DEFAULT_SETTINGS = {
   avgTicketPrice: 14.5,
   previewsMinutes: 20,      // added to runtime for end-time calc
   onboardingDone: false,
+  // A friend's "Let <owner> plan movies with me" switch (lib/together.js).
+  // Off until they turn it on; the owner has no switch and is always available.
+  watchTogether: false,
   lastRefresh: null,        // ISO timestamp
   lastRefreshLog: null,     // JSON summary of last refresh
 };

@@ -567,7 +567,9 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .shell.guest .nav-item[data-name="stats"],
 .shell.guest .seg-item[data-name="rate"],
 .shell.guest .seg-item[data-name="watchlist"],
-.shell.guest .seg-item[data-name="stats"] { display: none; }
+.shell.guest .seg-item[data-name="stats"],
+.shell.guest .nav-item[data-name="together"],
+.shell.guest .seg-item[data-name="together"] { display: none; }
 
 /* ---- responsive ---- */
 @media (min-width: 720px) {
@@ -878,4 +880,26 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
   }
   .lv-day.empty .lv-day-body { display: none; }
+}
+
+/* ---- Together ---- */
+.tg-picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 2px 6px; }
+.tg-person { font-size: var(--fs-sm); padding: 7px 14px; }
+.tg-where { margin: 4px 2px 10px; }
+.tg-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.tg-film { display: flex; gap: 14px; align-items: flex-start; padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); min-width: 0; }
+.tg-film .poster-link, .tg-film > .poster { flex: 0 0 64px; }
+.tg-film .poster-sm { width: 64px; flex-basis: 64px; }
+.tg-main { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; flex: 1; }
+.tg-title { font-weight: 700; font-size: var(--fs-base); color: var(--text); overflow-wrap: anywhere; }
+.tg-year { color: var(--muted); font-weight: 500; }
+.badge.tg-label { text-transform: none; letter-spacing: 0; font-size: var(--fs-xs); background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.badge.tg-label.strong { background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good); }
+.tg-times { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.tg-time { display: inline-flex; flex-direction: column; gap: 1px; padding: 6px 10px; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text); font-size: var(--fs-sm); line-height: 1.25; }
+a.tg-time:hover { border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.tg-when { font-weight: 600; font-variant-numeric: tabular-nums; }
+.tg-at { color: var(--muted); font-size: var(--fs-xs); }
+@media (min-width: 900px) {
+  .tg-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 }

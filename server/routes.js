@@ -34,6 +34,7 @@ import { isGuest, ownerName } from './lib/guest.js';
 import { currentUserId, currentUser } from './lib/user.js';
 import { startCreditsBackfill, backfillStatus, backfillState, tmdbThrottle } from './lib/backfill.js';
 import { backupStatus, latestBackup, backupsDir } from './lib/backup.js';
+import { overview as togetherOverview, partnerFor, filmsFor, NOT_FOUND } from './lib/together.js';
 import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, userName } from './lib/accounts.js';
 
 const router = Router();
@@ -654,6 +655,21 @@ router.post('/watched', (req, res) => {
 });
 
 router.delete('/watched/:id', (req, res) => res.json(undoWatched(Number(req.params.id))));
+
+// ---- watch together ------------------------------------------------------
+
+// The owner and one opted-in friend, never two friends (lib/together.js).
+// Not on the guest allowlist. Every id that isn't the caller's valid partner
+// gets the identical 404, so a friend can't tell another friend's id from a
+// made-up one.
+router.get('/together', (req, res) => res.json(togetherOverview(currentUser())));
+
+router.get('/together/:id', (req, res) => {
+  const me = currentUser();
+  const partner = partnerFor(me, req.params.id);
+  if (!partner) return res.status(NOT_FOUND.status).json(NOT_FOUND.body);
+  res.json(filmsFor(me, partner));
+});
 
 // ---- stats / export ----------------------------------------------------
 

@@ -9,6 +9,7 @@ import * as leaving from './views/leaving.js';
 import * as rate from './views/rate.js';
 import * as watchlist from './views/watchlist.js';
 import * as stats from './views/stats.js';
+import * as together from './views/together.js';
 import * as settings from './views/settings.js';
 import * as onboarding from './views/onboarding.js';
 
@@ -20,6 +21,7 @@ const routes = {
   rate: rate.render,
   watchlist: watchlist.render,
   stats: stats.render,
+  together: together.render,
   settings: settings.render,
   onboarding: onboarding.render,
 };
@@ -30,6 +32,7 @@ const NAV = [
   { name: 'leaving', label: 'Leaving', icon: 'hourglass' },
   { name: 'rate', label: 'Rate', icon: 'star' },
   { name: 'watchlist', label: 'Watchlist', icon: 'bookmark' },
+  { name: 'together', label: 'Together', icon: 'users' },
   { name: 'stats', label: 'Stats', icon: 'chart' },
 ];
 

@@ -11,13 +11,13 @@
 // A new worker takes over as soon as it installs (skipWaiting + claim). The
 // page hears "controllerchange" and reloads once when that's safe
 // (js/update.js).
-const CACHE = 'reelpicks-v35';
+const CACHE = 'reelpicks-v36';
 const CORE = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
   '/js/app.js', '/js/api.js', '/js/ui.js', '/js/icons.js', '/js/update.js',
   '/js/views/components.js', '/js/views/home.js', '/js/views/detail.js',
   '/js/views/coming.js', '/js/views/leaving.js', '/js/views/rate.js', '/js/views/onboarding.js',
-  '/js/views/watchlist.js', '/js/views/stats.js', '/js/views/settings.js',
+  '/js/views/watchlist.js', '/js/views/stats.js', '/js/views/settings.js', '/js/views/together.js',
   '/icons/icon.svg',
 ];
 

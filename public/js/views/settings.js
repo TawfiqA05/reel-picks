@@ -373,6 +373,29 @@ export async function render(root, params, ctx) {
     } catch (e) { toast(e.message, 'error'); }
   } }, 'Clear home base');
 
+  // ---- Watch together (friends only). The owner is always available, so only
+  // a friend has a switch. It saves on change, so switching off takes the
+  // friend out of the owner's Together page straight away.
+  if (!isOwner) {
+    const owner = status?.ownerName || 'the owner';
+    const tgToggle = h('input', { type: 'checkbox', ...(s.watchTogether ? { checked: true } : {}) });
+    tgToggle.addEventListener('change', async () => {
+      const on = tgToggle.checked;
+      tgToggle.disabled = true;
+      try {
+        await api.saveSettings({ watchTogether: on });
+        toast(on ? `${owner} can now plan movies with you on Together.` : `Watch together is off. ${owner} won't see you on Together.`, 'success');
+      } catch (e) {
+        tgToggle.checked = !on;
+        toast(e.message, 'error');
+      } finally { tgToggle.disabled = false; }
+    });
+    page.appendChild(card('Watch together',
+      h('label', { class: 'switch-row' }, tgToggle, h('span', {}, `Let ${owner} plan movies with me`)),
+      h('p', { class: 'muted small' }, `Together lists films you would both enjoy at a theater you both follow. ${owner} sees one short reason for each film, never your ratings, scores or full watchlist.`),
+    ));
+  }
+
   page.appendChild(card('Home base',
     h('div', { class: 'row-gap' }, placeIn, lookupBtn, locBtn),
     geoStatus,

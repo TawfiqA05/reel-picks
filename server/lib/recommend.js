@@ -584,18 +584,41 @@ export function getComingSoon({ guest = false } = {}) {
   return { list: scored, profile: { count: ctx.profile.count, lowData: ctx.profile.count < 10 } };
 }
 
+// Where a movie is scored: at the primary when it has the movie this week,
+// else at the first followed theatre that does ("Also nearby"), so a movie
+// page and Watch together agree with the Picks row for the same film.
+function scoredAt(ctx, tmdbId) {
+  const hasWeek = (tid) => rowsAt(ctx, tid, tmdbId, { week: true }).length > 0;
+  return hasWeek(ctx.primaryId)
+    ? ctx.primaryId
+    : (ctx.theatres.find((t) => !t.isPrimary && hasWeek(t.id))?.id ?? ctx.primaryId);
+}
+
+// Watch together (lib/together.js): the current user's own match score for
+// each film, the number their Picks and movie pages show, and whether they
+// have already rated it, logged it as seen, or hidden it. Read only: nothing
+// is written, so the weekly 4 and its log are untouched.
+export function matchScores(tmdbIds) {
+  const out = new Map();
+  if (!tmdbIds.length) return out;
+  const ctx = buildCtx();
+  const movies = all(`SELECT * FROM movies WHERE tmdb_id IN (${tmdbIds.map(() => '?').join(',')})`, ...tmdbIds).map(hydrate);
+  for (const m of movies) {
+    const ev = evaluate(m, ctx, scoredAt(ctx, m.tmdb_id));
+    out.set(m.tmdb_id, {
+      final: ev.final,
+      watchlisted: ctx.watch.has(m.tmdb_id),
+      done: ctx.rated.has(m.tmdb_id) || ctx.watched.has(m.tmdb_id) || ctx.hidden.has(m.tmdb_id),
+    });
+  }
+  return out;
+}
+
 export function getMovieDetail(tmdbId, { guest = false } = {}) {
   const m = getMovie(tmdbId);
   if (!m) return null;
   const ctx = buildCtx({ guest });
-  // Evaluate where the ranking did: at the primary when it has the movie this
-  // week, else at the first followed theatre that does ("Also nearby"), so the
-  // score, reason and runway here agree with the row that led to this page.
-  const hasWeek = (tid) => rowsAt(ctx, tid, tmdbId, { week: true }).length > 0;
-  const at = hasWeek(ctx.primaryId)
-    ? ctx.primaryId
-    : (ctx.theatres.find((t) => !t.isPrimary && hasWeek(t.id))?.id ?? ctx.primaryId);
-  const ev = evaluate(m, ctx, at);
+  const ev = evaluate(m, ctx, scoredAt(ctx, tmdbId));
 
   // Full schedule (every published date) at each followed theatre that has it.
   const showtimesByTheatre = ctx.theatres
