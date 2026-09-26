@@ -261,6 +261,17 @@ Every night at 3am (the server's `TZ`) it writes a consistent copy of the databa
 before any schema migration. The owner can download the newest from Settings → Data,
 and `/api/status` shows its time and size under `backup`.
 
+Once a week, Sunday at 4am (the server's `TZ`), the newest nightly copy also goes off-site
+to S3-compatible storage, Cloudflare R2 in my case, as
+`reel-picks/weekly/reelpicks-YYYY-MM-DD.db`. The last 8 weekly copies are kept and older
+ones are deleted, and only objects under that prefix with exactly that name pattern are
+ever touched. The first copy goes up as soon as the variables are set, and a server that
+was down at 4am on Sunday sends it at its next check. Settings → Data shows the last
+upload's time and size and has an Upload now button. A failed upload is retried an hour
+later and sends an owner alert. Requests are signed (AWS Signature Version 4) with Node's
+own crypto, so there's no SDK. Without the variables the feature doesn't exist: nothing
+is scheduled and nothing shows.
+
 Variables to set:
 
 - `TMDB_API_KEY`, `OMDB_API_KEY`, `AMC_API_KEY`: the keys above.
@@ -273,6 +284,11 @@ Variables to set:
   Make a pair with `node -e "const e=require('crypto').createECDH('prime256v1');e.generateKeys();console.log(e.getPublicKey('base64url'),e.getPrivateKey('base64url'))"`
   (public first). Changing them later means everyone turns the switch on again.
   `VAPID_SUBJECT` optionally overrides the contact URL sent to push services.
+- `BACKUP_S3_ENDPOINT`, `BACKUP_S3_BUCKET`, `BACKUP_S3_KEY_ID`, `BACKUP_S3_SECRET`:
+  optional, turn on the weekly off-site backup. For R2 the endpoint is
+  `https://<account id>.r2.cloudflarestorage.com`, and the key is an R2 API token's
+  access key id and secret, with Object Read & Write on that bucket. `BACKUP_S3_REGION`
+  defaults to `auto`, which is what R2 wants.
 
 One thing to know: AMC rejected my key with "Unauthorized VendorKey" when the service
 ran in an EU region, even though the same key worked from home. Moving the service to a

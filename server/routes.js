@@ -43,6 +43,7 @@ import {
   pushEnabled, publicKey, saveSubscription, removeSubscription, hasSubscription, sendWeekly,
 } from './lib/push.js';
 import { recentAlerts, failingNow } from './lib/alerts.js';
+import { offsiteStatus, offsiteEnabled, uploadNow as offsiteUpload } from './lib/offsite.js';
 import { syncStatus as letterboxdStatus, setUsername as setLetterboxdUser, syncUser as syncLetterboxd } from './lib/letterboxd.js';
 
 const router = Router();
@@ -914,6 +915,16 @@ const pushOn = (req, res, next) => {
   if (!pushEnabled()) return res.status(404).json({ error: 'Notifications aren\'t set up on this server.' });
   next();
 };
+
+// ---- off-site backup (lib/offsite.js) ---------------------------------------
+// Owner only. With BACKUP_S3_* unset: { enabled: false }, and nothing to press.
+
+router.get('/offsite', ownerOnly, (req, res) => res.json(offsiteStatus()));
+
+router.post('/offsite/upload', ownerOnly, h(async (req, res) => {
+  if (!offsiteEnabled()) return res.status(404).json({ error: 'Off-site backup isn\'t set up on this server.' });
+  res.json(await offsiteUpload(dataDir));
+}));
 
 // ---- owner alerts (lib/alerts.js) ------------------------------------------
 // The last 10 alerts and what's failing now, for the owner's Settings card.

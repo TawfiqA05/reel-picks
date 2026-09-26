@@ -332,6 +332,8 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .alert-item.problem > svg { color: var(--low); }
 .alert-item.recovered > svg { color: var(--good); }
 .alert-main { min-width: 0; overflow-wrap: anywhere; }
+.offsite { display: flex; flex-direction: column; gap: 10px; }
+.offsite > p { margin: 0; }
 
 /* ---- banners / alerts ---- */
 .banner, .alert { display: flex; align-items: center; gap: 12px; padding: 13px 15px; border-radius: var(--r-md); margin: 8px 0; }

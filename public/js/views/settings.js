@@ -760,6 +760,39 @@ export async function render(root, params, ctx) {
       : bk?.last
         ? `Last automatic backup ${new Date(bk.last.at).toLocaleString()}, ${mb(bk.last.bytes)}. One is taken every night at 3am; the last 14 are kept.`
         : 'No automatic backup yet. One is taken every night at 3am; the last 14 are kept.');
+  // Off-site copy (owner only, and only when the server has BACKUP_S3_* set):
+  // the last upload's time and size, and Upload now. Hidden otherwise.
+  const offsiteSlot = h('div', { class: 'offsite', hidden: true });
+  if (isOwner) {
+    const offLine = h('p', { class: 'muted small', role: 'status', 'aria-live': 'polite' });
+    const offBtn = h('button', { class: 'btn ghost', type: 'button' }, icon('upload', { size: 16 }), 'Upload now');
+    const paintOff = (o) => {
+      if (!o?.enabled) { offsiteSlot.hidden = true; return; }
+      offsiteSlot.hidden = false;
+      offLine.classList.toggle('lb-error', Boolean(o.lastError));
+      const next = new Date(o.next).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+      offLine.textContent = o.uploading ? 'Uploading…'
+        : o.lastError ? `Last off-site upload failed (${new Date(o.lastError.at).toLocaleString()}): ${o.lastError.message}`
+          : o.last ? `Last off-site copy ${new Date(o.last.at).toLocaleString()}, ${mb(o.last.bytes)}. A copy goes up every Sunday at 4am (next ${next}); the last ${o.keep} are kept.`
+            : `No off-site copy yet. One goes up every Sunday at 4am; the last ${o.keep} are kept.`;
+    };
+    offBtn.addEventListener('click', async () => {
+      offBtn.disabled = true;
+      offLine.classList.remove('lb-error');
+      offLine.textContent = 'Uploading…';
+      try {
+        const o = await api.offsiteUpload();
+        paintOff(o);
+        if (o?.lastError) toast('The upload failed', 'error'); else toast('Off-site copy uploaded', 'success');
+      } catch (e) {
+        toast(e.message, 'error');
+        api.offsite().then(paintOff).catch(() => {});
+      } finally { offBtn.disabled = false; }
+    });
+    offsiteSlot.append(offLine, h('div', {}, offBtn));
+    api.offsite().then(paintOff).catch(() => {});
+  }
+
   // ---- Help: the guided tour again (js/tour.js).
   page.appendChild(card('Help',
     h('p', { class: 'muted small' }, 'A quick walk through Picks, Schedule, Search and the rest. The ? at the top opens it too.'),
@@ -783,6 +816,7 @@ export async function render(root, params, ctx) {
       ? 'Full setup carries settings, theatres, home base, ratings, watchlist, watch history, AMC match decisions, and hidden films. Everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'
       : 'Your export carries your own settings, theatres, home base, ratings, watchlist, watch history and hidden films.'),
     backupLine,
+    offsiteSlot,
     status?.lastRefreshLog?.errors?.length
       ? h('details', { class: 'log' }, h('summary', {}, `Last refresh: ${status.lastRefreshLog.errors.length} warning(s)`),
         ...status.lastRefreshLog.errors.map((e) => h('div', { class: 'muted small' }, `• ${e}`)))

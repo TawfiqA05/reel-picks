@@ -17,6 +17,7 @@ import { startNightlyBackups } from './lib/backup.js';
 import { pushEnabled, sendWeeklyIfDue } from './lib/push.js';
 import { syncAllDue as syncLetterboxdDue } from './lib/letterboxd.js';
 import { raiseLater, resolveLater } from './lib/alerts.js';
+import { startWeeklyOffsite, offsiteEnabled } from './lib/offsite.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 
@@ -133,6 +134,7 @@ app.listen(config.port, () => {
     config.omdbKey ? 'OMDb✓' : 'OMDb✗',
     config.amcKey ? 'AMC✓' : 'AMC✗',
     pushEnabled() ? 'Push✓' : 'Push✗',
+    offsiteEnabled() ? 'Off-site✓' : 'Off-site✗',
   ].join('  ');
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || process.env.TZ || 'system';
   const where = process.env.NODE_ENV === 'production' ? `port ${config.port}` : `http://localhost:${config.port}`;
@@ -156,6 +158,8 @@ app.listen(config.port, () => {
   startNightlyBackups(db, dataDir, {
     onResult: (err) => (err ? raiseLater('backup', `The nightly backup failed: ${err}`) : resolveLater('backup')),
   });
+  // Off-site copy of the newest nightly, Sunday 4am, when BACKUP_S3_* is set (lib/offsite.js).
+  startWeeklyOffsite(dataDir);
   // Letterboxd: everyone who linked a username, once a day (lib/letterboxd.js).
   const letterboxd = () => syncLetterboxdDue().catch((e) => console.error('[letterboxd]', e.message));
   letterboxd();
