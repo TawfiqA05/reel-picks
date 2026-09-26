@@ -894,7 +894,8 @@ body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-botto
         color-mix(in srgb, var(--bg) 25%, transparent) 68%,
         color-mix(in srgb, var(--bg) 10%, transparent) 100%);
   }
-  .hero-pick .hero-content, .detail-hero .hero-content { max-width: 600px; margin: 0; padding: var(--sp-9) var(--sp-9) var(--sp-8); gap: var(--sp-3); }
+  /* Wide enough for Book, Details, Watchlist and Not for me on one line. */
+  .hero-pick .hero-content, .detail-hero .hero-content { max-width: 660px; margin: 0; padding: var(--sp-9) var(--sp-9) var(--sp-8); gap: var(--sp-3); }
   .hero-title { font-size: var(--fs-hero); }
   .hero-pick .hero-actions .btn.book { flex: 0 0 auto; }
 }
