@@ -251,6 +251,34 @@ CREATE TABLE IF NOT EXISTS search_recents (
   PRIMARY KEY (user_id, kind, key)
 );
 
+-- Letterboxd auto-sync (lib/letterboxd.js): the username each person linked
+-- and how their last sync went. One row per person.
+CREATE TABLE IF NOT EXISTS letterboxd_sync (
+  user_id         INTEGER PRIMARY KEY,
+  username        TEXT NOT NULL,
+  last_sync_at    TEXT,      -- last attempt, ISO
+  last_ok_at      TEXT,      -- last successful sync, ISO
+  last_error      TEXT,
+  last_error_kind TEXT,      -- 'username' | 'network'
+  last_added      INTEGER,   -- films that got a new rating or watch
+  last_ratings    INTEGER,
+  last_updated    INTEGER,
+  last_watched    INTEGER,
+  last_kept       INTEGER,   -- changed here after Letterboxd, left alone
+  last_unmatched  INTEGER
+);
+
+-- Every Letterboxd diary entry already brought in, by its feed guid, so a
+-- re-sync never imports it twice. rating is what it carried then: an entry is
+-- only looked at again when its rating changes on Letterboxd.
+CREATE TABLE IF NOT EXISTS letterboxd_seen (
+  user_id INTEGER NOT NULL,
+  guid    TEXT NOT NULL,
+  rating  REAL,
+  seen_at TEXT,
+  PRIMARY KEY (user_id, guid)
+);
+
 -- The weekly push, claimed per person per A-List week before it is sent, so
 -- a restart or redeploy never sends it twice.
 CREATE TABLE IF NOT EXISTS push_sent (
@@ -616,6 +644,16 @@ function migratePersonIds() {
 }
 
 migratePersonIds();
+
+// watched.source: NULL for films logged here (the A-List tracker), or
+// 'letterboxd' for diary entries brought in by the Letterboxd sync, which never
+// count toward the A-List week or savings. A copy of the database is written
+// first.
+if (!hasColumn('watched', 'source')) {
+  preMigrationBackup(db, dataDir, 'watched-source');
+  db.exec('ALTER TABLE watched ADD COLUMN source TEXT');
+  console.log('[db] added watched.source');
+}
 
 // ---- low-level helpers -------------------------------------------------
 

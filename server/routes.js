@@ -42,6 +42,7 @@ import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, user
 import {
   pushEnabled, publicKey, saveSubscription, removeSubscription, hasSubscription, sendWeekly,
 } from './lib/push.js';
+import { syncStatus as letterboxdStatus, setUsername as setLetterboxdUser, syncUser as syncLetterboxd } from './lib/letterboxd.js';
 
 const router = Router();
 const h = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -549,6 +550,25 @@ router.post('/ratings/import', (req, res) => {
   });
 });
 
+// ---- Letterboxd auto-sync (lib/letterboxd.js) -------------------------------
+// The caller's own link: owner or friend. Not on the guest allowlist, so the
+// guest link gets a 403 before a handler runs. Saving a name syncs straight
+// away, so a misspelled one shows its message at once.
+
+router.get('/letterboxd', (req, res) => res.json(letterboxdStatus(currentUserId())));
+
+router.put('/letterboxd', h(async (req, res) => {
+  const uid = currentUserId();
+  const name = setLetterboxdUser(uid, req.body?.username);
+  res.json(name ? await syncLetterboxd(uid) : letterboxdStatus(uid));
+}));
+
+router.post('/letterboxd/sync', h(async (req, res) => {
+  const uid = currentUserId();
+  if (!letterboxdStatus(uid).username) return res.status(400).json({ error: 'Add your Letterboxd username first.' });
+  res.json(await syncLetterboxd(uid, { manual: true }));
+}));
+
 router.get('/ratings/search', h(async (req, res) => {
   if (!tmdb.tmdbConfigured()) return res.status(400).json({ error: 'TMDB_API_KEY is not set.' });
   const q = (req.query.q || '').trim();
@@ -788,13 +808,13 @@ router.get('/stats/more', h(async (req, res) => {
 router.get('/export', (req, res) => {
   const uid = currentUserId();
   const ratings = all('SELECT tmdb_id, title, year, rating, source, rated_at FROM ratings WHERE user_id = ?', uid);
-  const watched = all('SELECT tmdb_id, title, watched_at, in_weekly4, ticket_price FROM watched WHERE user_id = ? ORDER BY id', uid);
+  const watched = all('SELECT tmdb_id, title, watched_at, in_weekly4, ticket_price, source FROM watched WHERE user_id = ? ORDER BY id', uid);
   const lines = ['Type,tmdb_id,Title,Year,Rating,Source,RatedAt,WatchedAt,InWeekly4,Price'];
   for (const r of ratings) {
     lines.push(['rating', r.tmdb_id, csvField(r.title), r.year ?? '', r.rating, r.source, r.rated_at ?? '', '', '', ''].join(','));
   }
   for (const w of watched) {
-    lines.push(['watched', w.tmdb_id, csvField(w.title), '', '', '', '', w.watched_at, w.in_weekly4 ? '1' : '0', w.ticket_price ?? ''].join(','));
+    lines.push(['watched', w.tmdb_id, csvField(w.title), '', '', w.source ?? '', '', w.watched_at, w.in_weekly4 ? '1' : '0', w.ticket_price ?? ''].join(','));
   }
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="reel-picks-backup.csv"');

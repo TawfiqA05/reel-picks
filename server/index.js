@@ -15,6 +15,7 @@ import { runAs } from './lib/user.js';
 import { startCreditsBackfill } from './lib/backfill.js';
 import { startNightlyBackups } from './lib/backup.js';
 import { pushEnabled, sendWeeklyIfDue } from './lib/push.js';
+import { syncAllDue as syncLetterboxdDue } from './lib/letterboxd.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 
@@ -151,14 +152,19 @@ app.listen(config.port, () => {
   startCreditsBackfill('startup');
   // Nightly database backup at 3am local time (lib/backup.js).
   startNightlyBackups(db, dataDir);
+  // Letterboxd: everyone who linked a username, once a day (lib/letterboxd.js).
+  const letterboxd = () => syncLetterboxdDue().catch((e) => console.error('[letterboxd]', e.message));
+  letterboxd();
 
   // A long-running process (a deployed instance) would otherwise never refresh
   // again: check every 15 minutes whether the local calendar day has rolled
   // over since the last refresh and, if so, pull the new day's schedule.
-  // The same tick sends Friday's "weekly picks are ready" push to anyone who
-  // turned notifications on after that day's refresh (lib/push.js; once per
-  // person per week).
+  // The same tick syncs Letterboxd for anyone not synced yet today, and
+  // sends Friday's "weekly picks are ready" push to anyone who turned
+  // notifications on after that day's refresh (lib/push.js; once per person
+  // per week).
   setInterval(() => {
+    letterboxd();
     if (refreshState.running) return;
     if (shouldAutoRefresh()) autoRefresh('new day');
     else sendWeeklyIfDue().catch((e) => console.error('[push]', e.message));

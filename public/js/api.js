@@ -63,6 +63,9 @@ export const api = {
   rate: (payload) => req('POST', '/ratings', payload),
   unrate: (id) => req('DELETE', '/ratings/' + id),
   importCsv: (csv) => req('POST', '/ratings/import', { csv }),
+  letterboxd: () => req('GET', '/letterboxd'),
+  letterboxdSave: (username) => req('PUT', '/letterboxd', { username }),
+  letterboxdSync: () => req('POST', '/letterboxd/sync'),
   searchRatings: (q) => req('GET', '/ratings/search?q=' + encodeURIComponent(q)),
 
   onboardingMovies: ({ known = false } = {}) => req('GET', `/onboarding/movies${known ? '?known=1' : ''}`),

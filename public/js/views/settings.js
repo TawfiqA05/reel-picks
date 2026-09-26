@@ -514,6 +514,9 @@ export async function render(root, params, ctx) {
   // ---- Weekly picks notifications: only when the server has VAPID keys.
   if (pushCfg?.enabled && !status?.guest) page.appendChild(notificationsCard(pushCfg.publicKey));
 
+  // ---- Letterboxd auto-sync: owner and friends (the guest never gets here).
+  if (!status?.guest) page.appendChild(letterboxdCard(ctx));
+
   page.appendChild(card('Home base',
     h('div', { class: 'row-gap geo-row' }, placeIn, lookupBtn, locBtn),
     geoStatus,
@@ -873,6 +876,69 @@ export async function render(root, params, ctx) {
 
 // ---- Friends (owner only): invite links, revoke, re-issue. A link is shown
 // once, right after it's made; the server keeps only a hash of it.
+// Letterboxd: a username, the last sync's result, Sync now. Saving a name
+// syncs at once, so a misspelled one shows its message right here.
+function letterboxdCard(ctx) {
+  const nameIn = h('input', {
+    class: 'input', type: 'text', maxlength: '80', placeholder: 'Letterboxd username', 'aria-label': 'Letterboxd username',
+    autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false',
+  });
+  const saveBtn = h('button', { class: 'btn', type: 'button' }, 'Save');
+  const syncBtn = h('button', { class: 'btn ghost', type: 'button' }, icon('refresh', { size: 16 }), 'Sync now');
+  const line = h('p', { class: 'muted small lb-status', role: 'status', 'aria-live': 'polite' });
+  let st = null;
+
+  const when = (iso) => new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+  const paint = () => {
+    line.classList.toggle('lb-error', Boolean(st?.error));
+    syncBtn.hidden = !st?.username;
+    if (!st?.username) { line.textContent = 'Not linked.'; return; }
+    if (st.syncing) { line.textContent = 'Syncing…'; return; }
+    if (st.error) { line.textContent = st.error; return; }
+    if (!st.lastOkAt) { line.textContent = `Linked to ${st.username}. Not synced yet.`; return; }
+    const extra = [
+      st.ratingsUpdated ? `${plural(st.ratingsUpdated, 'rating')} updated` : '',
+      st.kept ? `${plural(st.kept, 'rating')} you changed here kept` : '',
+      st.unmatched ? `${plural(st.unmatched, 'film')} not found on TMDB` : '',
+    ].filter(Boolean);
+    line.textContent = `Last synced ${when(st.lastOkAt)}: ${plural(st.added, 'film')} added.${extra.length ? ` ${extra.join(', ')}.` : ''}`;
+  };
+  const busy = (on) => { saveBtn.disabled = on; syncBtn.disabled = on; };
+  const done = (r) => {
+    st = r;
+    nameIn.value = r.username || '';
+    paint();
+    if (!r.error && (r.added || r.ratingsUpdated)) ctx.refreshStatus?.();
+  };
+  const save = async () => {
+    busy(true);
+    st = { ...(st || {}), username: nameIn.value.trim() || null, syncing: Boolean(nameIn.value.trim()), error: null };
+    paint();
+    try { done(await api.letterboxdSave(nameIn.value.trim())); } catch (e) { toast(e.message, 'error'); try { done(await api.letterboxd()); } catch { /* keep the line */ } } finally { busy(false); }
+  };
+  saveBtn.addEventListener('click', save);
+  nameIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') save(); });
+  syncBtn.addEventListener('click', async () => {
+    busy(true);
+    st = { ...st, syncing: true };
+    paint();
+    try { done(await api.letterboxdSync()); } catch (e) { toast(e.message, 'error'); try { done(await api.letterboxd()); } catch { /* keep the line */ } } finally { busy(false); }
+  });
+  api.letterboxd().then(done).catch((e) => { line.textContent = e.message; });
+  paint();
+
+  return card('Letterboxd',
+    h('div', { class: 'row-gap' }, nameIn, saveBtn),
+    line,
+    h('div', {}, syncBtn),
+    h('p', { class: 'muted small' },
+      'Once a day Reel Picks reads your public Letterboxd diary and brings in new star ratings and the films you logged as watched. '
+      + 'Each entry comes in once, and a rating you change here is never overwritten. Films logged on Letterboxd count as seen, not toward your A-List week. '
+      + 'The feed only has your latest 50 or so entries; for your whole history, import ratings.csv on the Rate page. Clear the name and save to unlink.'),
+  );
+}
+
 function friendsCard() {
   const list = h('div', { class: 'theatre-list' });
   const linkSlot = h('div', {});

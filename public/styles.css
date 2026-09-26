@@ -325,6 +325,7 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 /* A value Settings won't save: the field turns red and its message sits under the row. */
 .input[aria-invalid="true"] { border-color: var(--low); }
 .form-error { margin: 0; color: var(--low); font-size: var(--fs-sm); }
+.lb-status.lb-error { color: var(--low); }
 
 /* ---- banners / alerts ---- */
 .banner, .alert { display: flex; align-items: center; gap: 12px; padding: 13px 15px; border-radius: var(--r-md); margin: 8px 0; }

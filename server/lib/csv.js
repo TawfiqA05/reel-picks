@@ -108,6 +108,7 @@ export function parseBackupCsv(text) {
         watched_at: cell(cols, 'watchedat') || null,
         in_weekly4: cell(cols, 'inweekly4') === '1',
         price: Number.isFinite(price) ? price : null,
+        source: cell(cols, 'source') || null,
       });
     } else {
       skip(i, `unknown row type "${type || ''}"`);

@@ -155,6 +155,19 @@ You can also just search and rate in the app; a quick-rate flow covers about twe
 films in a minute or two. Under all that, my ratings list opens on the newest 60, with
 Show all for the rest and a forgiving filter box that searches every one of them.
 
+Letterboxd can also stay in sync on its own. Anyone with an account (me or a friend, never
+the guest link) can put their Letterboxd username in Settings. Once a day, and whenever
+they press Sync now, the app reads their public diary feed (`letterboxd.com/<name>/rss/`,
+the newest 50 or so entries) and brings in new star ratings and films logged as watched,
+matched to TMDB by the id Letterboxd includes. Each diary entry comes in once, so a
+re-sync adds nothing and a rating or watch deleted here isn't brought back. A rating
+changed in Reel Picks after the Letterboxd entry was logged is never overwritten; one
+changed on Letterboxd later comes across. Films logged there count as seen but never
+toward the A-List week or savings, since they may not have been a ticket. Settings shows
+the last sync time and how many films it added, or a plain message for a username with
+no public profile. Imports start the credits backfill like any other import. For a whole
+history, the ratings.csv import is still the way.
+
 ## Friends
 
 One instance holds me and up to nine friends. I add a friend in **Settings → Friends**
