@@ -312,13 +312,21 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .pick-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-2); color: var(--muted); font-size: var(--fs-xs); }
 .pick-reason { font-size: var(--fs-sm); color: var(--text-2); margin: 0; line-height: 1.45; }
 .pick-foot { display: flex; align-items: center; gap: var(--sp-2); margin-top: auto; padding-top: var(--sp-1); min-width: 0; }
-.pick-foot .showtime-chip, .pick-foot .row-none { flex: 1 1 auto; min-width: 0; }
+.pick-foot .showtime-chip, .pick-foot .row-none, .pick-foot .st-pair { flex: 1 1 auto; min-width: 0; }
 
 /* Wraps rather than overflowing: the times inside stay unbreakable, so in a
    narrow card the chip needs to fold onto a second line instead of pushing
    its column wider. */
 .showtime-chip { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 7px 11px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-sm); font-size: var(--fs-sm); width: fit-content; }
 .showtime-chip:hover { border-color: var(--accent); }
+/* A showtime and its "Add to calendar" button, side by side (components.js). */
+.st-pair { display: inline-flex; align-items: stretch; gap: 4px; max-width: 100%; min-width: 0; }
+.st-pair .showtime-chip { min-width: 0; }
+.cal-btn { display: inline-grid; place-items: center; flex: 0 0 auto; width: 36px; min-height: 36px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-sm); color: var(--text-2); }
+.cal-btn:hover { border-color: var(--accent); color: var(--text); }
+.cal-link { display: inline-flex; align-items: center; gap: 6px; padding: 0; color: var(--text-2); text-decoration: underline; text-underline-offset: 2px; vertical-align: middle; }
+.cal-link:hover { color: var(--text); }
+.tg-times li { display: inline-flex; align-items: stretch; gap: 4px; }
 .st-time { font-weight: 600; }
 .st-seat { color: var(--ok); font-size: var(--fs-xs); font-weight: 600; white-space: nowrap; }
 .st-end { color: var(--muted); font-size: var(--fs-xs); white-space: nowrap; }
@@ -968,7 +976,8 @@ body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-botto
 /* ---- tap targets ---- */
 .chip-btn, .btn { min-height: 40px; }
 @media (pointer: coarse) {
-  .chip, .chip-btn, .btn, .link-btn, .rater-clear, .row-more, .section-toggle, .bar-row, .ob-star, .showtime-chip, .toast-action, .switch-row { min-height: 44px; }
+  .chip, .chip-btn, .btn, .link-btn, .rater-clear, .row-more, .section-toggle, .bar-row, .ob-star, .showtime-chip, .toast-action, .switch-row, .cal-btn { min-height: 44px; }
+  .cal-btn { width: 44px; }
   .chip, .btn.small, .rater-clear, .link-btn { min-width: 44px; justify-content: center; }
   .chip { display: inline-flex; align-items: center; }
   .link-btn, .rater-clear { display: inline-flex; align-items: center; }

@@ -5,6 +5,7 @@ const PATHS = {
   reel: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="7" r="1.8"/><circle cx="12" cy="17" r="1.8"/><circle cx="7" cy="12" r="1.8"/><circle cx="17" cy="12" r="1.8"/>',
   film: '<rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M7.5 3v18M16.5 3v18M3 8h4.5M3 12h18M3 16h4.5M16.5 8H21M16.5 16H21"/>',
   calendar: '<rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/>',
+  calendarPlus: '<path d="M21 12.5V7a2.5 2.5 0 0 0-2.5-2.5h-13A2.5 2.5 0 0 0 3 7v11.5A2.5 2.5 0 0 0 5.5 21h7"/><path d="M8 2.5v4M16 2.5v4M3 10h18M18.5 15.5v6M15.5 18.5h6"/>',
   hourglass: '<path d="M6 2.5h12M6 21.5h12"/><path d="M7 2.5v3.3a5 5 0 0 0 2.1 4.1L12 12l2.9-2.1A5 5 0 0 0 17 5.8V2.5M7 21.5v-3.3a5 5 0 0 1 2.1-4.1L12 12l2.9 2.1a5 5 0 0 1 2.1 4.1v3.3"/>',
   star: '<path d="M12 3.2l2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17.1 6.6 20l1-6.1-4.4-4.3 6.1-.9z"/>',
   bookmark: '<path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.2-6.5 4.2v-16a1 1 0 0 1 1-1z"/>',

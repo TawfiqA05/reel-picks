@@ -70,8 +70,22 @@ export function showtimeChip(st, { showDay = true } = {}) {
   if (st.past) {
     return h('div', { ...attrs, class: 'showtime-chip past' }, ...kids, h('span', { class: 'st-past' }, 'started'));
   }
-  return h('a', { ...attrs, href: st.purchase_url || '#', target: '_blank', rel: 'noopener' },
+  const chip = h('a', { ...attrs, href: st.purchase_url || '#', target: '_blank', rel: 'noopener' },
     ...kids, h('span', { class: 'st-book' }, 'Book ↗'));
+  // A link can't hold another link, so the calendar button sits beside it.
+  return st.id ? h('span', { class: 'st-pair' }, chip, calendarButton(st)) : chip;
+}
+
+// "Add to calendar": the showtime as an .ics file (server/lib/calendar.js).
+// A plain link, so iPhone Safari hands it to Calendar and a desktop browser
+// downloads it. `label` gives the worded version.
+export function calendarButton(st, { label = null } = {}) {
+  const when = `${dayLabel(st.date)} ${st.time}`;
+  return h('a', {
+    class: label ? 'link-btn cal-link' : 'cal-btn', href: `/api/showtimes/${encodeURIComponent(st.id)}/calendar.ics`,
+    'aria-label': `Add to calendar: ${when}`, title: `Add ${when} to your calendar`,
+    onClick: (e) => { if (!navigator.onLine) { e.preventDefault(); toast('You\'re offline. Try again once you\'re back online.', 'error'); } },
+  }, icon('calendarPlus', { size: label ? 16 : 18 }), label ? h('span', {}, label) : null);
 }
 
 // Spells the three times out in full on hover, so the compact chip never has to
@@ -338,13 +352,15 @@ export function bookButton(st, day, { wide = false } = {}) {
 
 // "Be in your seat by 7:50 PM. Ends around 10:51 PM." Same two times the
 // showtime chip names (be there by / ends), spelled out as a sentence.
+// Ends with "Add to calendar" for that showtime.
 export function seatLine(st) {
   if (!st) return null;
   const bits = [];
   if (st.be_there_by) bits.push(`Be in your seat by ${st.be_there_by}.`);
   if (st.end) bits.push(`Ends around ${st.end}.`);
   if (st.fits_window) bits.push('Fits your window.');
-  return bits.length ? h('p', { class: 'seat-line' }, bits.join(' ')) : null;
+  const cal = st.id && !st.past ? calendarButton(st, { label: 'Add to calendar' }) : null;
+  return bits.length || cal ? h('p', { class: 'seat-line' }, bits.join(' '), cal ? ' ' : null, cal) : null;
 }
 
 // Backdrop art with a graceful fall-through: the backdrop, then the poster

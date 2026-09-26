@@ -4,7 +4,7 @@
 // can be paired and sends one label per film, no scores or ratings.
 import { api } from '../api.js';
 import { h, clear, spinner, emptyState, sectionTitle, badge, poster, toast } from '../ui.js';
-import { dayLabel } from './components.js';
+import { dayLabel, calendarButton } from './components.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -114,7 +114,8 @@ function showtime(st) {
   return h('li', {},
     st.purchase_url
       ? h('a', { class: 'tg-time', href: st.purchase_url, target: '_blank', rel: 'noopener', title: 'Book on AMC' }, ...text)
-      : h('span', { class: 'tg-time' }, ...text));
+      : h('span', { class: 'tg-time' }, ...text),
+    st.id ? calendarButton(st) : null);
 }
 
 const listOf = (xs) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);

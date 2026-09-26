@@ -73,6 +73,7 @@ const ALLOW = [
   /^(?:\/api)?\/recommendations$/,
   /^(?:\/api)?\/coming-soon$/,
   /^(?:\/api)?\/movies\/\d+$/,
+  /^(?:\/api)?\/showtimes\/[^/]+\/calendar\.ics$/,
 ];
 
 export function guestAllowed(req) {

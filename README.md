@@ -61,6 +61,10 @@ A few smaller things make the lists easier to read:
   with provider logos, from TMDB's watch providers (data from JustWatch). Films that
   aren't in theaters get a one-line "Stream on …" in search and in "More from". Each
   film's answer is cached for three days and fetched through the shared TMDB throttle.
+- **Add to calendar.** Every showtime has a calendar button that downloads an `.ics`
+  event: the film as the title, AMC's start time in the theater's own time zone, "be
+  there by" and the end time in the notes, and the theater's name and address as the
+  location. It opens straight in Calendar on an iPhone.
 - **Poster fallbacks.** When a poster is missing or fails to load, the film's title goes
   on a plain gradient tile instead of a broken image.
 

@@ -28,6 +28,7 @@ import {
   replacePrimary, refreshDistances, MAX_THEATRES, sharedTheatreIds,
 } from './lib/theatres.js';
 import { geocode, reverseGeocode } from './lib/geocode.js';
+import { showtimeIcs, icsFilename, theatreRecord } from './lib/calendar.js';
 import { bustCache } from './lib/cache.js';
 import { localYMD, addDays, csvField } from './lib/util.js';
 import { isGuest, ownerName } from './lib/guest.js';
@@ -562,6 +563,28 @@ router.post('/search/recents', (req, res) => res.json(addRecent(req.body)));
 router.delete('/search/recents', (req, res) => res.json(removeRecent(req.query.kind, req.query.key)));
 router.post('/search/recents/clear', (req, res) => res.json(clearRecents()));
 router.post('/search/recents/restore', (req, res) => res.json(restoreRecents(req.body)));
+
+// ---- add to calendar -------------------------------------------------------
+
+// One showtime as an .ics file (lib/calendar.js). Only showtimes at a theater
+// the caller follows; anything else is the same 404 as a made-up id. The guest
+// link may ask too (read only, about the owner's theaters it already sees).
+router.get('/showtimes/:id/calendar.ics', (req, res) => {
+  const s = get('SELECT * FROM showtimes WHERE id = ?', String(req.params.id));
+  const theatre = s && followedTheatres().find((t) => String(t.id) === String(s.theatre_id));
+  if (!s || !theatre || !s.tmdb_id) return res.status(404).json({ error: 'Showtime not found' });
+  const movie = getMovie(s.tmdb_id);
+  const ics = showtimeIcs({
+    showtime: s, movie, theatreName: theatre.name, record: theatreRecord(s.theatre_id), previewsMinutes: getSetting('previewsMinutes'),
+  });
+  if (!ics) return res.status(404).json({ error: 'Showtime not found' });
+  res.set({
+    'Content-Type': 'text/calendar; charset=utf-8',
+    'Content-Disposition': `attachment; filename="${icsFilename(movie?.title, s)}"`,
+    'Cache-Control': 'no-store',
+  });
+  res.send(ics);
+});
 
 // ---- where to stream ------------------------------------------------------
 
