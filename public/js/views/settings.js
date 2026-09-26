@@ -11,10 +11,120 @@ function card(title, ...children) {
   return h('section', { class: 'settings-card' }, h('h3', {}, title), ...children);
 }
 
+// ---- Weekly picks notifications ------------------------------------------
+// Per device: the switch shows whether this browser is signed up for this
+// person. Permission is asked for only when the switch is turned on. iPhone
+// and iPad only allow web push from an app added to the Home Screen, so there
+// Safari gets a note instead of a switch that can't work.
+
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+
+function keyBytes(b64url) {
+  const s = b64url.replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(s + '='.repeat((4 - (s.length % 4)) % 4));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+
+const sameKey = (a, b) => {
+  if (!a) return false;
+  const x = new Uint8Array(a);
+  return x.length === b.length && x.every((v, i) => v === b[i]);
+};
+
+async function currentSubscription() {
+  // ready never settles when the service worker couldn't register.
+  const reg = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('the app\'s service worker isn\'t running')), 8000)),
+  ]);
+  return { reg, sub: await reg.pushManager.getSubscription() };
+}
+
+function notificationsCard(publicKey) {
+  const label = 'Notify me when my weekly picks are ready';
+  const hint = h('p', { class: 'muted small' }, 'One notification on Friday with your #1 pick, on this device. Nothing about your ratings is in it.');
+  if (isIOS() && !isStandalone()) {
+    return card('Notifications', h('div', { class: 'notify-static' },
+      h('p', {}, label),
+      h('p', { class: 'muted small notify-note' }, 'On iPhone, notifications need Reel Picks on your Home Screen first. In Safari, tap Share, then Add to Home Screen, and open it from there.')));
+  }
+  if (!pushSupported()) {
+    return card('Notifications', h('div', { class: 'notify-static' },
+      h('p', {}, label), h('p', { class: 'muted small notify-note' }, 'This browser can\'t show notifications.')));
+  }
+
+  const toggle = h('input', { type: 'checkbox', disabled: true });
+  const note = h('p', { class: 'muted small notify-note', hidden: true });
+  const showNote = (text) => { note.textContent = text || ''; note.hidden = !text; };
+  const blocked = () => Notification.permission === 'denied';
+  const blockedText = 'Notifications are blocked for Reel Picks in this browser\'s settings. Allow them there, then turn this on.';
+
+  // Initial state: on only if this browser has a subscription the server
+  // knows belongs to this person.
+  (async () => {
+    try {
+      const { sub } = await currentSubscription();
+      toggle.checked = Boolean(sub && Notification.permission === 'granted' && (await api.pushCheck(sub.endpoint)).subscribed);
+    } catch { toggle.checked = false; }
+    toggle.disabled = false;
+    if (!toggle.checked && blocked()) showNote(blockedText);
+  })();
+
+  const turnOn = async () => {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') {
+      showNote(perm === 'denied' ? blockedText : '');
+      return false;
+    }
+    const key = keyBytes(publicKey);
+    let { reg, sub } = await currentSubscription();
+    // Keys changed on the server since this device signed up: start over.
+    if (sub && !sameKey(sub.options?.applicationServerKey, key)) { await sub.unsubscribe(); sub = null; }
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+    await api.pushSubscribe(sub.toJSON());
+    showNote('');
+    return true;
+  };
+
+  const turnOff = async () => {
+    const { sub } = await currentSubscription();
+    if (!sub) return;
+    await api.pushUnsubscribe(sub.endpoint);
+    await sub.unsubscribe().catch(() => {});
+  };
+
+  toggle.addEventListener('change', async () => {
+    const on = toggle.checked;
+    toggle.disabled = true;
+    try {
+      if (on) {
+        const ok = await turnOn();
+        toggle.checked = ok;
+        if (ok) toast('You\'ll get a notification when your weekly picks are ready.', 'success');
+      } else {
+        await turnOff();
+        toast('Weekly picks notifications are off on this device.');
+      }
+    } catch (e) {
+      toggle.checked = !on;
+      toast(on ? `Couldn't turn notifications on: ${e.message}` : e.message, 'error');
+    } finally { toggle.disabled = false; }
+  });
+
+  return card('Notifications',
+    h('label', { class: 'switch-row' }, toggle, h('span', {}, label)),
+    hint, note);
+}
+
 export async function render(root, params, ctx) {
   clear(root);
   root.appendChild(spinner('Loading settings…'));
-  const [s, status] = await Promise.all([api.settings(), api.status().catch(() => null)]);
+  const [s, status, pushCfg] = await Promise.all([
+    api.settings(), api.status().catch(() => null), api.pushConfig().catch(() => null),
+  ]);
   clear(root);
 
   const page = h('div', { class: 'page settings' });
@@ -395,6 +505,9 @@ export async function render(root, params, ctx) {
       h('p', { class: 'muted small' }, `Together lists films you would both enjoy at a theater you both follow. ${owner} sees one short reason for each film, never your ratings, scores or full watchlist.`),
     ));
   }
+
+  // ---- Weekly picks notifications: only when the server has VAPID keys.
+  if (pushCfg?.enabled && !status?.guest) page.appendChild(notificationsCard(pushCfg.publicKey));
 
   page.appendChild(card('Home base',
     h('div', { class: 'row-gap' }, placeIn, lookupBtn, locBtn),

@@ -169,6 +169,24 @@ from their own home base, and nobody else sees it. The read-only guest link neve
 home coordinates, drive times, or distances. Settings has a plain "where your location
 data goes" note and a one-click way to clear it all.
 
+## Notifications
+
+Anyone with an account (me or a friend, never the guest link) can turn on "Notify me
+when my weekly picks are ready" in Settings. It's off by default, it's per device, and the
+browser only asks for permission when the switch is turned on. On iPhone it works once
+Reel Picks is added to the Home Screen; before that, Settings says so instead of showing
+a switch. On Friday, right after the first refresh of the new A-List week, each
+subscribed person gets one push: "Your 4 for this week are ready" and their #1 title.
+Tapping it opens Picks. Nothing else is in it, no scores or ratings.
+
+It's once per person per week even across restarts and deploys: the send is recorded in
+the database before it goes out. A device the push service reports as gone (404/410) is
+deleted. The owner can run the week's send by hand with `POST /api/push/weekly/send`,
+and it skips anyone who already got this week's.
+
+It's plain Web Push with VAPID keys, no extra dependency. Without `VAPID_PUBLIC_KEY` and
+`VAPID_PRIVATE_KEY` the feature is off and the switch never appears.
+
 ## The guest link
 
 Anyone who reaches the app from outside without a cookie gets the read-only guest view:
@@ -202,6 +220,10 @@ Variables to set:
 - `TZ`: your local time zone, such as `America/New_York`. Showtime math happens in local
   time and containers default to UTC.
 - `OWNER_NAME` is optional and sets the name on the guest link and the Join page.
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`: optional, turn on weekly picks notifications.
+  Make a pair with `node -e "const e=require('crypto').createECDH('prime256v1');e.generateKeys();console.log(e.getPublicKey('base64url'),e.getPrivateKey('base64url'))"`
+  (public first). Changing them later means everyone turns the switch on again.
+  `VAPID_SUBJECT` optionally overrides the contact URL sent to push services.
 
 One thing to know: AMC rejected my key with "Unauthorized VendorKey" when the service
 ran in an EU region, even though the same key worked from home. Moving the service to a

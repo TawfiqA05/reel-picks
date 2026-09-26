@@ -13,6 +13,7 @@
 import { run, all, get, getSettings, getSharedSettings, setSetting, getSetting } from '../db.js';
 import { runSystem, OWNER_ID } from './user.js';
 import { startCreditsBackfill } from './backfill.js';
+import { sendWeeklyIfDue } from './push.js';
 import * as amc from './amc.js';
 import * as tmdb from './tmdb.js';
 import * as omdb from './omdb.js';
@@ -573,6 +574,8 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
     const queued = state.rerun;
     state.rerun = null;
     if (queued) runSystem(() => refreshAllInner(queued)).catch((e) => console.error('[refresh rerun]', e.message));
+    // Friday's first refresh has just put the new week's four in place.
+    else sendWeeklyIfDue().catch((e) => console.error('[push]', e.message));
   }
 }
 

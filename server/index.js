@@ -14,6 +14,7 @@ import { refreshAll, shouldAutoRefresh, state as refreshState } from './lib/refr
 import { runAs } from './lib/user.js';
 import { startCreditsBackfill } from './lib/backfill.js';
 import { startNightlyBackups } from './lib/backup.js';
+import { pushEnabled, sendWeeklyIfDue } from './lib/push.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 
@@ -129,6 +130,7 @@ app.listen(config.port, () => {
     config.tmdbKey ? 'TMDB✓' : 'TMDB✗',
     config.omdbKey ? 'OMDb✓' : 'OMDb✗',
     config.amcKey ? 'AMC✓' : 'AMC✗',
+    pushEnabled() ? 'Push✓' : 'Push✗',
   ].join('  ');
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || process.env.TZ || 'system';
   const where = process.env.NODE_ENV === 'production' ? `port ${config.port}` : `http://localhost:${config.port}`;
@@ -153,7 +155,12 @@ app.listen(config.port, () => {
   // A long-running process (a deployed instance) would otherwise never refresh
   // again: check every 15 minutes whether the local calendar day has rolled
   // over since the last refresh and, if so, pull the new day's schedule.
+  // The same tick sends Friday's "weekly picks are ready" push to anyone who
+  // turned notifications on after that day's refresh (lib/push.js; once per
+  // person per week).
   setInterval(() => {
-    if (!refreshState.running && shouldAutoRefresh()) autoRefresh('new day');
+    if (refreshState.running) return;
+    if (shouldAutoRefresh()) autoRefresh('new day');
+    else sendWeeklyIfDue().catch((e) => console.error('[push]', e.message));
   }, AUTO_REFRESH_CHECK_MS).unref();
 });

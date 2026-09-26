@@ -521,6 +521,8 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .import-result.err { border: 1px solid color-mix(in srgb, var(--low) 45%, transparent); background: color-mix(in srgb, var(--low) 8%, transparent); }
 .switch-row { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .switch-row.tight { gap: 8px; }
+.notify-static { display: flex; flex-direction: column; gap: 6px; }
+.notify-static p { margin: 0; }
 .window-row { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .window-row:last-of-type { border-bottom: none; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }

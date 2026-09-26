@@ -11,7 +11,7 @@
 // A new worker takes over as soon as it installs (skipWaiting + claim). The
 // page hears "controllerchange" and reloads once when that's safe
 // (js/update.js).
-const CACHE = 'reelpicks-v36';
+const CACHE = 'reelpicks-v37';
 const CORE = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
   '/js/app.js', '/js/api.js', '/js/ui.js', '/js/icons.js', '/js/update.js',
@@ -53,6 +53,33 @@ self.addEventListener('activate', (e) => {
     const wins = await self.clients.matchAll({ type: 'window' });
     await Promise.all(wins.map((c) => c.navigate(c.url).catch(() => {})));
   }).catch(() => {});
+});
+
+// "Your 4 for this week are ready" (server/lib/push.js). The payload is just
+// the title, the #1 film and where to go.
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch { d = {}; }
+  e.waitUntil(self.registration.showNotification(d.title || 'Reel Picks', {
+    body: d.body || '',
+    icon: '/icons/icon-192.png',
+    tag: d.tag || 'weekly-picks',
+    data: { url: d.url || '/#/home' },
+  }));
+});
+
+// Tapping it opens Picks: in an open Reel Picks window if there is one.
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  let url = new URL(e.notification.data?.url || '/#/home', self.location.origin);
+  if (url.origin !== self.location.origin) url = new URL('/#/home', self.location.origin);
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const win = wins.find((c) => new URL(c.url).origin === self.location.origin);
+    if (!win) return self.clients.openWindow(url.href);
+    await win.focus();
+    return win.navigate(url.href).catch(() => self.clients.openWindow(url.href));
+  })());
 });
 
 // The page asks which version took control (its reload-once guard).

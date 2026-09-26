@@ -222,6 +222,26 @@ CREATE TABLE IF NOT EXISTS cache (
   fetched_at TEXT,
   ttl        INTEGER    -- seconds
 );
+
+-- Web Push: one row per device someone turned "weekly picks are ready" on
+-- for (lib/push.js). Dead ones are deleted when the push service says so.
+CREATE TABLE IF NOT EXISTS push_subs (
+  endpoint   TEXT PRIMARY KEY,
+  user_id    INTEGER NOT NULL,
+  p256dh     TEXT NOT NULL,
+  auth       TEXT NOT NULL,
+  created_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subs(user_id);
+
+-- The weekly push, claimed per person per A-List week before it is sent, so
+-- a restart or redeploy never sends it twice.
+CREATE TABLE IF NOT EXISTS push_sent (
+  user_id    INTEGER NOT NULL,
+  week_start TEXT NOT NULL,   -- Friday that begins the A-List week (YYYY-MM-DD)
+  sent_at    TEXT,
+  PRIMARY KEY (user_id, week_start)
+);
 `;
 
 db.exec(SCHEMA);
