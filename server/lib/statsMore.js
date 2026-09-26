@@ -13,7 +13,8 @@
 // throttle. Person ids come from the rated films' stored credits; a film whose
 // ids aren't stored yet has its details fetched once (same throttle, 7-day
 // cache) to learn them.
-import { all } from '../db.js';
+import crypto from 'node:crypto';
+import { all, get, run } from '../db.js';
 import * as tmdb from './tmdb.js';
 import { getMovies, upsertFullMovie } from './movies.js';
 import { getStatsGroup, userLineup } from './recommend.js';
@@ -22,6 +23,7 @@ import { tmdbThrottle } from './backfill.js';
 import { currentUserId } from './user.js';
 import { localYMD } from './util.js';
 
+const UNKNOWN_TTL = 7 * 86400; // seconds a "TMDB doesn't know this person" answer is kept
 // Actors: films with fewer votes than this go behind "Show smaller films".
 export const SMALL_FILM_VOTES = 50;
 const TV_MOVIE = 10770;
@@ -40,7 +42,9 @@ const isActing = (c) => !SELF.test(c.character || '') && !/uncredited/i.test(c.c
 
 // The TMDB person id behind a name in the user's rated films: the id stored
 // with most of those films. Films whose ids aren't stored yet are asked of
-// TMDB (details, cached 7 days), up to three, until one answers.
+// TMDB (details, cached 7 days), up to three, until one answers. A film TMDB
+// answers 404 for is marked not_found (as the backfill does) and never asked
+// about again.
 async function personId(kind, name, films) {
   const count = new Map();
   const tally = (m) => {
@@ -51,9 +55,15 @@ async function personId(kind, name, films) {
   };
   const movies = getMovies(films.map((f) => f.tmdb_id));
   movies.forEach(tally);
-  for (const m of movies.slice(0, 3)) {
+  for (const m of movies.filter((x) => !x.details_missing).slice(0, 3)) {
     if (count.size) break;
-    upsertFullMovie(tmdb.normalizeDetails(await tmdb.details(m.tmdb_id, { gate: tmdbThrottle })));
+    try {
+      upsertFullMovie(tmdb.normalizeDetails(await tmdb.details(m.tmdb_id, { gate: tmdbThrottle })));
+    } catch (e) {
+      if (e.status !== 404) throw e; // a real outage stays an error ("try again later")
+      run("UPDATE movies SET details_missing = 'not_found' WHERE tmdb_id = ?", m.tmdb_id);
+      continue;
+    }
     getMovies([m.tmdb_id]).forEach(tally);
   }
   return [...count].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
@@ -123,9 +133,26 @@ export async function getStatsMore(kind, name) {
       .filter((m) => (m.genres || []).includes(name) && !seen.has(m.tmdb_id) && seen.add(m.tmdb_id))
       .map((m) => fromMovie(m, today));
   } else {
+    // Someone TMDB doesn't know is remembered for a week, so opening their
+    // sheet again answers at once instead of asking TMDB the same question.
+    const unknownKey = `stats:unknown-person:${kind}:${crypto.createHash('sha256').update(`${name}\n${group.films.map((f) => f.tmdb_id).sort((a, b) => a - b).join(',')}`).digest('hex').slice(0, 32)}`;
+    const unknown = { kind, name, films: [], smaller: [], unknownPerson: true };
+    const known = get('SELECT fetched_at, ttl FROM cache WHERE key = ?', unknownKey);
+    if (known && Date.now() - Date.parse(known.fetched_at) < known.ttl * 1000) return unknown;
+    const remember = () => {
+      run(`INSERT INTO cache(key, value, fetched_at, ttl) VALUES(?, 'true', ?, ?)
+            ON CONFLICT(key) DO UPDATE SET fetched_at = excluded.fetched_at, ttl = excluded.ttl`, unknownKey, new Date().toISOString(), UNKNOWN_TTL);
+      return unknown;
+    };
     const pid = await personId(kind, name, group.films);
-    if (!pid) return { kind, name, films: [], smaller: [], unknownPerson: true };
-    const credits = await tmdb.personCredits(pid, { gate: tmdbThrottle });
+    if (!pid) return remember();
+    let credits;
+    try {
+      credits = await tmdb.personCredits(pid, { gate: tmdbThrottle });
+    } catch (e) {
+      if (e.status === 404) return remember();
+      throw e;
+    }
     const pool = kind === 'director'
       ? (credits?.crew || []).filter((c) => c.job === 'Director')
       : (credits?.cast || []).filter(isActing);

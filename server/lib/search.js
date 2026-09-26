@@ -9,11 +9,17 @@ import { tmdbThrottle } from './backfill.js';
 import { followedTheatres } from './theatres.js';
 import { currentUserId } from './user.js';
 import { localYMD } from './util.js';
-import { norm, prepare, query as prepQuery, score as fit, STARTS, isTypoOnly } from '../../public/js/fuzzy.js';
+import { norm, prepare, query as prepQuery, score as fit, EXACT, STARTS, isTypoOnly } from '../../public/js/fuzzy.js';
 
 export const MIN_QUERY = 2;
 const LIMIT = 20;
 const THIN = 3; // fewer TMDB results than this and a corrected / shortened query is tried too
+// A film is well known with this many TMDB votes, or with this much TMDB
+// popularity (an anticipated film that isn't out yet has no votes but plenty
+// of interest). Anything else ranks below every well-known film unless it's
+// playing at the caller's theatres or they rated or watchlisted it.
+export const KNOWN_VOTES = 50;
+export const KNOWN_POPULARITY = 50;
 
 const placeholders = (n) => Array.from({ length: n }, () => '?').join(',');
 
@@ -49,8 +55,26 @@ function localFilms(me) {
     const m = rows.get(id) || {};
     const title = m.title || me.ratings.get(id)?.title || me.hidden.get(id)?.title;
     if (!title) return null;
-    return { tmdb_id: id, title, year: m.year ?? me.ratings.get(id)?.year ?? null, poster: m.poster || null, popularity: null, votes: m.tmdb_votes || 0 };
+    return { tmdb_id: id, title, year: m.year ?? me.ratings.get(id)?.year ?? null, poster: m.poster || null, popularity: null, votes: m.tmdb_votes ?? null };
   }).filter(Boolean);
+}
+
+const boosted = (r) => r.playing || r.rating != null || r.watchlisted;
+export const wellKnown = (r) => (r.votes ?? 0) >= KNOWN_VOTES || (r.popularity ?? 0) >= KNOWN_POPULARITY;
+
+// 0: the title fits what was typed, and the film is well known or boosted
+// for this person. 1: well known, but only TMDB saw a match (an alternate or
+// original-language title). 2: obscure (few votes, little interest), which
+// never outranks a well-known film however exactly it matches.
+const tierOf = (r) => (!(wellKnown(r) || boosted(r)) ? 2 : r.match === 'tmdb' ? 1 : 0);
+
+// How the words fit counts, but fame counts more: a whole-title match is
+// worth about as much as ten times the votes. Playing at my theatres and my
+// own rated / watchlisted films get a lift on top.
+function rankOf(r, fitScore) {
+  const fitPart = fitScore >= EXACT ? 2 : fitScore >= STARTS ? 1.5 : fitScore >= 300 ? 1 : fitScore > 0 ? 0.5 : 0;
+  const fame = Math.log10(1 + (r.votes ?? 0)) + 0.5 * Math.log10(1 + (r.popularity ?? 0));
+  return fitPart + fame + (r.playing ? 2.5 : 0) + (r.rating != null || r.watchlisted ? 2 : 0);
 }
 
 async function tmdbTry(q) {
@@ -80,11 +104,12 @@ export async function search(raw) {
     if (had) {
       had.score = Math.max(had.score, s);
       if (f.popularity != null) had.popularity = Math.max(had.popularity ?? 0, f.popularity);
+      if (f.votes != null) had.votes = Math.max(had.votes ?? 0, f.votes);
       had.poster ||= f.poster;
       had.year ??= f.year;
       return;
     }
-    byId.set(f.tmdb_id, { ...f, score: s, source });
+    byId.set(f.tmdb_id, { ...f, votes: f.votes ?? f.tmdb_votes ?? null, score: s, source });
   };
 
   for (const f of localFilms(me)) {
@@ -114,22 +139,17 @@ export async function search(raw) {
 
   const results = [...byId.values()].map((f) => {
     const rating = me.ratings.get(f.tmdb_id)?.rating ?? null;
-    return {
+    const r = {
       tmdb_id: f.tmdb_id, title: f.title, year: f.year ? Number(String(f.year).slice(0, 4)) || null : null, poster: f.poster || null,
       playing: me.playing.has(f.tmdb_id), rating, watchlisted: me.watchlist.has(f.tmdb_id), hidden: me.hidden.has(f.tmdb_id),
+      votes: f.votes ?? null, popularity: f.popularity != null ? Math.round(f.popularity * 10) / 10 : null,
       match: f.score >= STARTS ? 'title' : f.score >= 300 ? 'words' : f.score > 0 ? 'typo' : 'tmdb',
-      _score: f.score, _pop: f.popularity ?? Math.log10(1 + (f.votes || 0)),
     };
+    return { ...r, _tier: tierOf(r), _rank: rankOf(r, f.score) };
   });
-  // Exact and starts-with first, then playing at my theatres, then rated or
-  // watchlisted, then how well the words fit, then popularity.
-  const tier = (r) => [r._score >= STARTS ? 0 : 1, r.playing ? 0 : 1, r.rating != null || r.watchlisted ? 0 : 1, r._score >= 300 ? 0 : r._score > 0 ? 1 : 2];
-  results.sort((a, b) => {
-    const ta = tier(a); const tb = tier(b);
-    for (let i = 0; i < ta.length; i++) if (ta[i] !== tb[i]) return ta[i] - tb[i];
-    return b._pop - a._pop || a.title.localeCompare(b.title);
-  });
-  return { query: q.n, results: results.slice(0, LIMIT).map(({ _score, _pop, ...r }) => r) };
+  // Well-known (and boosted) films first; inside that, the blended rank.
+  results.sort((a, b) => a._tier - b._tier || b._rank - a._rank || (b.popularity ?? 0) - (a.popularity ?? 0) || a.title.localeCompare(b.title));
+  return { query: q.n, results: results.slice(0, LIMIT).map(({ _tier, _rank, ...r }) => r) };
 }
 
 // ---- recents ---------------------------------------------------------------
