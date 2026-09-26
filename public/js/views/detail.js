@@ -18,10 +18,11 @@ export async function render(root, params, ctx) {
   const trailer = m.trailer_key ? h('div', { class: 'trailer-wrap', id: 'trailer' }, h('div', { class: 'trailer' },
     h('iframe', {
       src: `https://www.youtube-nocookie.com/embed/${m.trailer_key}`,
-      title: `${m.title} trailer`, allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+      title: `${m.title} trailer`, allow: 'accelerometer; autoplay; clipboard-write; compute-pressure; encrypted-media; gyroscope; picture-in-picture',
       allowfullscreen: true, loading: 'lazy',
     }),
   )) : null;
+  if (trailer) watchFrameFocus(trailer);
   const meta = [m.year, fmtRuntime(m.runtime), m.mpaa].filter(Boolean);
   page.appendChild(h('section', { class: 'detail-hero', 'aria-labelledby': 'detail-title' },
     heroMedia(m),
@@ -238,4 +239,29 @@ function openFixMatch(d, ctx) {
   });
   const modal = openModal(h('div', {}, input, results), { title: 'Fix movie match' });
   input.focus();
+}
+
+// Tabbing into the YouTube frame: the browser moves focus into the frame's own
+// document, so the frame never matches :focus and fires no focus event here;
+// the page only sees its window lose focus. Right after a Tab key that means
+// the frame took it: ring it and bring all of it into view (it could otherwise
+// sit under the tab bar). Clicking into the player shows no ring.
+function watchFrameFocus(wrap) {
+  const frame = wrap.querySelector('iframe');
+  let tabAt = 0;
+  const onKey = (e) => { if (e.key === 'Tab') tabAt = Date.now(); };
+  const onBlur = () => setTimeout(() => {
+    if (document.activeElement !== frame || Date.now() - tabAt > 500) return;
+    frame.classList.add('kb-focus');
+    wrap.scrollIntoView({ block: 'nearest' });
+  }, 0);
+  const onFocus = () => frame.classList.remove('kb-focus');
+  document.addEventListener('keydown', onKey);
+  window.addEventListener('blur', onBlur);
+  window.addEventListener('focus', onFocus);
+  window.addEventListener('hashchange', () => {
+    document.removeEventListener('keydown', onKey);
+    window.removeEventListener('blur', onBlur);
+    window.removeEventListener('focus', onFocus);
+  }, { once: true });
 }
