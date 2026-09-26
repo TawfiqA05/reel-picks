@@ -123,7 +123,7 @@ pre { background: var(--surface-2); padding: 12px; border-radius: var(--r-sm); o
   -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px);
   border-bottom: 1px solid var(--line);
 }
-.brand { display: flex; align-items: center; gap: var(--sp-2); flex: 0 0 auto; }
+.brand { display: flex; align-items: center; gap: var(--sp-2); flex: 0 0 auto; min-height: 44px; }
 .brand-mark { color: var(--accent); }
 .brand-name { font-size: var(--fs-lg); line-height: 1; }
 .header-actions { display: flex; align-items: center; gap: var(--sp-2); margin-left: auto; min-width: 0; }
@@ -933,11 +933,24 @@ body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-botto
 /* ---- tap targets ---- */
 .chip-btn, .btn { min-height: 40px; }
 @media (pointer: coarse) {
-  .chip, .chip-btn, .btn, .link-btn, .rater-clear, .row-more, .section-toggle { min-height: 44px; }
+  .chip, .chip-btn, .btn, .link-btn, .rater-clear, .row-more, .section-toggle, .bar-row, .ob-star, .showtime-chip, .toast-action, .switch-row { min-height: 44px; }
+  .chip, .btn.small, .rater-clear, .link-btn { min-width: 44px; justify-content: center; }
   .chip { display: inline-flex; align-items: center; }
   .link-btn, .rater-clear { display: inline-flex; align-items: center; }
+  input[type="range"] { height: 44px; }
+  .log summary { padding: 11px 0; }
   .stars.interactive { font-size: calc(var(--fs-lg) + 4px) !important; padding: 9px 0; }
   .stars.interactive .stars-fill { top: 9px; }
+}
+
+/* Title links: the text stays where it is and the tap area grows to at least
+   44px around it (the poster beside most of them links to the same page). */
+.row-title, .pick-title, .ri-title, .search-title, .tg-title, .hidden-title { position: relative; }
+.ri-title, .search-title { display: block; }
+.row-title::after, .pick-title::after, .ri-title::after, .search-title::after, .tg-title::after, .hidden-title::after {
+  content: ''; position: absolute;
+  top: min(0px, calc(50% - 22px)); bottom: min(0px, calc(50% - 22px));
+  left: min(0px, calc(50% - 22px)); right: min(0px, calc(50% - 22px));
 }
 
 /* ---- dialog focus ---- */
@@ -993,7 +1006,7 @@ a.tg-time:hover { border-color: color-mix(in srgb, var(--accent) 50%, transparen
 .input.filter-input { padding-left: 38px; padding-right: 44px; font-size: 16px; /* 16px keeps iOS from zooming in */ }
 .filter-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
 .filter-clear {
-  position: absolute; right: 2px; width: 40px; height: 40px; display: grid; place-items: center;
+  position: absolute; right: 0; width: 44px; height: 44px; display: grid; place-items: center;
   background: none; border: none; border-radius: 50%; color: var(--muted); cursor: pointer;
 }
 .filter-clear:hover { color: var(--text); background: var(--surface-2); }
@@ -1029,7 +1042,7 @@ a.tg-time:hover { border-color: color-mix(in srgb, var(--accent) 50%, transparen
 .badge.sr-badge.playing { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
 .badge.sr-badge.rated { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
 .recents-head { display: flex; align-items: center; justify-content: space-between; margin: 2px 2px 0; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
-.recents-clear { min-height: 40px; padding: 4px 8px; }
+.recents-clear { min-height: 44px; padding: 4px 8px; }
 .recents-label { margin: 8px 2px 2px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .recent-row { display: flex; align-items: center; gap: 4px; }
 .recent-row > .recent-main { flex: 1; }
