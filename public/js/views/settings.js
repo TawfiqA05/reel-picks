@@ -150,7 +150,9 @@ export async function render(root, params, ctx) {
       keyRow('OMDb', keyState.omdb, 'IMDb / RT / Metacritic scores'),
       keyRow('AMC', keyState.amc, 'your theatre\'s showtimes'),
     ),
-    h('p', { class: 'muted small' }, 'Keys live in the ', h('code', {}, '.env'), ' file in the project root. Edit it, then hit Refresh or restart.'),
+    status?.host === 'railway'
+      ? h('p', { class: 'muted small' }, 'Keys are set as Railway variables. Change them there, then redeploy.')
+      : h('p', { class: 'muted small' }, 'Keys live in the ', h('code', {}, '.env'), ' file in the project root. Edit it, then hit Refresh or restart.'),
   ));
 
   // ---- Theatres: the primary plus any followed ones, in order.

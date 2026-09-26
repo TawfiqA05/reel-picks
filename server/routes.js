@@ -164,6 +164,8 @@ router.get('/status', (req, res) => {
     // Deployment diagnostics: is the DB on the volume, and what clock does
     // showtime math use? (Containers default to UTC unless TZ is set.)
     data: { dir: dataDir, dbBytes, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || process.env.TZ || null },
+    // Where keys are edited: Railway sets these variables in every deployment.
+    host: process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID ? 'railway' : 'local',
     // Automatic backups (lib/backup.js): the newest copy, and a failure since it.
     backup: backupStatus(dataDir),
     theatre: { ...theatres[0] },
