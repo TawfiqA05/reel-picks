@@ -505,6 +505,12 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .theatre-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px; background: var(--surface-2); border-radius: 8px; }
 .weight-label { font-weight: 600; }
 .geo-status:empty { display: none; }
+/* Phones: the look-up box gets its own line, the two buttons share the next. */
+@media (max-width: 599px) {
+  .geo-row { flex-wrap: wrap; }
+  .geo-row > .input { flex: 1 1 100%; }
+  .geo-row > .btn { flex: 1 1 0; justify-content: center; }
+}
 
 /* ---- guided ratings import (Rate tab) ---- */
 .import-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -525,9 +531,39 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .notify-static p { margin: 0; }
 .window-row { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .window-row:last-of-type { border-bottom: none; }
-.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.save-bar { position: sticky; bottom: 92px; padding-top: 8px; }
+.grid-2, .grid-3, .grid-4 { display: grid; gap: 10px; }
+/* Fields sit on the bottom of their row, so a label that wraps to two lines
+   never pushes its input below its neighbours'. */
+.settings-card :is(.grid-2, .grid-3, .grid-4) { align-items: end; }
+.grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 719px) { .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 599px) {
+  .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-3 > .span-all { grid-column: 1 / -1; }
+}
+/* A card's only field keeps a column's width instead of stretching across. */
+.settings-card > .field { max-width: 360px; }
+/* One spacing system per card: the card's 12px gap separates blocks; help
+   paragraphs carry no margins of their own, and a run of help text is 8px apart. */
+.settings-card p { margin: 0; }
+.settings-card > .muted.small + .muted.small { margin-top: -4px; }
+/* Save sits just above the tab bar (on desktop, the window's bottom edge) on a
+   solid strip that fades out upward, so scrolled content passes behind it
+   instead of showing through around the button. It stays in the flow, so at the
+   end of the page it rests below the last card. */
+.save-bar {
+  position: sticky; z-index: 5; bottom: calc(52px + env(safe-area-inset-bottom));
+  padding: 24px 0 16px;
+  background: linear-gradient(to bottom, transparent, var(--bg) 22px);
+  pointer-events: none;
+}
+.save-bar > * { pointer-events: auto; }
+@media (min-width: 900px) { .save-bar { bottom: 0; } }
+/* At the end of the page the bar rests exactly where it sticks: main's bottom
+   padding clears the tab bar, and the bar itself holds the space it covers. */
+@media (max-width: 899px) { .page.settings { margin-bottom: -52px; } }
 .log { background: var(--surface-2); border-radius: 8px; padding: 8px 12px; }
 .log summary { cursor: pointer; color: var(--muted); }
 
@@ -690,7 +726,13 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .ti-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .ti-name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .ti-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+.diag-scroll { position: relative; }
 .diag-wrap { overflow-x: auto; }
+.diag-scroll::after {
+  content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 40px; pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--surface)); opacity: 0; transition: opacity .2s;
+}
+.diag-scroll.more::after { opacity: 1; }
 .diag-table { width: 100%; border-collapse: collapse; font-size: var(--fs-xs); white-space: nowrap; }
 .diag-table th, .diag-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .diag-table th { color: var(--muted); font-weight: 600; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.04em; }
@@ -745,6 +787,18 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .badge.noscore { background: color-mix(in srgb, var(--muted) 16%, transparent); color: var(--muted); border: 1px dashed color-mix(in srgb, var(--muted) 50%, transparent); }
 .score-pill.unscored { border-style: dashed; opacity: 0.85; }
 .diag-table td.warn { color: var(--low); font-weight: 700; }
+/* Phones: each theatre becomes a small card of labelled values. */
+@media (max-width: 599px) {
+  .diag-scroll::after { display: none; }
+  .diag-table, .diag-table tbody { display: block; white-space: normal; }
+  .diag-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .diag-table tbody { display: flex; flex-direction: column; gap: 8px; }
+  .diag-table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 12px; align-items: end; padding: 12px; background: var(--surface-2); border-radius: var(--r-sm); }
+  .diag-table td { display: block; padding: 0; border: 0; text-align: left; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+  .diag-table td.num { text-align: left; }
+  .diag-table td:first-child { grid-column: 1 / -1; font-weight: 600; }
+  .diag-table td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 2px; color: var(--muted); font-size: var(--fs-xs); font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
 .unmatched-row.review { border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: color-mix(in srgb, var(--accent) 6%, var(--surface-2)); }
 .review-why { font-size: var(--fs-xs); color: var(--accent); }
 .confirm { display: flex; flex-direction: column; gap: 10px; }

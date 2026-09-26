@@ -7,6 +7,9 @@ const GENRES = ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Document
   'Science Fiction', 'Thriller', 'War', 'Western'];
 const MPAA = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'];
 
+// On phones, a field that takes a whole row of its grid (see .span-all).
+const spanAll = (field) => { field.classList.add('span-all'); return field; };
+
 function card(title, ...children) {
   return h('section', { class: 'settings-card' }, h('h3', {}, title), ...children);
 }
@@ -510,10 +513,10 @@ export async function render(root, params, ctx) {
   if (pushCfg?.enabled && !status?.guest) page.appendChild(notificationsCard(pushCfg.publicKey));
 
   page.appendChild(card('Home base',
-    h('div', { class: 'row-gap' }, placeIn, lookupBtn, locBtn),
+    h('div', { class: 'row-gap geo-row' }, placeIn, lookupBtn, locBtn),
     geoStatus,
     geoResults,
-    h('div', { class: 'grid-3' }, labeled('Label', homeLabelIn), labeled('Latitude', homeLat), labeled('Longitude', homeLng)),
+    h('div', { class: 'grid-3' }, spanAll(labeled('Label', homeLabelIn)), labeled('Latitude', homeLat), labeled('Longitude', homeLng)),
     h('p', { class: 'muted small' },
       'Drive times next to each theatre are measured from here, and re-measured within seconds of saving a change.'),
     h('p', { class: 'muted small' },
@@ -607,7 +610,7 @@ export async function render(root, params, ctx) {
   const ticket = h('input', { class: 'input num', type: 'number', step: '0.01', value: String(s.avgTicketPrice ?? 14.5) });
   const previews = h('input', { class: 'input num', type: 'number', step: '1', value: String(s.previewsMinutes ?? 20) });
   page.appendChild(card('A-List & pricing',
-    h('div', { class: 'grid-3' },
+    h('div', { class: 'grid-4' },
       labeled('Reservations / week', perWeek),
       labeled('Monthly fee ($)', fee),
       labeled('Avg ticket ($)', ticket),
@@ -634,7 +637,7 @@ export async function render(root, params, ctx) {
   // ---- Picks sections
   const gmScore = h('input', { class: 'input num', type: 'number', min: '0', max: '100', value: String(s.goodMatchMinScore ?? 75) });
   if (isOwner) page.appendChild(card('Also worth seeing',
-    h('div', { class: 'grid-3' }, labeled('Minimum score', gmScore)),
+    labeled('Minimum score', gmScore),
     h('div', { class: 'muted small' },
       'Score a movie needs to appear in the "Also worth seeing" section under your weekly 4. '
       + 'Everything playing stays listed below it regardless of this cutoff.'),
@@ -648,7 +651,7 @@ export async function render(root, params, ctx) {
     h('div', { class: 'grid-3' },
       labeled('Min score', lcScore),
       labeled('Days before horizon', lcGap),
-      labeled('Max entries', lcMax),
+      spanAll(labeled('Max entries', lcMax)),
     ),
     h('div', { class: 'muted small' },
       'Only flags a movie whose last showtime falls this many days before the end of the published schedule, '
@@ -662,28 +665,35 @@ export async function render(root, params, ctx) {
     const amcByTheatre = new Map((status?.lastRefreshLog?.sources?.amc?.theatres || []).map((t) => [t.id, t]));
     const fmtDate = (d) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : '–');
     const th = (t, num) => h('th', { class: num ? 'num' : '' }, t);
-    const td = (t, num) => h('td', { class: num ? 'num' : '' }, t);
+    const td = (t, num, label) => h('td', { class: num ? 'num' : '', 'data-label': label }, t);
     const rows = horizons.map((hz) => {
       const src = amcByTheatre.get(hz.theatre?.id) || {};
       return h('tr', {},
         td(h('span', {}, hz.theatre?.short || hz.theatre?.name || '–', hz.theatre?.isPrimary ? h('span', { class: 'muted small' }, ' · primary') : null)),
-        td(fmtDate(hz.publishedThrough)),
-        td(String(hz.publishedDays ?? '–'), true),
-        td(`${hz.typicalDailyLineup ?? '–'} / ${hz.typicalDailyShowtimes ?? '–'}`, true),
-        td(`${hz.breadthThreshold ?? '–'} / ${hz.showtimeThreshold ?? '–'}`, true),
-        td(fmtDate(hz.furthestShowtime)),
-        td(String(hz.lineup ?? '–'), true),
-        td(String(src.showtimes ?? '–'), true),
-        td(String(src.calls ?? '–'), true),
-        h('td', { class: `num${src.staleDays ? ' warn' : ''}`, title: src.staleError || '' }, src.staleDays ? [`${src.staleDays} `, icon('alert', { size: 13, label: 'stale' })] : '0'),
+        td(fmtDate(hz.publishedThrough), false, 'Through'),
+        td(String(hz.publishedDays ?? '–'), true, 'Days'),
+        td(`${hz.typicalDailyLineup ?? '–'} / ${hz.typicalDailyShowtimes ?? '–'}`, true, 'Typical / day'),
+        td(`${hz.breadthThreshold ?? '–'} / ${hz.showtimeThreshold ?? '–'}`, true, 'Threshold'),
+        td(fmtDate(hz.furthestShowtime), false, 'Furthest'),
+        td(String(hz.lineup ?? '–'), true, 'Movies'),
+        td(String(src.showtimes ?? '–'), true, 'Showtimes'),
+        td(String(src.calls ?? '–'), true, 'AMC calls'),
+        h('td', { class: `num${src.staleDays ? ' warn' : ''}`, title: src.staleError || '', 'data-label': 'Stale days' }, src.staleDays ? [`${src.staleDays} `, icon('alert', { size: 13, label: 'stale' })] : '0'),
       );
     });
+    // Wide screens scroll the table sideways inside the card, with a fade on
+    // the right edge while there's more to see; phones stack each theatre.
+    const diagWrap = h('div', { class: 'diag-wrap' }, h('table', { class: 'diag-table' },
+      h('thead', {}, h('tr', {}, th('Theatre'), th('Published through'), th('Days', true), th('Typical movies / showtimes per day', true),
+        th('Threshold (movies / showtimes)', true), th('Furthest showtime'), th('Movies', true), th('Showtimes', true), th('AMC calls', true), th('Stale days', true))),
+      h('tbody', {}, ...rows),
+    ));
+    const diagScroll = h('div', { class: 'diag-scroll' }, diagWrap);
+    const paintFade = () => diagScroll.classList.toggle('more', diagWrap.scrollLeft + diagWrap.clientWidth < diagWrap.scrollWidth - 2);
+    diagWrap.addEventListener('scroll', paintFade, { passive: true });
+    new ResizeObserver(paintFade).observe(diagWrap);
     page.appendChild(card('Schedule diagnostics',
-      h('div', { class: 'diag-wrap' }, h('table', { class: 'diag-table' },
-        h('thead', {}, h('tr', {}, th('Theatre'), th('Published through'), th('Days', true), th('Typical movies / showtimes per day', true),
-          th('Threshold (movies / showtimes)', true), th('Furthest showtime'), th('Movies', true), th('Showtimes', true), th('AMC calls', true), th('Stale days', true))),
-        h('tbody', {}, ...rows),
-      )),
+      diagScroll,
       h('p', { class: 'muted small' },
         '"Published through" is where each theatre\'s schedule stops being densely posted (the horizon). '
         + 'A movie\'s runway badge only commits to an end date when its last showtime falls at least the "Days before horizon" setting short of it; '
