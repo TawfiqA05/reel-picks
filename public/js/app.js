@@ -2,6 +2,7 @@
 import { api } from './api.js';
 import { h, clear, toast, spinner, emptyState, icon } from './ui.js';
 import { watchForUpdates } from './update.js';
+import { openSearch } from './search.js';
 import * as home from './views/home.js';
 import * as detail from './views/detail.js';
 import * as coming from './views/coming.js';
@@ -77,6 +78,7 @@ function chromeEls() {
     userChip: document.querySelector('#user-chip'),
     settingsBtn: document.querySelector('#settings-btn'),
     refreshBtn: document.querySelector('#refresh-btn'),
+    searchBtn: document.querySelector('#search-btn'),
     nav: document.querySelector('#bottom-nav'),
   };
 }
@@ -93,6 +95,9 @@ function renderChrome() {
     els.userChip.hidden = !name;
     els.userChip.title = name ? `Signed in as ${name}` : '';
   }
+  // Search is the owner's and friends'; the guest link has none (and the
+  // server refuses it). Hidden until status says who this is.
+  if (els.searchBtn) els.searchBtn.hidden = !status || guest;
   // A friend can't force a refresh; the server would refuse it anyway.
   document.querySelector('.shell')?.classList.toggle('friend', !guest && status?.user?.isOwner === false);
 
@@ -226,6 +231,7 @@ function buildShell() {
         ),
         h('div', { class: 'header-actions' },
           h('a', { id: 'theatre-name', class: 'theatre-name', href: '#/settings' }, ''),
+          h('button', { id: 'search-btn', class: 'icon-btn round', type: 'button', hidden: true, 'aria-label': 'Search movies', title: 'Search (/)', 'aria-haspopup': 'dialog', onClick: () => openSearch() }, icon('search', { size: 20 })),
           h('button', { id: 'refresh-btn', class: 'icon-btn round', type: 'button', 'aria-label': 'Refresh showtimes and scores', title: 'Refresh', onClick: doRefresh }, icon('refresh', { size: 20 })),
           h('span', { id: 'user-chip', class: 't-chip user-chip', hidden: true }),
           h('a', { id: 'settings-btn', class: 'icon-btn round', href: '#/settings', 'aria-label': 'Settings', title: 'Settings' },
@@ -249,6 +255,14 @@ async function boot() {
   await refreshStatus();
   if (!location.hash) location.hash = '#/home';
   window.addEventListener('hashchange', route);
+  // "/" opens search from anywhere that isn't a text field.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target.closest?.('input, textarea, select, [contenteditable="true"], .modal-overlay')) return;
+    if (!status || status.guest) return;
+    e.preventDefault();
+    openSearch();
+  });
   route();
 
   // Service worker (PWA install/offline) and getting new deploys onto this

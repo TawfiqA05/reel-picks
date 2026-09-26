@@ -31,6 +31,14 @@ async function send(method, path, body) {
   return data;
 }
 
+// A GET that a newer one can cancel (search as you type).
+async function fetchJson(path, { signal } = {}) {
+  const res = await fetch('/api' + path, { signal });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || `Request failed (${res.status})`);
+  return data;
+}
+
 export const api = {
   status: () => req('GET', '/status'),
   refresh: () => req('POST', '/refresh'),
@@ -91,6 +99,13 @@ export const api = {
   pushCheck: (endpoint) => req('POST', '/push/check', { endpoint }),
   pushSubscribe: (subscription) => req('POST', '/push/subscribe', { subscription }),
   pushUnsubscribe: (endpoint) => req('POST', '/push/unsubscribe', { endpoint }),
+  search: (q, opts) => fetchJson('/search?q=' + encodeURIComponent(q), opts),
+  searchRecents: () => req('GET', '/search/recents'),
+  addRecentQuery: (query) => req('POST', '/search/recents', { query }),
+  addRecentMovie: (movie) => req('POST', '/search/recents', { movie }),
+  removeRecent: (kind, key) => req('DELETE', `/search/recents?kind=${encodeURIComponent(kind)}&key=${encodeURIComponent(key)}`),
+  clearRecents: () => req('POST', '/search/recents/clear'),
+  restoreRecents: (cleared) => req('POST', '/search/recents/restore', cleared),
   exportUrl: () => '/api/export',
   stateUrl: () => '/api/state',
   backupUrl: () => '/api/backup/latest',

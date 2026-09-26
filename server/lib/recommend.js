@@ -407,7 +407,11 @@ export const STATS_GROUP_KINDS = Object.keys(GROUP_KEYS);
 export function getStatsGroup(kind, name) {
   const films = statsRows()
     .filter((r) => keysOf(kind, r).includes(name))
-    .map((r) => ({ tmdb_id: r.tmdb_id, title: r.title || `Movie ${r.tmdb_id}`, year: r.year ?? null, poster: r.poster || null, rating: Number(r.rating) || 0 }))
+    .map((r) => ({
+      tmdb_id: r.tmdb_id, title: r.title || `Movie ${r.tmdb_id}`, year: r.year ?? null, poster: r.poster || null, rating: Number(r.rating) || 0,
+      // For the sheet's filter box, which matches people as well as titles.
+      director: r.director || null, cast: parseList(r.cast),
+    }))
     .sort((a, b) => b.rating - a.rating || a.title.localeCompare(b.title));
   const sum = films.reduce((s, f) => s + f.rating, 0);
   return { kind, name, n: films.length, avg: films.length ? average(sum, films.length) : 0, films };

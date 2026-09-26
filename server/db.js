@@ -234,6 +234,23 @@ CREATE TABLE IF NOT EXISTS push_subs (
 );
 CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subs(user_id);
 
+-- The header search's recents, per person: the last queries (kind 'query',
+-- key = the normalized query, so a repeat moves up instead of doubling) and
+-- the last films opened from search (kind 'movie', key = TMDB id). seq orders
+-- them, newest highest. Private: only ever read for the caller.
+CREATE TABLE IF NOT EXISTS search_recents (
+  user_id INTEGER NOT NULL,
+  kind    TEXT NOT NULL,
+  key     TEXT NOT NULL,
+  query   TEXT,
+  tmdb_id INTEGER,
+  title   TEXT,
+  year    INTEGER,
+  poster  TEXT,
+  seq     INTEGER NOT NULL,
+  PRIMARY KEY (user_id, kind, key)
+);
+
 -- The weekly push, claimed per person per A-List week before it is sent, so
 -- a restart or redeploy never sends it twice.
 CREATE TABLE IF NOT EXISTS push_sent (

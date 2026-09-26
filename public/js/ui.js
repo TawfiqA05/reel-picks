@@ -182,8 +182,9 @@ export function toast(message, type = '', { action = null, duration = action ? 6
 // stays inside it, and focus goes back to whatever opened it on close.
 let modalSeq = 0;
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])';
-// `onClose` runs once, after the dialog starts closing.
-export function openModal(contentNode, { title, onClose } = {}) {
+// `onClose` runs once, after the dialog starts closing. `cls` adds a class to
+// the overlay (the search sheet uses it to sit at the top on phones).
+export function openModal(contentNode, { title, onClose, cls = '' } = {}) {
   const opener = document.activeElement;
   const titleId = `modal-title-${++modalSeq}`;
   let closed = false;
@@ -213,7 +214,7 @@ export function openModal(contentNode, { title, onClose } = {}) {
     ),
     h('div', { class: 'modal-body' }, contentNode),
   );
-  const overlay = h('div', { class: 'modal-overlay', onClick: (e) => { if (e.target === overlay) close(); } }, card);
+  const overlay = h('div', { class: `modal-overlay${cls ? ` ${cls}` : ''}`, onClick: (e) => { if (e.target === overlay) close(); } }, card);
   document.body.appendChild(overlay);
   document.addEventListener('keydown', onKey);
   requestAnimationFrame(() => overlay.classList.add('show'));
@@ -221,7 +222,7 @@ export function openModal(contentNode, { title, onClose } = {}) {
   // that focuses something specific right after opening still wins.
   const firstField = card.querySelector('.modal-body input, .modal-body select, .modal-body textarea');
   (firstField || card).focus();
-  return { close, card };
+  return { close, card, overlay };
 }
 
 export function labeled(label, node) {

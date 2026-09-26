@@ -84,6 +84,8 @@ function fromMovie(m, today) {
     year: m.year ?? year(date),
     poster: m.poster || null,
     genres: m.genres || [],
+    director: m.director || null, // for the sheet's filter box
+    cast: Array.isArray(m.cast) ? m.cast : [],
     tmdb_rating: m.tmdb_rating ?? null,
     tmdb_votes: m.tmdb_votes ?? null,
     release_date: date,

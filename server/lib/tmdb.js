@@ -1,6 +1,7 @@
 // TMDB client — posters, metadata, credits, trailers, now-playing/upcoming.
 import { config } from '../env.js';
 import { cachedJson, fetchJson } from './cache.js';
+import { run } from '../db.js';
 
 const BASE = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p';
@@ -102,6 +103,25 @@ export async function personCredits(personId, { gate = null } = {}) {
   return req(`person:${personId}:movie_credits`, 7 * DAY, `/person/${personId}/movie_credits`, {
     language: 'en-US',
   }, { gate });
+}
+
+// Typing makes a cache row per spelling ("inte", "inter", …), so expired
+// ones are swept out, at most once an hour, instead of piling up.
+let sweptAt = 0;
+function sweepSearches() {
+  if (Date.now() - sweptAt < 3600e3) return;
+  sweptAt = Date.now();
+  run("DELETE FROM cache WHERE key LIKE 'tmdb:find:%' AND fetched_at < ?", new Date(Date.now() - DAY * 1000).toISOString());
+}
+
+// The header search. Cached a day per spelling, and `gate` (the shared TMDB
+// throttle) is awaited before any live call, so typing can't outrun the budget
+// the backfill and Stats share.
+export async function searchTitles(query, { gate = null } = {}) {
+  sweepSearches();
+  const data = await req(`find:${query.toLowerCase()}`, DAY, '/search/movie',
+    { query, include_adult: 'false', language: 'en-US' }, { gate });
+  return (data?.results || []).map((r) => ({ ...lightMovie(r), popularity: r.popularity ?? 0 }));
 }
 
 // Live (uncached) search for the in-app rating screen so results feel instant/fresh.

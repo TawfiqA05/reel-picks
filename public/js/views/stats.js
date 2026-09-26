@@ -2,6 +2,7 @@
 import { api } from '../api.js';
 import { h, clear, spinner, money, pct, makeStars, toast, sectionTitle, openModal, icon } from '../ui.js';
 import { starRater, watchlistButton, opensBadge } from './components.js';
+import { filterBox } from '../filter.js';
 
 // Re-draws the page in place after a sheet changed a rating: no spinner, same
 // scroll position, same "Show all" lists open, focus back on the row.
@@ -167,13 +168,32 @@ function openGroup(kind, it, ctx) {
   const rated = h('div', { class: 'sheet-part sheet-rated' }, spinner('Loading films…'));
   const more = h('section', { class: 'sheet-part sheet-more', 'aria-labelledby': `sheet-more-${kind}` });
   let changed = false;
-  const modal = openModal(h('div', { class: 'sheet' }, sub, rated, more), {
+  // More than FILTER_AT films in the sheet and a filter box goes on top. It
+  // matches titles, and directors and actors where the film has them.
+  const filter = filterBox({ label: `Filter films: ${it.name}`, placeholder: 'Filter by title, director or actor', onChange: (r) => onFilter(r) });
+  filter.el.hidden = true;
+  const modal = openModal(h('div', { class: 'sheet' }, sub, filter.el, rated, more), {
     title: it.name,
     onClose: () => { if (changed) repaint?.(kind, it.name).catch(() => ctx?.rerender?.()); },
   });
   const close = () => modal.close();
 
   let ratedIds = new Set();
+  let ratedRows = [];
+  const refreshFilter = () => {
+    const moreRows = [...more.querySelectorAll('.more-film')].map((el) => ({ el, fields: el._fields }));
+    const all = [...ratedRows, ...moreRows];
+    if (all.length > FILTER_AT) filter.el.hidden = false;
+    filter.set(all);
+  };
+  const onFilter = ({ query }) => {
+    // A section with nothing left says nothing; the filter's own line covers "none at all".
+    const anyIn = (el) => [...el.querySelectorAll('.sheet-film')].some((r) => !r.hidden);
+    rated.hidden = Boolean(query) && !anyIn(rated);
+    more.hidden = Boolean(query) && !anyIn(more);
+    // A match in the folded "smaller films" opens it.
+    if (query && smallerList?.hidden && [...smallerList.children].some((r) => !r.hidden)) { smallerList.hidden = false; paintSmaller(); }
+  };
   const paintRated = (g) => {
     ratedIds = new Set(g.films.map((f) => f.tmdb_id));
     sub.textContent = filmsLabel(g.n, g.avg);
@@ -182,17 +202,20 @@ function openGroup(kind, it, ctx) {
     if (!g.films.length) { rated.appendChild(h('p', { class: 'muted' }, 'No films here any more.')); return; }
     const list = h('ul', { class: 'sheet-films', 'aria-label': `Films you rated: ${it.name}` });
     const frag = document.createDocumentFragment();
+    ratedRows = [];
     for (const f of g.films) {
-      frag.appendChild(h('li', { class: 'sheet-film' },
+      const li = frag.appendChild(h('li', { class: 'sheet-film' },
         h('a', { href: `#/movie/${f.tmdb_id}`, onClick: close },
           thumbOf(f),
           h('span', { class: 'sheet-title' }, f.title, f.year ? h('span', { class: 'sheet-year' }, ` ${f.year}`) : null),
           h('span', { class: 'sheet-rating', 'aria-label': `your rating ${f.rating} stars` },
             makeStars({ value: f.rating, size: 13 }), h('span', { 'aria-hidden': 'true' }, `${f.rating}★`)),
         )));
+      ratedRows.push({ el: li, fields: [f.title, f.director, ...(f.cast || [])] });
     }
     list.appendChild(frag);
     rated.appendChild(list);
+    refreshFilter();
   };
   const loadRated = () => api.statsGroup(kind, it.name).then(paintRated, (e) => {
     clear(rated);
@@ -221,6 +244,7 @@ function openGroup(kind, it, ctx) {
 
   const moreRow = (f) => {
     const row = h('li', { class: 'sheet-film more-film' });
+    row._fields = [f.title, f.director, ...(f.cast || [])];
     // The server leaves tmdb_rating null when it rests on too few votes or the film isn't out in the US yet.
     const tmdbLine = f.tmdb_rating > 0
       ? h('span', { class: 'more-tmdb', 'aria-label': `TMDB ${f.tmdb_rating.toFixed(1)} out of 10` }, `TMDB ${f.tmdb_rating.toFixed(1)}`)
@@ -275,6 +299,7 @@ function openGroup(kind, it, ctx) {
     }
     if (!m.films.length && !m.smaller.length) status.textContent = m.unknownPerson ? "Couldn't find this person on TMDB." : emptyLine;
     else status.hidden = true;
+    refreshFilter();
   }, (e) => {
     status.textContent = e.message;
     status.classList.add('sheet-error');
@@ -285,6 +310,7 @@ function openGroup(kind, it, ctx) {
 // to expand to the rest when the server sent more (for people, that's only
 // those with 2+ films).
 const TOP = 10;
+const FILTER_AT = 12; // a drill-down sheet with more films than this gets a filter box
 const expanded = new Set(); // lists opened with "Show all", kept across repaints
 function topList(title, sub, items, key, ctx) {
   const id = `top-${key}`;
@@ -294,8 +320,15 @@ function topList(title, sub, items, key, ctx) {
   if (!extra.length) return wrap;
   let open = expanded.has(key);
   const btn = h('button', { class: 'btn ghost small show-all', type: 'button', 'aria-controls': id });
+  // With every row showing, a filter box sits between the heading and the list.
+  const filter = filterBox({ label: `Filter ${title.toLowerCase()}`, placeholder: `Filter ${items.length} ${title.replace(/^Top /, '')}` });
+  const rows = [...list.children].map((li, i) => ({ el: li, fields: [items[i].name] }));
+  wrap.insertBefore(filter.el, list);
   const paint = () => {
+    filter.reset();
+    filter.el.hidden = !open;
     for (const row of extra) row.hidden = !open;
+    if (open) filter.set(rows);
     btn.textContent = open ? 'Show fewer' : `Show all (${items.length})`;
     btn.setAttribute('aria-expanded', String(open));
   };

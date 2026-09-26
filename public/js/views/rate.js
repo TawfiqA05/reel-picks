@@ -87,7 +87,7 @@ export async function render(root, params, ctx) {
       // watched.csv still imports.
       if (/\.zip$/i.test(f.name)) {
         showResult('err',
-          h('strong', {}, `"${f.name}" is the export ZIP itself.`),
+          h('strong', {}, `"${f.name}" is the whole ZIP file.`),
           h('div', {}, 'Unzip it first, then upload the ratings.csv file from inside it. Nothing was imported.'));
         return;
       }
@@ -103,7 +103,7 @@ export async function render(root, params, ctx) {
       }
       if (r.emptyExport) {
         // Valid export, zero ratings — the misleading "could not detect" case, named.
-        showResult('warn', h('strong', {}, 'This is a valid export, but it has no ratings in it.'), h('div', {}, r.note));
+        showResult('warn', h('strong', {}, 'This is a valid ratings file, but it has no ratings in it.'), h('div', {}, r.note));
         return;
       }
       await pollAndSummarize(r);
@@ -229,7 +229,7 @@ export async function render(root, params, ctx) {
       h('ol', { class: 'import-steps' }, ...g.steps.map((s) => h('li', {}, ...s))),
       h('div', { class: 'import-warn' }, icon('alert', { size: 16 }), ' ', ...g.warn),
       h('div', { class: 'row-gap wrap' },
-        h('button', { class: 'btn', onClick: () => fileInput.click() }, '⬆ Upload ratings.csv'),
+        h('button', { class: 'btn', onClick: () => fileInput.click() }, icon('upload', { size: 16 }), 'Upload ratings.csv'),
         h('span', { class: 'muted small' }, 'Reel Picks backup CSVs restore here too.'),
       ),
     );
@@ -248,17 +248,17 @@ export async function render(root, params, ctx) {
   page.appendChild(input);
   page.appendChild(results);
 
-  page.appendChild(sectionTitle('Bring your ratings from Letterboxd or IMDb',
+  page.appendChild(sectionTitle('Bring your ratings',
     'A one-time file upload. Nothing connects to your account.'));
   page.appendChild(h('div', { class: 'import-split' },
     h('div', { class: 'import-box' },
       h('h4', {}, 'Rate right here'),
-      h('div', { class: 'muted small' }, 'No export needed. Search above, or run a quick tap-through of 20 popular films.'),
+      h('div', { class: 'muted small' }, 'Nothing to download. Search above, or run a quick tap-through of 20 popular films.'),
       h('div', {}, h('a', { class: 'btn ghost', href: '#/onboarding' }, icon('zap', { size: 16 }), 'Quick rate 20')),
     ),
     h('div', { class: 'import-box' },
-      h('h4', {}, '⬆ Upload an export'),
-      h('div', { class: 'muted small' }, 'Already rated films on Letterboxd or IMDb? Bring them over as a CSV.'),
+      h('h4', { class: 'import-head' }, icon('upload', { size: 18 }), 'Import from Letterboxd or IMDb'),
+      h('div', { class: 'muted small' }, 'Already rated films there? Download your ratings file from the site, then upload it here. The steps show where to find it.'),
       h('div', {}, toggleGuide),
     ),
   ));

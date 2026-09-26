@@ -2,6 +2,7 @@
 import { api } from '../api.js';
 import { h, clear, spinner, emptyState, sectionTitle, icon } from '../ui.js';
 import { posterTile, watchlistButton, dayLabel } from './components.js';
+import { filterBox } from '../filter.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -31,6 +32,7 @@ export async function render(root, params, ctx) {
   }
 
   const grid = h('div', { class: 'tile-grid' });
+  const rows = [];
   for (const mv of movies) {
     const tile = posterTile(mv, {
       caption: mv.title,
@@ -38,6 +40,13 @@ export async function render(root, params, ctx) {
         watchlistButton({ tmdb_id: mv.tmdb_id, title: mv.title, watchlisted: true }, ctx, { compact: true, onToggle: () => tile.remove() })),
     });
     grid.appendChild(tile);
+    rows.push({ el: tile, fields: [mv.title] });
+  }
+  // A long watchlist gets a filter box.
+  if (movies.length > 8) {
+    const filter = filterBox({ label: 'Filter your watchlist', placeholder: `Filter ${movies.length} films` });
+    filter.set(rows);
+    page.appendChild(filter.el);
   }
   page.appendChild(grid);
   root.appendChild(page);

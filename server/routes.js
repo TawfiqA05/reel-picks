@@ -35,6 +35,7 @@ import { currentUserId, currentUser } from './lib/user.js';
 import { startCreditsBackfill, backfillStatus, backfillState, tmdbThrottle } from './lib/backfill.js';
 import { backupStatus, latestBackup, backupsDir } from './lib/backup.js';
 import { overview as togetherOverview, partnerFor, filmsFor, NOT_FOUND } from './lib/together.js';
+import { search, listRecents, addRecent, removeRecent, clearRecents, restoreRecents } from './lib/search.js';
 import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, userName } from './lib/accounts.js';
 import {
   pushEnabled, publicKey, saveSubscription, removeSubscription, hasSubscription, sendWeekly,
@@ -541,6 +542,17 @@ router.get('/ratings/search', h(async (req, res) => {
   const mine = new Map(all('SELECT tmdb_id, rating FROM ratings WHERE user_id = ?', currentUserId()).map((r) => [r.tmdb_id, r.rating]));
   res.json({ results: results.map((r) => ({ ...r, myRating: mine.get(r.tmdb_id) ?? null })) });
 }));
+
+// ---- header search -----------------------------------------------------
+// Owner and friends; none of these is on the guest allowlist, so the guest
+// link gets a 403 before a handler runs. Recents are the caller's own.
+
+router.get('/search', h(async (req, res) => res.json(await search(req.query.q))));
+router.get('/search/recents', (req, res) => res.json(listRecents()));
+router.post('/search/recents', (req, res) => res.json(addRecent(req.body)));
+router.delete('/search/recents', (req, res) => res.json(removeRecent(req.query.kind, req.query.key)));
+router.post('/search/recents/clear', (req, res) => res.json(clearRecents()));
+router.post('/search/recents/restore', (req, res) => res.json(restoreRecents(req.body)));
 
 // ---- onboarding --------------------------------------------------------
 

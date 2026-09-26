@@ -2,6 +2,7 @@
 import { api } from '../api.js';
 import { h, clear, spinner, emptyState, sectionTitle, icon, toast, openModal } from '../ui.js';
 import { weeklyCard, heroPick, movieRow, lastChanceCard, dayPicker } from './components.js';
+import { filterBox } from '../filter.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -178,10 +179,12 @@ function buildPage(data, status, ctx, state, actions) {
 
   // Full lineup — nothing disappears, whatever the cutoff is. Collapsible, and
   // the choice is remembered server-side (guests just toggle locally).
-  const listWrap = h('div', { class: 'list' });
+  const listWrap = h('div', { class: 'list playing-list' });
+  const listFilter = filterBox({ label: 'Filter everything playing', placeholder: `Filter ${data.list.length} movies` });
   const collapseBtn = h('button', { class: 'chip-btn section-toggle', type: 'button' });
   const paintCollapse = () => {
     listWrap.hidden = state.collapsed;
+    listFilter.el.hidden = state.collapsed;
     collapseBtn.textContent = state.collapsed ? `Show all ${data.list.length}` : 'Hide';
     collapseBtn.setAttribute('aria-expanded', String(!state.collapsed));
   };
@@ -203,6 +206,7 @@ function buildPage(data, status, ctx, state, actions) {
       `${unmatched} AMC title${unmatched > 1 ? 's' : ''} ${unmatched > 1 ? 'are' : 'is'} missing from this list. ${unmatched > 1 ? 'They' : 'It'} couldn't be matched to TMDB. `,
       h('a', { class: 'note-link', href: '#/settings' }, 'Match in Settings')));
   }
+  page.appendChild(listFilter.el);
   page.appendChild(listWrap);
 
   // Re-render just the rows when the selected day changes.
@@ -225,7 +229,9 @@ function buildPage(data, status, ctx, state, actions) {
     clear(nearbyList);
     nearby.forEach((e) => nearbyList.appendChild(movieRow(e, ctx, { day, multi, nearby: true, onHide })));
     clear(listWrap);
-    data.list.forEach((e) => listWrap.appendChild(movieRow(e, ctx, { day, compact: true, multi, onUnhide })));
+    const rows = data.list.map((e) => ({ el: movieRow(e, ctx, { day, compact: true, multi, onUnhide }), fields: [e.title] }));
+    rows.forEach((r) => listWrap.appendChild(r.el));
+    listFilter.set(rows); // a new day redraws the rows; whatever is typed still applies
   }
   paint();
   paintCollapse();

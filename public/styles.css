@@ -959,3 +959,89 @@ a.tg-time:hover { border-color: color-mix(in srgb, var(--accent) 50%, transparen
 @media (min-width: 900px) {
   .tg-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 }
+
+/* ---- hidden means hidden, whatever display a class gives ---- */
+[hidden] { display: none !important; }
+
+/* ---- filter boxes (Watchlist, Everything playing, Stats) ---- */
+.filter { display: flex; flex-direction: column; gap: 6px; margin: 2px 0 10px; }
+.filter-field { position: relative; display: flex; align-items: center; }
+.filter-icon { position: absolute; left: 12px; color: var(--muted); pointer-events: none; }
+.input.filter-input { padding-left: 38px; padding-right: 44px; font-size: 16px; /* 16px keeps iOS from zooming in */ }
+.filter-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.filter-clear {
+  position: absolute; right: 2px; width: 40px; height: 40px; display: grid; place-items: center;
+  background: none; border: none; border-radius: 50%; color: var(--muted); cursor: pointer;
+}
+.filter-clear:hover { color: var(--text); background: var(--surface-2); }
+.filter-none { margin: 2px 2px 0; color: var(--muted); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.stat-list .filter { margin: 0 0 10px; }
+.sheet > .filter { margin: 0 0 12px; }
+
+/* ---- header search sheet ---- */
+.search-overlay { place-items: start center; padding-top: 10vh; }
+.search-card { width: min(640px, 100%); max-height: 76vh; }
+.search-card .modal-body { display: flex; flex-direction: column; min-height: 0; flex: 1; padding: 12px 16px 16px; overflow: hidden; }
+.search-sheet { display: flex; flex-direction: column; min-height: 0; flex: 1; gap: 8px; }
+.input.search-input { padding-left: 44px; padding-right: 48px; font-size: 17px; }
+.search-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.search-field .filter-icon { left: 14px; }
+.search-status { margin: 0 2px; min-height: 1.2em; color: var(--muted); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.search-status:empty { display: none; }
+.search-body { overflow-y: auto; overscroll-behavior: contain; min-height: 0; flex: 1; margin: 0 -8px; padding: 0 8px 4px; display: flex; flex-direction: column; gap: 2px; }
+.sr-row, .recent-main {
+  display: flex; align-items: center; gap: 12px; min-width: 0; flex: none; padding: 6px 8px; border-radius: var(--r-sm);
+  color: var(--text); text-align: left; background: none; border: none; font: inherit; cursor: pointer; min-height: 48px;
+}
+.sr-row:hover, .recent-main:hover, .sr-row.active, .recent-main.active { background: var(--surface-2); }
+.sr-row.active, .recent-main.active { outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: -2px; }
+.sr-thumb { flex: 0 0 40px; width: 40px; height: 60px; border-radius: 6px; object-fit: cover; background: var(--surface-2); }
+.sr-noposter { display: grid; place-items: center; color: var(--muted); }
+.sr-text { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.sr-title { font-weight: 600; overflow-wrap: anywhere; }
+.sr-year { color: var(--muted); font-weight: 400; }
+.sr-badges { display: flex; flex-wrap: wrap; gap: 5px; }
+.sr-badges:empty { display: none; }
+.badge.sr-badge { text-transform: none; letter-spacing: 0; font-weight: 600; }
+.badge.sr-badge.playing { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
+.badge.sr-badge.rated { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.recents-head { display: flex; align-items: center; justify-content: space-between; margin: 2px 2px 0; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+.recents-clear { min-height: 40px; padding: 4px 8px; }
+.recents-label { margin: 8px 2px 2px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.recent-row { display: flex; align-items: center; gap: 4px; }
+.recent-row > .recent-main { flex: 1; }
+.recent-main svg { flex: 0 0 auto; color: var(--muted); }
+.recent-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-x {
+  flex: 0 0 44px; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%;
+  background: none; border: none; color: var(--muted); cursor: pointer;
+}
+.recent-x:hover { color: var(--text); background: var(--surface-2); }
+.search-empty { margin: 12px 2px; color: var(--muted); font-size: var(--fs-sm); }
+/* Phones: the sheet takes the screen above the keyboard. --vvh / --vvt are
+   the visual viewport's height and offset, kept current by js/search.js, so
+   the results end where the keyboard begins instead of behind it. */
+@media (max-width: 640px) {
+  .search-overlay { padding: 0; place-items: start stretch; align-content: start; }
+  .search-card {
+    width: 100%; max-height: none; border-radius: 0; border-width: 0 0 1px;
+    height: var(--vvh, 100dvh); margin-top: var(--vvt, 0px);
+  }
+  .search-card .modal-head { padding-top: max(14px, env(safe-area-inset-top)); }
+}
+
+/* ---- Rate: import heading with its icon ---- */
+.import-head { display: flex; align-items: center; gap: 8px; }
+.import-head svg { color: var(--accent); flex: 0 0 auto; }
+
+/* Wide header: the tabs sit in the flow, centred in the space between the
+   brand and the buttons, so they can never run under the theatre name (they
+   used to be absolutely centred and overlapped it below about 1100px). They
+   tighten below 1180px, and under 1000px the theatre name steps aside. */
+@media (min-width: 900px) {
+  .seg { position: static; transform: none; margin: 0 auto; flex: 0 0 auto; }
+  .header-actions { margin-left: 0; min-width: 0; }
+  .theatre-name { flex: 0 1 auto; }
+}
+@media (min-width: 900px) and (max-width: 1179px) { .seg-item { padding: 0 var(--sp-3); } }
+@media (min-width: 900px) and (max-width: 999px) { .theatre-name { display: none; } }
