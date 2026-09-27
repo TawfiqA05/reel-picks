@@ -26,7 +26,7 @@ const CORE = [
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE)
-      .then((c) => c.addAll(CORE.map((u) => new Request(u, { cache: 'reload' }))))
+      .then((c) => c.addAll(CORE.map((u) => new Request(u, { cache: 'no-cache' }))))
       .then(() => self.skipWaiting()),
   );
 });
