@@ -941,17 +941,10 @@ export async function render(root, params, ctx) {
     return bad;
   };
 
-  const save = async () => {
+  // Everything the Save button sends, as it stands on screen.
+  const collect = () => {
     const p = Number(wRange.value) / 100;
-    const bad = validate();
-    if (bad.length) {
-      bad[0].focus();
-      toast(bad.length === 1 ? 'One setting needs fixing. Nothing was saved.' : `${bad.length} settings need fixing. Nothing was saved.`, 'error');
-      return;
-    }
-    paintU();
-    try {
-      await api.saveSettings({
+    return {
         weightPublic: p,
         weightTaste: 1 - p,
         preferImax: imaxToggle.checked,
@@ -980,12 +973,46 @@ export async function render(root, params, ctx) {
           lat: homeLat.value.trim() === '' ? null : Number(homeLat.value),
           lng: homeLng.value.trim() === '' ? null : Number(homeLng.value),
         },
-      });
+    };
+  };
+
+  // The Save bar shows only while what's on screen differs from what was
+  // last saved, and goes away once it's saved (or changed back).
+  const saveBtn = h('button', { class: 'btn wide', type: 'button', tabindex: '-1' }, 'Save settings');
+  const bar = h('div', { class: 'save-bar', 'aria-hidden': 'true' }, saveBtn);
+  let saved = JSON.stringify(collect());
+  const paintDirty = () => {
+    if (!bar.isConnected) return;
+    const dirty = JSON.stringify(collect()) !== saved;
+    bar.classList.toggle('show', dirty);
+    bar.setAttribute('aria-hidden', String(!dirty));
+    saveBtn.tabIndex = dirty ? 0 : -1;
+    document.body.classList.toggle('has-save', dirty);
+  };
+  let queued = false;
+  const onEdit = () => { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; paintDirty(); }); };
+  for (const type of ['input', 'change', 'click']) page.addEventListener(type, onEdit);
+
+  const save = async () => {
+    const bad = validate();
+    if (bad.length) {
+      bad[0].focus();
+      toast(bad.length === 1 ? 'One setting needs fixing. Nothing was saved.' : `${bad.length} settings need fixing. Nothing was saved.`, 'error');
+      return;
+    }
+    paintU();
+    const body = collect();
+    saveBtn.disabled = true;
+    try {
+      await api.saveSettings(body);
+      saved = JSON.stringify(body);
+      paintDirty();
       toast('Settings saved', 'success');
       ctx.refreshStatus();
-    } catch (e) { toast(e.message, 'error'); }
+    } catch (e) { toast(e.message, 'error'); } finally { saveBtn.disabled = false; }
   };
-  page.appendChild(h('div', { class: 'save-bar' }, h('button', { class: 'btn wide', onClick: save }, 'Save settings')));
+  saveBtn.addEventListener('click', save);
+  page.appendChild(bar);
 
   root.appendChild(page);
 }

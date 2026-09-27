@@ -35,7 +35,18 @@
   --sp-9: 48px;
   /* motion */
   --ease-out: cubic-bezier(.22, 1, .36, 1);
+  /* The fixed chrome at the bottom, and the notch and home indicator of an
+     installed iPhone app. Everything that has to clear the tab bar or the
+     Save bar is measured from these, so the gap under the last thing on a
+     page is the same everywhere, inset or not. */
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --tabbar-h: 58px;
+  --savebar-h: 76px;
+  --end-gap: 24px;
+  --chrome-bottom: calc(var(--tabbar-h) + var(--sab));
 }
+@media (min-width: 900px) { :root { --chrome-bottom: 0px; } }
 
 /* Stand-ins drawn only until the web fonts arrive (display=swap in
    index.html): Arial and Georgia resized so a line takes the same width in
@@ -149,12 +160,8 @@
 html { -webkit-text-size-adjust: 100%; }
 /* Whatever gets focus or is scrolled to lands clear of the sticky header, the
    tab bar and (on Settings) the Save bar, never behind them. */
-html { scroll-padding-top: 76px; scroll-padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
-html:has(.save-bar) { scroll-padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
-@media (min-width: 900px) {
-  html { scroll-padding-bottom: 24px; }
-  html:has(.save-bar) { scroll-padding-bottom: 100px; }
-}
+html { scroll-padding-top: calc(68px + var(--sat)); scroll-padding-bottom: calc(var(--chrome-bottom) + var(--end-gap)); }
+html:has(body.has-save) { scroll-padding-bottom: calc(var(--chrome-bottom) + var(--savebar-h) + var(--end-gap)); }
 body {
   margin: 0;
   background: var(--bg);
@@ -216,12 +223,18 @@ pre { background: var(--surface-2); padding: 12px; border-radius: var(--r-sm); o
 .boot { display: grid; place-items: center; height: 70vh; color: var(--muted); }
 
 /* ---- shell / chrome ---- */
-.shell { max-width: 1200px; margin: 0 auto; min-height: 100vh; }
+.shell { max-width: 1200px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; }
 .app-header {
-  position: sticky; top: 0; z-index: 30;
+  position: sticky; top: 0; z-index: 30; isolation: isolate;
   display: flex; align-items: center; gap: var(--sp-3);
-  padding: var(--sp-2) var(--sp-4); padding-top: max(var(--sp-2), env(safe-area-inset-top));
+  padding: var(--sp-2) var(--sp-4); padding-top: max(var(--sp-2), var(--sat));
   min-height: 60px;
+}
+/* The frosted material is a layer of its own behind the header's content.
+   On the header itself, iOS could paint the blur over the logo and buttons
+   once the page scrolled under it (a blank bar on the movie page). */
+.app-header::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: color-mix(in srgb, var(--bg) 78%, transparent);
   -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px);
   border-bottom: 1px solid var(--line);
@@ -283,7 +296,11 @@ pre { background: var(--surface-2); padding: 12px; border-radius: var(--r-sm); o
 .seg-item:hover { color: var(--text); }
 .seg-item.active { background: var(--surface-3); color: var(--accent-text); box-shadow: var(--shadow-soft); }
 
-main { padding: var(--sp-4); padding-bottom: 104px; }
+main { padding: var(--sp-4); padding-bottom: calc(var(--chrome-bottom) + var(--end-gap)); }
+body.has-save main { padding-bottom: calc(var(--chrome-bottom) + var(--savebar-h) + var(--end-gap)); }
+/* Whatever a page ends with, its last box brings no margin of its own, so the
+   gap above the chrome is --end-gap exactly. */
+#main :is(.view, .page, .detail, .sched-panel, .welcome) > :last-child { margin-bottom: 0; }
 .page { display: flex; flex-direction: column; gap: var(--sp-1); }
 /* One page's box inside main (app.js); it takes no part in the layout. */
 .view { display: contents; }
@@ -292,8 +309,9 @@ main { padding: var(--sp-4); padding-bottom: 104px; }
 .bottom-nav {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 1200px; z-index: 30;
-  display: flex; justify-content: space-around;
-  padding: var(--sp-1) var(--sp-1) calc(var(--sp-1) + env(safe-area-inset-bottom));
+  display: flex; justify-content: space-around; align-items: flex-start;
+  height: var(--chrome-bottom); box-sizing: border-box; overflow: hidden;
+  padding: var(--sp-1) var(--sp-1) var(--sab);
   background: color-mix(in srgb, var(--surface) 72%, transparent);
   -webkit-backdrop-filter: saturate(1.6) blur(20px); backdrop-filter: saturate(1.6) blur(20px);
   border-top: 1px solid var(--line);
@@ -323,7 +341,7 @@ main { padding: var(--sp-4); padding-bottom: 104px; }
   .app-header { position: sticky; }
   .theatre-name { display: block; }
   .bottom-nav { display: none; }
-  main { padding: var(--sp-6) var(--sp-6) var(--sp-9); }
+  main { padding: var(--sp-6) var(--sp-6) var(--end-gap); }
 }
 
 /* ---- Schedule: the Leaving soon / Coming soon switch (views/schedule.js) ---- */
@@ -538,6 +556,8 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
 
 /* ---- empty / spinner ---- */
 .empty { text-align: center; padding: 48px 20px; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+/* Ending the page, it keeps no padding under it: the page's own end gap is the space. */
+.empty:last-child { padding-bottom: 0; }
 .empty-icon { color: var(--muted); display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); margin-bottom: var(--sp-2); }
 .empty-title { font-size: var(--fs-xl); color: var(--text); }
 .empty-msg { max-width: 420px; overflow-wrap: anywhere; }
@@ -825,7 +845,7 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
 
 /* ---- settings ---- */
 .settings { gap: 14px; }
-.settings-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 4px; }
+.settings-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .settings-card .card-title { font-size: var(--fs-md); }
 .sub-label { font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; margin-top: 4px; }
 .key-list { display: flex; flex-direction: column; gap: 8px; }
@@ -889,21 +909,23 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
 /* A status line with nothing to say yet takes no room (it stays in place so
    what it says later is announced). */
 .settings-card > [role="status"]:empty { margin-top: calc(-1 * 12px); }
-/* Save sits just above the tab bar (on desktop, the window's bottom edge) on a
-   solid strip that fades out upward, so scrolled content passes behind it
-   instead of showing through around the button. It stays in the flow, so at the
-   end of the page it rests below the last card. */
+/* Save settings: only while something is changed and not saved. It slides up
+   to sit on the tab bar (on desktop, the window's bottom edge), and main
+   makes room for it (body.has-save), so nothing is ever left under it. */
 .save-bar {
-  position: sticky; z-index: 5; bottom: calc(52px + env(safe-area-inset-bottom));
-  padding: 24px 0 16px;
-  background: linear-gradient(to bottom, transparent, var(--bg) 22px);
-  pointer-events: none;
+  position: fixed; z-index: 25; left: 50%; bottom: var(--chrome-bottom);
+  width: 100%; max-width: 1200px; height: var(--savebar-h); box-sizing: border-box;
+  display: flex; align-items: center; padding: 0 var(--sp-4);
+  background: var(--bg); border-top: 1px solid var(--line);
+  transform: translate(-50%, 110%); visibility: hidden;
+  transition: transform 220ms var(--ease-out), visibility 0s linear 220ms;
 }
-.save-bar > * { pointer-events: auto; }
-@media (min-width: 900px) { .save-bar { bottom: 0; } }
-/* At the end of the page the bar rests exactly where it sticks: main's bottom
-   padding clears the tab bar, and the bar itself holds the space it covers. */
-@media (max-width: 899px) { .page.settings { margin-bottom: -52px; } }
+.save-bar.show { transform: translate(-50%, 0); visibility: visible; transition: transform 220ms var(--ease-out), visibility 0s; }
+@media (min-width: 900px) { .save-bar { padding: 0 var(--sp-6); } }
+@media (prefers-reduced-motion: reduce) {
+  .save-bar { transform: translate(-50%, 0); opacity: 0; transition: opacity 150ms, visibility 0s linear 150ms; }
+  .save-bar.show { opacity: 1; transition: opacity 150ms, visibility 0s; }
+}
 .log { background: var(--surface-2); border-radius: var(--r-sm); padding: 8px 12px; overflow-wrap: anywhere; }
 .log summary { cursor: pointer; color: var(--muted); }
 
@@ -917,11 +939,10 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
 .modal-x:hover { color: var(--text); background: var(--surface-2); }
 .modal-body { padding: 16px; overflow: auto; }
 
-.toast-host { position: fixed; bottom: calc(92px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: max-content; max-width: calc(100vw - 32px); }
+.toast-host { position: fixed; bottom: calc(var(--chrome-bottom) + 16px); left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: max-content; max-width: calc(100vw - 32px); }
 @media (min-width: 900px) { .toast-host { bottom: var(--sp-7); } }
-/* On Settings a toast sits above the Save bar, not on its button. */
-body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-bottom)); }
-@media (min-width: 900px) { body:has(.save-bar) .toast-host { bottom: 136px; } }
+/* With the Save bar up, a toast sits above it, not on its button. */
+body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h) + 16px); }
 .toast.has-action { display: flex; align-items: center; gap: var(--sp-3); padding: 6px 6px 6px 16px; border-radius: var(--r-md); pointer-events: auto; text-align: left; }
 .toast-action { flex: 0 0 auto; min-height: 36px; padding: 0 14px; border-radius: var(--r-sm); border: none; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: var(--fs-sm); cursor: pointer; }
 .toast { background: var(--surface-2); border: 1px solid var(--line); color: var(--text); padding: 10px 16px; border-radius: 999px; font-size: var(--fs-sm); font-weight: 600; box-shadow: var(--shadow); opacity: 0; transition: opacity 0.3s, transform 0.3s; transform: translateY(8px); }
@@ -1418,7 +1439,7 @@ a.tg-time:hover { border-color: var(--text-2); }
     height: var(--vvh, 100dvh); margin-top: var(--vvt, 0px);
   }
   /* The close button reaches 10px above its row, so the row starts 10px below the notch. */
-  .search-card .modal-head { padding-top: max(14px, calc(env(safe-area-inset-top) + 10px)); }
+  .search-card .modal-head { padding-top: max(14px, calc(var(--sat) + 10px)); }
 }
 
 /* ---- Rate: import heading with its icon ---- */

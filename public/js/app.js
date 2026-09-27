@@ -221,6 +221,8 @@ async function route() {
   // reader moves on finishes into a box that's gone, never under the new page.
   const root = h('div', { class: 'view' });
   document.querySelector('#main').replaceChildren(root);
+  // A page's Save bar (Settings) leaves with the page, and so does its room.
+  document.body.classList.remove('has-save');
   // Picks draws its own skeleton; everything else gets the spinner.
   if (view !== routes.home) root.appendChild(spinner('Loading…'));
   updateNavActive(name);
