@@ -878,7 +878,8 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 .trailer iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 /* Set by js/views/detail.js: a frame never matches :focus once focus is inside it,
    and it clips an outside ring, so the ring sits just inside its edge. */
-.trailer iframe.kb-focus { outline: 2px solid var(--focus); outline-offset: -2px; }
+/* The frame is black in both themes, so the ring is the bright amber in both. */
+.trailer iframe.kb-focus { outline: 2px solid #f2a93b; outline-offset: -2px; }
 /* Where to watch (js/stream.js): logo rows. */
 .stream-row { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: var(--sp-3); align-items: center; }
 .stream-kind { font-size: var(--fs-sm); font-weight: 600; }
@@ -981,7 +982,11 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 .bar-row[hidden], .bar-item[hidden] { display: none; }
 .bar-row:hover .bar-name { text-decoration: underline; text-underline-offset: 3px; }
 .bar-row .row-chevron { color: var(--muted); }
-@media (max-width: 420px) { .bar-row .stars { display: none; } }
+/* Narrow: no stars, and no empty column left where they were. */
+@media (max-width: 420px) {
+  .bar-row { grid-template-columns: 1.6em minmax(0, 1fr) auto auto; }
+  .bar-row .stars { display: none; }
+}
 /* ---- Stats drill-down sheet ---- */
 .sheet-sub { margin: 0 0 var(--sp-3); color: var(--text); font-size: var(--fs-sm); }
 .sheet-films { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -1009,16 +1014,15 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 .more-tools { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); flex: 0 1 auto; margin-left: auto; min-width: 0; }
 /* Narrow: the controls take their own line under the title, lined up with it. */
 @media (max-width: 520px) { .more-tools { flex: 1 1 100%; padding-left: 58px; } }
-.bar-list { list-style: none; margin: 0; padding: 0; }
-.bar-rank { min-width: 1.6em; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
-.bar-row .bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 420px) { .bar-row .stars { display: none; } }
 
 /* ---- Settings: grouped lists ---- */
 .sub-label { font-size: var(--fs-sm); font-weight: 600; margin-bottom: var(--sp-2); }
 .field-block { display: flex; flex-direction: column; gap: var(--sp-2); }
 /* Help under a row reads as that row's note: no divider above it. */
-.group-body > p.muted.small, .group-body > .muted.small:not([role="status"]) { border-top: none; padding-top: 0; margin-top: calc(-1 * var(--sp-1)); }
+.group-body > p.muted.small, .group-body > .muted.small:not([role="status"]) { border-top: none; padding-top: 0; }
+/* 8px between a row and its note: the row gives up some padding (a pulled-up
+   note would overlap it). */
+.group-body > :has(+ p.muted.small, + .muted.small:not([role="status"])) { padding-bottom: var(--sp-2); }
 .group-body > [role="status"]:empty, .group-body > .form-error:empty { display: none; }
 .key-list { display: flex; flex-direction: column; gap: var(--sp-2); }
 .key-row { display: flex; align-items: center; gap: 10px; min-height: 28px; }
@@ -1365,8 +1369,11 @@ a.tg-time:hover { border-color: var(--text); }
   .hero-title, .detail-hero .hero-title { font-size: var(--fs-xl); overflow-wrap: anywhere; }
   .segment { white-space: normal; text-align: center; line-height: var(--lh-tight); }
   .row-head { flex-wrap: wrap; }
-  .factor-row { grid-template-columns: minmax(0, 1fr) auto; }
-  .factor-row > .stars { grid-column: 1 / -1; grid-row: 2; }
+  .factor-row { grid-template-columns: minmax(0, 1fr); row-gap: 2px; }
+  .bar-row { grid-template-columns: 1.6em minmax(0, 1fr) auto; row-gap: 2px; }
+  .bar-row .bar-meta { grid-column: 2; }
+  /* The calendar button's tap area grows left only, so it can't poke past the page edge. */
+  .st-row .cal-btn::after { left: -16px; right: 0; }
   /* Labels that hold one line elsewhere may take two here. */
   .tag, .runway-text, .st-end, .key-status, .factor-name, .btn, .row-gap:has(> .input) > .btn { white-space: normal; }
   .segment { overflow-wrap: anywhere; }
@@ -1377,6 +1384,10 @@ a.tg-time:hover { border-color: var(--text); }
   .source-row { grid-template-columns: minmax(0, 1fr) auto; }
   .source-row .src-bar { grid-column: 1 / -1; grid-row: 2; }
   .pick-card, .list-row, .theatre-item { flex-direction: column; align-items: stretch; }
+  /* The poster over the facts, so the facts get the full width. */
+  .pc-top { flex-direction: column; }
+  .list-row { grid-template-columns: minmax(0, 1fr); }
+  .match, .runway { white-space: normal; }
   .row-gap:has(> .input) > .btn { flex-shrink: 1; min-width: 0; }
   .ti-actions { flex-wrap: wrap; }
 }
