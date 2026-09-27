@@ -27,7 +27,7 @@ you want your own, you run your own copy with your own keys.
   the app works out where the schedule genuinely stops being published and only says
   "leaving Thursday" when it actually knows. Hedged guesses look hedged.
 - Shows a Last chance row when a film I'd like is confirmed to be leaving soon. Real
-  departures get a loud "Last day today" or "Leaving Fri" pill. Anything hedged stays
+  departures get a loud "Last day today" or "Leaving Fri" tag. Anything hedged stays
   quiet, and the row disappears when nothing qualifies.
 - Under the four: Also worth seeing (everything else above my good-match cutoff), Also
   nearby (films playing only at one of my other theaters), and Everything playing, the
@@ -52,7 +52,7 @@ you want your own, you run your own copy with your own keys.
   4 best matches this week from films included with them in the US, never rentals. Films
   are scored with the same taste model and weights as the theater picks, need 50+ TMDB
   votes, and skip anything rated, seen or hidden. Each card has the service's logo, the
-  match score, a one-line reason ("Because you loved Interstellar") and Rate, Watchlist and
+  match score, a one-line reason ("Because you loved Interstellar") and Rate, Save and
   Not for me. The list is worked out once a week (from Friday) and stays put; every
   candidate is confirmed with TMDB's watch providers, and all of it goes through the shared
   TMDB throttle and cache. No services chosen means a one-tap prompt to pick them.
@@ -62,7 +62,7 @@ you want your own, you run your own copy with your own keys.
   Surprise me). Out come three films that fit, from what's playing at my theaters and what's
   on my services, scored like the picks and each with a reason from my own ratings. "Show
   me 3 more" never repeats a film while the sheet is open, and Seen it (a rating),
-  Watchlist and Not for me work right there. With no ratings yet it leans on popularity,
+  Save and Not for me work right there. With no ratings yet it leans on popularity,
   so a brand-new friend still gets well-known films that fit the mood.
 - Shares a read-only guest link so other people can see my picks without touching anything.
 
@@ -92,35 +92,63 @@ that joins it during the week.
 
 ## The tabs
 
+There are five, along the bottom on a phone and across the top on a computer.
+
 - **Picks** is everything above: the four, At home, What should I watch?, Last chance, and
-  the rest of the lineup.
+  the rest of the lineup. On a phone I pull the page down to refresh it: for me that runs
+  a real refresh, for a friend it just reloads the picks.
 - **Schedule** holds Leaving soon and Coming soon as two segments, and it reopens the one
   I used last. Old `#/coming` and `#/leaving` links still land on the right one.
 - **Rate** is where ratings come in: search and rate, the Letterboxd and IMDb importer,
   and my full ratings list (more on that below).
-- **Watchlist** is every film I starred, as a poster grid. A starred film that's
-  confirmed to be leaving gets a line at the top. A long list gets a filter box.
-  Watchlisted films get a ranking boost on Picks.
-- **Together** is for planning a movie with one friend (see Watch together below).
-- **Stats** shows this period's plan usage and savings (or ticket spend with no plan),
-  films seen this year, my average rating, the pick hit-rate (how I rated the weekly picks
-  I actually went to), a tip when my picks keep rating below my average, and my top
-  genres, directors and actors.
+- **Watchlist** is every film I saved, as a poster grid. A saved film that's confirmed to
+  be leaving gets a line at the top. A long list gets a filter box. Saved films get a
+  ranking boost on Picks.
+- **You** holds four segments, and reopens the one I used last:
+  - **Stats** shows this period's plan usage and savings (or ticket spend with no plan),
+    films seen this year, my average rating, the pick hit-rate (how I rated the weekly
+    picks I actually went to), a tip when my picks keep rating below my average, and my
+    top genres, directors and actors.
+  - **Together** is for planning a movie with one friend (see Watch together below).
+  - **Settings** is every setting (see Settings below).
+  - **Help** has Replay tour and a short guide to how the app works.
 
-Search and Settings sit in the header. Search opens a sheet that searches TMDB and the
-films I already have around (playing, coming soon, rated, watchlisted, hidden) as I type.
+  Old `#/stats`, `#/together` and `#/settings` links open the right segment inside You.
+  Anyone who used the app before You existed gets a one-time note saying Stats, Together
+  and Settings moved there. The guest link has no You tab.
+
+The header holds only the logo and Search. Search opens a sheet that searches TMDB and the
+films I already have around (playing, coming soon, rated, saved, hidden) as I type.
 It forgives typos, ranks well-known films first, and badges what's playing, rated,
-watchlisted or hidden. With the box empty it shows my recents: the last 10 searches and
+saved or hidden. With the box empty it shows my recents: the last 10 searches and
 the last 8 films I opened, kept per person on the server, with Clear all and an Undo.
 Pressing `/` anywhere outside a text field opens it.
 
 A movie page has the hero, a Trailer button, Mark seen, the public score broken down by
 source, the taste match broken down by the genres, director and actors I've rated, and
 every showtime at each theater I follow, with how long it has left there. For me there's
-also "Wrong movie? Fix it" when AMC's title was matched to the wrong TMDB film.
+also a small "Matched to '<AMC title>' · Fix" line for when AMC's title was matched to
+the wrong TMDB film.
 
-It follows the device's light or dark setting: a light "Ticket stub" look by default and a
-dark "Projector" look in dark mode.
+## How it looks
+
+It follows the device's light or dark setting. Dark is "Midnight marquee": deep navy with
+warm amber for the things I tap, gold for saved films and stars, and a soft glow behind
+the top of the Picks hero and a movie page in the main color of that film's poster. The
+server works that color out once per film and stores it; a film without one gets a faint
+amber glow. Light is "Ticket stub": cream paper, dark ink and teal, with no glow.
+
+Titles, film names and section headings are set in Big Shoulders Display, and everything
+else in IBM Plex Sans. Both are served from Google Fonts with fallbacks sized to match, so
+nothing jumps when they arrive.
+
+A few rules hold everywhere. Every showtime row is the same grid (time, format, when it
+ends, whether it fits my preferred times, Book), and tapping anywhere on the row books.
+Format tags are tinted by kind (IMAX blue, Dolby purple, RealD 3D teal, 70mm amber), and
+so are status tags (Back in theaters teal, Last chance red, New this week amber). The main
+button on a screen is filled, other choices are soft, and anything that removes or hides
+is soft red. Stats and Settings are plain grouped lists; only the hero, sheets and dialogs
+sit in boxes. The seat line reads like "Seat by 12:05 PM · out around 3:06 PM".
 
 A few smaller things make the lists easier to read:
 
@@ -147,21 +175,22 @@ A few smaller things make the lists easier to read:
   TMDB's official English trailer when there is one, and a foreign film with only its
   own-language trailers still gets one.
 - **Where to watch.** Movie pages list where a film streams, rents and sells in the US,
-  with provider logos, from TMDB's watch providers (data from JustWatch). Films that
+  with provider logos, from TMDB's watch providers (data from JustWatch). When the same
+  services rent and sell it, the two lists become one "Rent or buy" row. Films that
   aren't in theaters get a one-line "Stream on …" in search and in "More from". Each
   film's answer is cached for three days and fetched through the shared TMDB throttle.
-- **Add to calendar.** Every showtime has a calendar button that downloads an `.ics`
+- **Add to calendar.** Every showtime row has a small calendar button that downloads an `.ics`
   event: the film as the title, AMC's start time in the theater's own time zone, "be
   there by" and the end time in the notes, and the theater's name and address as the
   location. It opens straight in Calendar on an iPhone.
 - **Poster fallbacks.** When a poster is missing or fails to load, the film's title goes
   on a plain gradient tile instead of a broken image.
 - **Guided tour.** The first time anyone opens Picks they get a short tour: a spotlight
-  on the real thing on screen (the four, the stars, Watchlist, Not for me, At home, What
-  should I watch?, Schedule, Search, Together for friends, Stats and Settings) and a small
-  card with Next, Back and Skip tour. It works with arrow keys, Enter and Escape, never
-  closes on a stray tap, and holds still for reduced motion. Finishing or skipping is
-  remembered per person; Replay tour in Settings and the ? at the top bring it back.
+  on the real thing on screen (the four, Book, Save and Not for me, the day strip, the
+  stars, What should I watch?, At home, Schedule, Rate, Watchlist, Search and You) and a
+  small card with Next, Back and Skip tour. It works with arrow keys, Enter and Escape,
+  never closes on a stray tap, and holds still for reduced motion. Finishing or skipping
+  is remembered per person; Replay tour under You, Help brings it back.
 
 ## Quick start
 
@@ -224,9 +253,9 @@ carry an average of what I've rated before, weighted a little toward recent rati
 under ten ratings the app leans on public scores and says so.
 
 The final score is a weighted blend of the two (50/50 by default, adjustable) plus
-small boosts: a watchlisted film, an IMAX showing, a showtime inside my preferred
+small boosts: a saved film, an IMAX showing, a showtime inside my preferred
 windows. On top of that sits **urgency**: a film whose run is confirmed to be ending
-gets up to six extra points, scaled by how soon it leaves, and more if I starred it.
+gets up to six extra points, scaled by how soon it leaves, and more if I saved it.
 Urgency only fires on a committed end date. A schedule that merely stops at the edge of
 what AMC has published is not scarcity, and treating it as scarcity would make every
 Monday look like a crisis. The defaults are tuned so urgency breaks ties without letting
@@ -395,17 +424,24 @@ On an iPhone, open the site in Safari, tap Share, then Add to Home Screen. On An
 desktop Chrome, use the browser's Install option. It opens full screen like an app.
 
 A service worker keeps exactly one copy of the app for offline use. Offline, a page that
-needs the server says "You're offline" with a Retry button instead of breaking. A deploy
-reaches phones that already have the app open: the service worker checks for a new
-version when the app opens, when it comes back to the foreground, and every 30 minutes. A
-new version takes over as soon as it installs, and the page reloads onto it once, unless a
-sheet is open or a save is in flight. Then it shows "Update ready" with a Refresh button
-and reloads at the next quiet moment. Bump `CACHE` in `public/sw.js` with every frontend
+needs the server says "You're offline" with a Retry button instead of breaking.
+
+A deploy reaches phones that already have the app open. Each page knows the version it
+was built from, and asks the server (`/api/version`) which one is live: when the app
+opens, every time it comes back to the foreground, when the network returns, and every
+five minutes. An installed iPhone app is mostly resumed rather than relaunched, and its
+first requests after waking often fail, so each check keeps retrying for about half a
+minute instead of giving up after one try. That single try was why my Home Screen app
+used to sit on an old version. When the page is behind, it reloads onto the new version
+once, unless a sheet is open, a save is in flight or I'm typing. Then it shows "Update
+ready" with a Refresh button and reloads at the next quiet moment. It never reloads twice
+for the same version, so it can't loop. Bump `CACHE` in `public/sw.js` with every frontend
 change, and add any new file under `public/js/` to its `CORE` list, so offline has it too.
 
 ## Settings
 
-Every card, top to bottom. Cards marked "mine" are only on my Settings page.
+Settings is under You. Every group, top to bottom. Groups marked "mine" are only on my
+Settings page. A Save bar slides up above the tab bar only when something has changed.
 
 - **API keys** (mine): which keys are connected. On Railway it says to change them in
   Railway's variables and redeploy; locally it points at `.env`.
@@ -426,14 +462,13 @@ Every card, top to bottom. Cards marked "mine" are only on my Settings page.
 - **Now-playing fallback** (mine): how recent a film has to be when there's no AMC key.
 - **Preferred showtimes**: weekday and weekend windows; a showing inside one gets a boost.
 - **Movie plan & pricing**: the plan, its allowance, fee and ticket price, and the preview
-  length that sets "be there by" and the end time.
+  length that sets the Seat by time and the "out around" time.
 - **Score boosts (advanced)**: the watchlist, IMAX, window-fit and urgency boosts.
 - **Also worth seeing** (mine): the minimum score for that section.
 - **Last chance** (mine): the minimum score, how far before the horizon counts as a real
   departure, and how many to show.
 - **Schedule diagnostics** (mine): where each theater's schedule stops being published,
   day by day.
-- **Help**: Replay tour.
 - **Alerts** (mine): the last 10 alerts and anything failing now.
 - **Data**: Export full setup (friends: Export my data), Import full setup (mine), Export
   backup CSV, Download latest backup (mine), the off-site backup status with Upload now
