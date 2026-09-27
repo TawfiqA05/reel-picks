@@ -23,6 +23,7 @@ import { warmHomePicks } from './lib/home.js';
 import { activeUserIds } from './lib/theatres.js';
 import { initLockWeek } from './lib/lock.js';
 import { afterNightlyBackup } from './lib/housekeeping.js';
+import { sendIndex } from './lib/version.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 const RETRY_CHECK_MS = 60 * 1000;
@@ -154,13 +155,15 @@ app.use('/api', (req, res, next) => {
 app.use('/api', router);
 
 const publicDir = fileURLToPath(new URL('../public/', import.meta.url));
-const indexHtml = fileURLToPath(new URL('../public/index.html', import.meta.url));
-app.use(express.static(publicDir, { extensions: ['html'] }));
+// The page itself carries the app version (lib/version.js), so it is never
+// served as a plain file.
+app.get(['/', '/index.html'], sendIndex);
+app.use(express.static(publicDir, { extensions: ['html'], index: false }));
 
 // SPA fallback: send index.html for any non-API, non-file route.
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api')) return next();
-  res.sendFile(indexHtml);
+  sendIndex(req, res);
 });
 
 app.use((err, req, res, next) => {

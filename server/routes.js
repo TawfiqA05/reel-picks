@@ -33,6 +33,7 @@ import { bustCache } from './lib/cache.js';
 import { localYMD, addDays, csvField } from './lib/util.js';
 import { isGuest, ownerName } from './lib/guest.js';
 import { currentUserId, currentUser } from './lib/user.js';
+import { appVersion } from './lib/version.js';
 import { startCreditsBackfill, backfillStatus, backfillState, tmdbThrottle } from './lib/backfill.js';
 import { backupStatus, latestBackup, backupsDir } from './lib/backup.js';
 import { overview as togetherOverview, partnerFor, filmsFor, NOT_FOUND } from './lib/together.js';
@@ -105,6 +106,12 @@ function theatresForStatus(s) {
     id: t.id, name: t.name, slug: t.slug, short: t.short, isPrimary: t.isPrimary, distance: readDistance(t.id, home),
   }));
 }
+
+// Which version is deployed (lib/version.js), for js/update.js. Anyone may ask.
+router.get('/version', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ version: appVersion });
+});
 
 router.get('/status', (req, res) => {
   const s = getSettings();

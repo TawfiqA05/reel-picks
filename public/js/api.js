@@ -1,20 +1,24 @@
 // Thin fetch wrapper around the Reel Picks JSON API.
 
 // Saves in flight (anything but GET), so an app update never reloads the page
-// under one (js/update.js).
-let writes = 0;
+// under one (js/update.js). One that hasn't answered in 20 seconds no longer
+// counts: a request frozen while an iPhone app was in the background can
+// hang for good, and would otherwise hold every update back.
+const writes = new Set();
 const settled = new Set();
-export const writesInFlight = () => writes;
+const STUCK_MS = 20000;
+export const writesInFlight = () => [...writes].filter((t) => Date.now() - t.at < STUCK_MS).length;
 export const onWritesSettled = (fn) => settled.add(fn);
 
 async function req(method, path, body) {
   if (method === 'GET') return send(method, path, body);
-  writes++;
+  const token = { at: Date.now() };
+  writes.add(token);
   try {
     return await send(method, path, body);
   } finally {
-    writes--;
-    if (!writes) for (const fn of settled) setTimeout(fn, 0);
+    writes.delete(token);
+    if (!writesInFlight()) for (const fn of settled) setTimeout(fn, 0);
   }
 }
 

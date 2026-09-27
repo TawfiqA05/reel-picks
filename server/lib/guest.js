@@ -78,6 +78,7 @@ export function isGuest(req) {
 // Matches whether the router is mounted (path has /api) or not.
 const ALLOW = [
   /^(?:\/api)?\/status$/,
+  /^(?:\/api)?\/version$/,
   /^(?:\/api)?\/recommendations$/,
   /^(?:\/api)?\/coming-soon$/,
   /^(?:\/api)?\/movies\/\d+$/,
