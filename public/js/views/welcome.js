@@ -80,7 +80,7 @@ export async function render(root, params, ctx) {
     };
     paintCurrent();
     const results = h('div', { class: 'wc-results', 'aria-live': 'polite' });
-    const input = h('input', { class: 'input', type: 'search', placeholder: 'Theater name or city', 'aria-label': 'Search AMC theaters by name or city', autocomplete: 'off', enterkeyhint: 'search' });
+    const input = h('input', { class: 'input', type: 'search', placeholder: 'Name or city', 'aria-label': 'Search AMC theaters by name or city', autocomplete: 'off', enterkeyhint: 'search' });
     let timer;
     let ticket = 0;
     const search = async () => {

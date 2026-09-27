@@ -265,6 +265,17 @@ main { padding: var(--sp-4); padding-bottom: 104px; }
 .nav-icon { display: grid; place-items: center; }
 .nav-item.active { color: var(--accent-text); }
 
+/* Narrow phones (320): the name steps aside for the mark (the link keeps its
+   label), and the six tabs share the width by their labels, 44px at least. */
+@media (max-width: 359px) {
+  .app-header { gap: var(--sp-2); padding-left: var(--sp-3); padding-right: var(--sp-3); }
+  .brand { min-width: 44px; justify-content: center; }
+  .brand-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .header-actions { gap: var(--sp-1); }
+  .bottom-nav { justify-content: space-between; }
+  .nav-item { flex: 1 1 auto; min-width: 44px; padding-left: 2px; padding-right: 2px; }
+}
+
 @media (min-width: 900px) {
   .seg {
     display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--line);
@@ -318,7 +329,9 @@ main { padding: var(--sp-4); padding-bottom: 104px; }
 .wc-popular { display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: var(--sp-4) var(--sp-3); }
 .wc-tile { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .wc-poster { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: var(--r-sm); background: var(--surface-3); }
-.wc-tile-title { font-size: var(--fs-xs); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wc-tile-title { font-size: var(--fs-xs); font-weight: 600; line-height: var(--lh-tight); overflow-wrap: anywhere; }
+/* Long titles wrap in full; the stars sit on one line across the row. */
+.wc-tile > .stars { margin-top: auto; }
 .wc-points { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
 .wc-points li { display: flex; gap: var(--sp-3); align-items: flex-start; color: var(--text-2); }
 .wc-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--surface-2); color: var(--text-2); flex: 0 0 auto; }
@@ -359,7 +372,7 @@ main { padding: var(--sp-4); padding-bottom: 104px; }
 .score-pill.na { color: var(--muted); }
 
 /* ---- badges / chips ---- */
-.badge { display: inline-block; font-size: var(--fs-xs); font-weight: 700; padding: 3px 7px; border-radius: 6px; background: var(--surface-2); color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.badge { display: inline-block; white-space: nowrap; font-size: var(--fs-xs); font-weight: 700; padding: 3px 7px; border-radius: 6px; background: var(--surface-2); color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
 .badge.imax { background: transparent; color: var(--text-2); box-shadow: inset 0 0 0 1px var(--muted); }
 .badge.watch { background: var(--surface-3); color: var(--text); }
 .badge.settling { background: var(--surface-3); color: var(--text-2); }
@@ -391,6 +404,11 @@ main { padding: var(--sp-4); padding-bottom: 104px; }
 .row-gap:has(> .input) { align-items: stretch; }
 .row-gap:has(> .input) > .input { flex: 1 1 auto; min-width: 0; }
 .row-gap:has(> .input) > .btn { flex: 0 0 auto; white-space: nowrap; }
+/* 320: the field takes its own line and its button goes under it. */
+@media (max-width: 359px) {
+  .row-gap:has(> .input) { flex-wrap: wrap; }
+  .row-gap:has(> .input) > .input { flex-basis: 100%; }
+}
 .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 10px 0; }
 
 /* ---- stars ---- */
@@ -847,7 +865,8 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
 .modal-overlay.show { opacity: 1; }
 .modal-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); width: min(560px, 100%); max-height: 86vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow); }
 .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--line); }
-.modal-x { width: 44px; height: 44px; margin: -10px -10px -10px 0; display: grid; place-items: center; border-radius: 50%; background: none; border: none; color: var(--muted); cursor: pointer; }
+.modal-head h3 { min-width: 0; }
+.modal-x { flex: 0 0 44px; width: 44px; height: 44px; margin: -10px -10px -10px 0; display: grid; place-items: center; border-radius: 50%; background: none; border: none; color: var(--muted); cursor: pointer; }
 .modal-x:hover { color: var(--text); background: var(--surface-2); }
 .modal-body { padding: 16px; overflow: auto; }
 
@@ -1201,11 +1220,21 @@ body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-botto
   .spinner-ring { display: none; }
 }
 
+/* ---- long words ----
+   A title word wider than its column ("Transformers:" at 320) breaks with a
+   hyphen where English allows one, and anywhere as a last resort, instead of
+   running out of its box. */
+.row-title, .ri-title, .search-info, .ti-name, .pick-title, .tg-title, .sheet-title, .sr-title, .lc-title, .lv-film-title, .tile-cap, .hidden-title, .um-title, .bar-meta { overflow-wrap: anywhere; hyphens: auto; }
+.ti-main { min-width: 0; }
+@media (max-width: 359px) { .bs-value { font-size: var(--fs-lg); } }
+
 /* ---- tap targets ---- */
 .chip-btn, .btn { min-height: 40px; }
 @media (pointer: coarse) {
   .chip, .chip-btn, .btn, .link-btn, .rater-clear, .row-more, .section-toggle, .bar-row, .ob-star, .showtime-chip, .toast-action, .switch-row, .cal-btn { min-height: 44px; }
   .cal-btn { width: 44px; }
+  /* A tablet gets the wide header: its tabs and theater name are taps too. */
+  .seg-item { min-height: 44px; }
   .chip, .btn.small, .rater-clear, .link-btn { min-width: 44px; justify-content: center; }
   .chip { display: inline-flex; align-items: center; }
   .link-btn, .rater-clear { display: inline-flex; align-items: center; }
@@ -1353,6 +1382,7 @@ a.tg-time:hover { border-color: var(--text-2); }
 }
 @media (min-width: 900px) and (max-width: 1179px) { .seg-item { padding: 0 var(--sp-3); } }
 @media (min-width: 900px) and (max-width: 999px) { .theatre-name { display: none; } }
+@media (min-width: 1000px) and (pointer: coarse) { .theatre-name { display: flex; align-items: center; min-height: 44px; } }
 
 /* ---- guided tour (js/tour.js) ---- */
 .tour-layer { position: fixed; inset: 0; z-index: 250; }

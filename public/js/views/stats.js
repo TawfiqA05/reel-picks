@@ -189,7 +189,7 @@ function openGroup(kind, it, ctx) {
   let changed = false;
   // More than FILTER_AT films in the sheet and a filter box goes on top. It
   // matches titles, and directors and actors where the film has them.
-  const filter = filterBox({ label: `Filter films: ${it.name}`, placeholder: 'Filter by title, director or actor', onChange: (r) => onFilter(r) });
+  const filter = filterBox({ label: `Filter films: ${it.name}`, placeholder: 'Title, director, actor', onChange: (r) => onFilter(r) });
   filter.el.hidden = true;
   const modal = openModal(h('div', { class: 'sheet' }, sub, filter.el, rated, more), {
     title: it.name,

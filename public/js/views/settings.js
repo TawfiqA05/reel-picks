@@ -214,7 +214,7 @@ export async function render(root, params, ctx) {
   paintTheatres();
 
   const theatreResults = h('div', { class: 'theatre-results' });
-  const theatreInput = h('input', { class: 'input', type: 'search', placeholder: 'Search AMC theatres', 'aria-label': 'Search AMC theatres by name or city' });
+  const theatreInput = h('input', { class: 'input', type: 'search', placeholder: 'Name or city', 'aria-label': 'Search AMC theaters by name or city' });
   const theatreSearch = async () => {
     if (!keyState.amc) { toast('Add an AMC key first', 'error'); return; }
     clear(theatreResults);
