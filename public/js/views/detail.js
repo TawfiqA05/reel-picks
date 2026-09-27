@@ -1,9 +1,9 @@
 // Movie detail: hero, rating, score breakdown, showtimes, trailer.
 import { api } from '../api.js';
-import { h, clear, spinner, scorePill, badge, makeStars, toast, openModal, scoreColor, icon, money, withStars } from '../ui.js';
+import { h, clear, spinner, scoreNum, badge, makeStars, toast, openModal, scoreColor, icon, money, withStars } from '../ui.js';
 import { planOf, planWords, loggedLine } from '../plans.js';
 import { streamSection } from '../stream.js';
-import { fmtRuntime, dayLabel, showtimeChip, watchlistButton, starRater, runwayBadge, handoffLine, backBadge, heroMedia, opensBadge } from './components.js';
+import { fmtRuntime, dayLabel, showtimeRow, watchlistButton, starRater, runwayBadge, handoffLine, backBadge, heroMedia, opensBadge } from './components.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -39,7 +39,7 @@ export async function render(root, params, ctx) {
         : null,
       d.reason ? h('p', { class: 'hero-reason' }, withStars(d.reason)) : null,
       h('div', { class: 'hero-actions' },
-        guest ? null : watchlistButton({ tmdb_id: m.tmdb_id, title: m.title, watchlisted: d.watchlisted }, ctx),
+        guest ? null : watchlistButton({ tmdb_id: m.tmdb_id, title: m.title, watchlisted: d.watchlisted }, ctx, { words: true }),
         m.trailer_key ? h('button', {
           class: 'btn soft', type: 'button', 'aria-haspopup': 'dialog',
           onClick: () => openTrailer(m),
@@ -129,7 +129,7 @@ function publicCard(d) {
 
   const checked = p.omdbCheckedAt ? new Date(p.omdbCheckedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null;
   return h('div', { class: 'stat-card' },
-    h('div', { class: 'stat-head' }, h('h3', {}, 'Public score'), scorePill(p.combined)),
+    h('div', { class: 'stat-head' }, h('h3', {}, 'Public score'), scoreNum(p.combined)),
     d.flags?.settling ? badge('Scores still settling (new release)', 'settling') : null,
     p.divergence ? h('div', { class: 'diverge-note' }, icon('alert', { size: 14 }), ` ${p.divergence.label} (${p.divergence.gap} pts apart)`) : null,
     rows.length ? h('div', { class: 'sources' }, ...rows) : h('div', { class: 'muted small' }, 'No public scores found yet.'),
@@ -167,7 +167,7 @@ function tasteCard(d, owner = null) {
     ? (owner ? `Based on ${n} of ${owner}'s rating${n === 1 ? '' : 's'}.` : `Based on ${n} rating${n === 1 ? '' : 's'}. Add more to sharpen this.`)
     : null;
   return h('div', { class: 'stat-card' },
-    h('div', { class: 'stat-head' }, h('h3', {}, 'Taste match'), scorePill(t.score)),
+    h('div', { class: 'stat-head' }, h('h3', {}, 'Taste match'), scoreNum(t.score)),
     lowData ? h('div', { class: 'muted small' }, lowData) : null,
     factors.length ? h('div', { class: 'factors' }, ...factors)
       : h('div', { class: 'muted small' }, owner ? `No overlap with ${owner}'s ratings yet.` : 'No overlap with your ratings yet.'),
@@ -185,7 +185,7 @@ function factorRow(name, avg, n) {
 function dayBlocks(showtimesByDay) {
   return showtimesByDay.map((day) => h('div', { class: 'day-block' },
     h('div', { class: 'day-label' }, `${dayLabel(day.date)} · ${new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`),
-    h('div', { class: 'day-times' }, ...day.showtimes.map((st) => showtimeChip(st))),
+    h('div', { class: 'day-times' }, ...day.showtimes.map((st) => showtimeRow(st))),
   ));
 }
 

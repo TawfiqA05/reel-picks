@@ -14,10 +14,10 @@ export async function render(root, params, ctx) {
   clear(root);
 
   const page = h('div', { class: 'page' });
-  const title = sectionTitle('Watchlist', `${movies.length} starred`, { level: 1 });
+  const title = sectionTitle('Watchlist', `${movies.length} saved`, { level: 1 });
   page.appendChild(title);
-  const empty = () => emptyState('bookmark', 'No movies starred yet',
-    'Tap the bookmark on any movie to add it here. Watchlisted movies get a ranking boost.');
+  const empty = () => emptyState('bookmark', 'Nothing saved yet',
+    'Tap Save on any movie to keep it here. Saved movies get a boost in your picks.');
 
   const leaving = (recs.leavingSoon || []).filter((m) => m.watchlisted);
   if (leaving.length) {
@@ -42,7 +42,7 @@ export async function render(root, params, ctx) {
     tile.remove();
     count--;
     const sub = title.querySelector('.section-sub');
-    if (sub) sub.textContent = `${count} starred`;
+    if (sub) sub.textContent = `${count} saved`;
     if (!count) { grid.replaceWith(empty()); page.querySelector('.filter')?.remove(); }
   };
   for (const mv of movies) {

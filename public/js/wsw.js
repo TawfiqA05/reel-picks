@@ -7,8 +7,8 @@
 // Seen it (a rating), Watchlist and Not for me all work right on the card and
 // teach the model the usual way.
 import { api } from './api.js';
-import { h, clear, toast, icon, openModal, spinner, poster, scorePill, withStars } from './ui.js';
-import { starRater, watchlistButton, dayLabel } from './views/components.js';
+import { h, clear, toast, icon, openModal, spinner, poster, matchBadge, withStars } from './ui.js';
+import { starRater, watchlistButton, dayLabel, reasonLine } from './views/components.js';
 import { serviceTag, openServicesSheet } from './views/athome.js';
 
 const QUESTIONS = [
@@ -113,12 +113,12 @@ export function openWhatToWatch(ctx) {
     const cardEl = h('article', { class: 'wsw-film', 'data-id': f.tmdb_id }, h('div', { class: 'wsw-top' },
       h('a', { class: 'wsw-poster', href: `#/movie/${f.tmdb_id}`, tabindex: '-1', 'aria-hidden': 'true', onClick: () => modal.close() }, poster(f, { size: 'card', link: false })),
       h('div', { class: 'wsw-body' },
-        h('div', { class: 'pick-head' },
-          h('a', { class: 'pick-title', href: `#/movie/${f.tmdb_id}`, onClick: () => modal.close() }, f.title),
-          scorePill(f.final)),
-        h('div', { class: 'pick-meta' }, h('span', {}, [f.year, (f.genres || []).slice(0, 2).join(' · '), f.runtime ? `${Math.floor(f.runtime / 60)}h ${String(f.runtime % 60).padStart(2, '0')}m` : null].filter(Boolean).join(' · '))),
+        h('h4', { class: 'pick-head' },
+          h('a', { class: 'pick-title', href: `#/movie/${f.tmdb_id}`, onClick: () => modal.close() }, f.title)),
+        matchBadge(f.final),
+        h('p', { class: 'pick-meta' }, [f.year, (f.genres || []).slice(0, 2).join(' · '), f.runtime ? `${Math.floor(f.runtime / 60)}h ${String(f.runtime % 60).padStart(2, '0')}m` : null].filter(Boolean).join(' · ')),
         whereLine(f),
-        h('p', { class: 'pick-reason' }, withStars(f.reason)))),
+        reasonLine(f, ctx))),
     tools, rateSlot);
     const seen = h('button', { class: 'btn soft wsw-seen', type: 'button', 'aria-expanded': 'false' }, icon('check', { size: 16 }), h('span', {}, 'Seen it'));
     seen.addEventListener('click', () => {
@@ -132,7 +132,7 @@ export function openWhatToWatch(ctx) {
       seen.setAttribute('aria-expanded', String(!rateSlot.hidden));
       if (!rateSlot.hidden) rateSlot.querySelector('.stars.interactive')?.focus();
     });
-    const hide = h('button', { class: 'btn soft wsw-hide', type: 'button', 'aria-label': `Not for me, hide ${f.title}` }, icon('eyeOff', { size: 16 }), h('span', {}, 'Not for me'));
+    const hide = h('button', { class: 'btn danger wsw-hide', type: 'button', 'aria-label': `Not for me, hide ${f.title}` }, icon('eyeOff', { size: 16 }), h('span', {}, 'Not for me'));
     hide.addEventListener('click', async () => {
       changed = true;
       hide.disabled = true;
@@ -148,7 +148,7 @@ export function openWhatToWatch(ctx) {
       cardEl.append(note);
       undo.focus();
     });
-    tools.append(seen, watchlistButton(f, ctx, { onToggle: () => { changed = true; } }), hide);
+    tools.append(seen, watchlistButton(f, ctx, { words: true, onToggle: () => { changed = true; } }), hide);
     return cardEl;
   }
 

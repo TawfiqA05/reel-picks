@@ -2,8 +2,8 @@
 // streaming services they have (server/lib/home.js), and the service chooser
 // shared with Settings. Owner and friends only; the guest link never draws it.
 import { api } from '../api.js';
-import { h, clear, poster, scorePill, toast, icon, openModal, withStars } from '../ui.js';
-import { ownerTools } from './components.js';
+import { h, clear, poster, matchBadge, toast, icon, openModal } from '../ui.js';
+import { ownerTools, reasonLine } from './components.js';
 import { SERVICES, cleanServices, servicesPhrase } from '../services.js';
 
 const POLL_MS = 2000;
@@ -64,17 +64,17 @@ export function serviceTag(service) {
 
 function homeCard(e, ctx, onHide) {
   return h('article', { class: 'pick-card home-card', 'data-id': e.tmdb_id },
-    h('a', { class: 'pick-poster', href: `#/movie/${e.tmdb_id}`, tabindex: '-1', 'aria-hidden': 'true' }, poster(e, { size: 'card', link: false })),
-    h('div', { class: 'pick-body' },
-      h('div', { class: 'pick-head' },
-        h('a', { class: 'pick-title', href: `#/movie/${e.tmdb_id}` }, e.title),
-        scorePill(e.final),
+    h('div', { class: 'pc-top' },
+      h('a', { class: 'pick-poster', href: `#/movie/${e.tmdb_id}`, tabindex: '-1', 'aria-hidden': 'true' }, poster(e, { size: 'card', link: false })),
+      h('div', { class: 'pick-body' },
+        h('h3', { class: 'pick-head' }, h('a', { class: 'pick-title', href: `#/movie/${e.tmdb_id}` }, e.title)),
+        matchBadge(e.final),
+        h('p', { class: 'pick-meta' }, meta(e)),
+        serviceTag(e.service),
+        reasonLine(e, ctx),
       ),
-      h('div', { class: 'pick-meta' }, h('span', {}, meta(e))),
-      serviceTag(e.service),
-      e.reason ? h('p', { class: 'pick-reason' }, withStars(e.reason)) : null,
-      ownerTools(e, ctx, { onHide }),
     ),
+    ownerTools(e, ctx, { onHide }),
   );
 }
 

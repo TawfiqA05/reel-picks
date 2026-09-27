@@ -416,17 +416,6 @@ body.has-save main { padding-bottom: calc(var(--chrome-bottom) + var(--savebar-h
 .poster-xl { width: min(60vw, 240px); }
 .poster-grid { width: 100%; }
 
-/* ---- score pill ---- */
-.score-pill { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 44px; padding: 4px 8px; border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--line); line-height: 1; }
-.score-num { font-weight: 800; font-size: var(--fs-md); }
-.score-label { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-top: 2px; }
-.score-pill.big { min-width: 56px; padding: 8px 10px; }
-.score-pill.big .score-num { font-size: var(--fs-lg); }
-.score-pill.good { color: var(--score-hi); background: color-mix(in srgb, var(--score-hi) 12%, var(--surface-2)); border-color: color-mix(in srgb, var(--score-hi) 60%, transparent); }
-.score-pill.ok { color: var(--score-mid); background: color-mix(in srgb, var(--score-mid) 5%, var(--surface-2)); border-color: color-mix(in srgb, var(--score-mid) 32%, transparent); }
-.score-pill.low { color: var(--score-lo); border-color: var(--line); }
-.score-pill.na { color: var(--muted); }
-
 /* ---- tags: small soft-filled labels, never outlined ----
    Format tints say which format (IMAX blue, Dolby purple, RealD 3D teal,
    anything else amber); status tints say what's going on (back in theaters
@@ -590,118 +579,254 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
 .spinner { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px 0; color: var(--muted); }
 .spinner-ring { width: 32px; height: 32px; border: 3px solid var(--line); border-top-color: var(--text); border-radius: 50%; animation: spin 0.8s linear infinite; }
 
-/* ---- home: picks 2-4 ---- */
-.pick-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
-.pick-card { display: flex; gap: var(--sp-3); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--sp-3); min-width: 0; }
-.pick-poster { position: relative; flex: 0 0 auto; align-self: flex-start; }
-.poster-card { width: 92px; height: 138px; flex: 0 0 92px; }
-.pick-rank {
-  position: absolute; top: 6px; left: 6px; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 999px;
-  background: color-mix(in srgb, var(--bg) 78%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
-  color: var(--text); font-weight: 700; display: grid; place-items: center; font-size: var(--fs-sm); z-index: 2;
-  border: 1px solid var(--line-strong);
+/* ---- the match: one soft accent pill everywhere ---- */
+.match {
+  display: inline-flex; align-items: baseline; gap: 6px; align-self: flex-start; white-space: nowrap;
+  padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text);
+  font-size: var(--fs-sm); font-weight: 600; line-height: var(--lh-tight); font-variant-numeric: tabular-nums;
 }
-/* Cards in a row stretch to equal height; the foot row is pushed to the
-   bottom so the showtimes line up across the three cards. */
-.pick-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
-.pick-head { display: flex; gap: var(--sp-3); align-items: flex-start; justify-content: space-between; }
-.pick-title { font-size: var(--fs-lg); line-height: var(--lh-display); min-width: 0; overflow-wrap: anywhere; }
-.pick-title:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .12em; }
-.pick-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-2); color: var(--muted); font-size: var(--fs-xs); }
-.pick-reason { font-size: var(--fs-sm); color: var(--text-2); margin: 0; line-height: var(--lh-body); }
-.pick-foot { display: flex; align-items: center; gap: var(--sp-2); margin-top: auto; padding-top: var(--sp-1); min-width: 0; }
-.pick-foot .showtime-chip, .pick-foot .row-none, .pick-foot .st-pair { flex: 1 1 auto; min-width: 0; }
+.match-early { font-size: var(--fs-xs); font-weight: 500; }
 
-/* Wraps rather than overflowing: the times inside stay unbreakable, so in a
-   narrow card the chip needs to fold onto a second line instead of pushing
-   its column wider. */
-.showtime-chip { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 7px 11px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-sm); font-size: var(--fs-sm); width: fit-content; }
-.showtime-chip:hover { border-color: var(--text-2); }
-/* A showtime and its "Add to calendar" button, side by side (components.js). */
-.st-pair { display: inline-flex; align-items: stretch; gap: 4px; max-width: 100%; min-width: 0; }
-.st-pair .showtime-chip { min-width: 0; }
-.cal-btn { display: inline-grid; place-items: center; flex: 0 0 auto; width: 36px; min-height: 36px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-sm); color: var(--text-2); }
-.cal-btn:hover { border-color: var(--text-2); color: var(--text); }
-.cal-link { display: inline-flex; align-items: center; gap: 6px; padding: 0; color: var(--text-2); text-decoration: underline; text-underline-offset: 2px; vertical-align: middle; }
-.cal-link:hover { color: var(--text); }
-/* In the hero's seat line the link runs as text: a 44px touch box would make
-   its line taller than the rest when the sentence wraps. The tap area grows
-   around it instead, the way the title links do. */
-.seat-line .cal-link { display: inline; min-height: 0; min-width: 0; position: relative; white-space: nowrap; vertical-align: baseline; }
-.seat-line .cal-link .icon { vertical-align: -3px; margin-right: 4px; }
-.seat-line .cal-link::after {
-  content: ''; position: absolute;
-  top: min(0px, calc(50% - 22px)); bottom: min(0px, calc(50% - 22px));
-  left: min(0px, calc(50% - 22px)); right: min(0px, calc(50% - 22px));
+/* ---- the reason line: two reasons at most, the public score coloured ---- */
+.reason-line { margin: 0; color: var(--text); font-size: var(--fs-sm); line-height: var(--lh-snug); }
+.hero-reason { font-size: var(--fs-base); }
+.row-reason { color: var(--muted); }
+.rs-score { font-weight: 600; }
+.rs-score.good { color: var(--good); }
+.rs-score.bad { color: var(--bad); }
+
+/* ---- runway: how long it's on ---- */
+.runway { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; }
+.runway.urgent { color: var(--bad); font-weight: 600; }
+.runway-where { color: var(--muted); font-weight: 600; }
+.runway-line { display: flex; align-items: flex-start; gap: 6px; margin: 0; color: var(--text); font-size: var(--fs-sm); font-weight: 500; line-height: var(--lh-snug); }
+.runway-icon { flex: 0 0 auto; margin-top: 1px; color: var(--muted); }
+/* A confirmed end fills the calendar in. */
+.runway-line.committed .runway-icon rect { fill: currentColor; fill-opacity: .3; }
+.runway-line.urgent, .runway-line.urgent .runway-icon { color: var(--bad); }
+.runway-line.upcoming { color: var(--muted); }
+.theatre-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.t-only { font-size: var(--fs-xs); color: var(--muted); }
+.handoff, .lc-handoff { font-size: var(--fs-xs); color: var(--muted); line-height: var(--lh-snug); }
+
+/* ---- the hero: #1 on Picks, and the movie page ----
+   Phone: the art on top, the words under it on the page. Wide screens: the
+   art fills the frame with a scrim that keeps the words readable, and no
+   outline around it. */
+.hero-pick, .detail-hero { position: relative; margin: calc(-1 * var(--sp-4)) calc(-1 * var(--sp-4)) 0; isolation: isolate; }
+.hero-media { position: relative; aspect-ratio: 16 / 10; overflow: hidden; }
+.hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; }
+.hero-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, var(--bg) 100%); }
+/* No backdrop: the poster itself, small and upright, over the glow. */
+.hero-media.from-poster { aspect-ratio: auto; display: flex; justify-content: center; padding: var(--sp-6) 0 var(--sp-2); }
+.hero-media.from-poster .hero-scrim, .hero-media.plain .hero-scrim { display: none; }
+.hero-poster { width: 150px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 12px; box-shadow: var(--shadow); }
+.hero-media.plain { aspect-ratio: auto; height: var(--sp-6); }
+.hero-content { position: relative; display: flex; flex-direction: column; gap: var(--sp-3); padding: 0 var(--sp-4) var(--sp-5); margin-top: calc(-1 * var(--sp-7)); }
+.hero-media:is(.from-poster, .plain) + .hero-content { margin-top: var(--sp-3); }
+.hero-line { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); color: var(--text); font-size: var(--fs-sm); font-weight: 600; }
+/* The one title set tighter than --lh-display: at 46-72px the default gap reads loose. */
+.hero-title { font-size: var(--fs-hero-sm); line-height: .98; text-wrap: balance; }
+.hero-title a:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .1em; }
+.hero-meta { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
+.tag-row.one-line { flex-wrap: nowrap; overflow: hidden; }
+.hero-actions { display: flex; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-1); }
+.btn.book { font-size: var(--fs-md); min-height: 48px; }
+.hero-buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); }
+.hero-buttons.one { grid-template-columns: minmax(0, 1fr); }
+.hero-buttons .btn { min-width: 0; padding: 0 var(--sp-2); gap: 6px; white-space: nowrap; }
+@media (max-width: 429px) { .hero-buttons .btn { font-size: var(--fs-sm); } .hero-buttons .btn .icon { width: 16px; height: 16px; } }
+@media (max-width: 359px) { .hero-buttons .btn .icon { display: none; } }
+.seat-line { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); color: var(--muted); font-size: var(--fs-sm); }
+@media (min-width: 900px) {
+  .hero-pick, .detail-hero { margin: 0 0 var(--sp-4); min-height: 540px; border-radius: 20px; overflow: hidden; display: flex; align-items: flex-end; }
+  .hero-pick .hero-media, .detail-hero .hero-media { position: absolute; inset: 0; aspect-ratio: auto; }
+  .hero-media.from-poster { justify-content: flex-end; align-items: center; padding: var(--sp-7) var(--sp-9); }
+  .hero-poster { width: 230px; }
+  .hero-media.plain { height: auto; }
+  .hero-pick .hero-scrim, .detail-hero .hero-scrim {
+    background:
+      linear-gradient(180deg, transparent 55%, var(--bg) 100%),
+      linear-gradient(90deg,
+        color-mix(in srgb, var(--bg) 96%, transparent) 0%,
+        color-mix(in srgb, var(--bg) 86%, transparent) 36%,
+        color-mix(in srgb, var(--bg) 25%, transparent) 70%,
+        color-mix(in srgb, var(--bg) 10%, transparent) 100%);
+  }
+  .hero-pick .hero-content, .detail-hero .hero-content { width: min(620px, 100%); margin: 0; padding: var(--sp-9) var(--sp-9) var(--sp-8); }
+  .hero-title { font-size: var(--fs-hero); }
 }
-.tg-times li { display: inline-flex; align-items: stretch; gap: 4px; }
-.st-time { font-weight: 600; }
-.st-seat { color: var(--text-2); font-size: var(--fs-xs); font-weight: 600; white-space: nowrap; }
-.st-end { color: var(--muted); font-size: var(--fs-xs); white-space: nowrap; }
-.st-fit { display: inline-flex; align-items: center; gap: 3px; color: var(--text); font-size: var(--fs-xs); font-weight: 700; }
-.st-book { display: inline-flex; align-items: center; gap: 2px; color: var(--text); font-weight: 700; font-size: var(--fs-xs); margin-left: auto; }
 
-/* ---- home: full list ---- */
-.list { display: flex; flex-direction: column; gap: 8px; }
-.list-row { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 12px 10px 10px; }
-.list-row:hover { background: var(--surface-2); }
-.list-row.excluded, .list-row.seen { opacity: 0.8; }
-.row-poster { flex: 0 0 auto; }
-.row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
-.row-head { display: flex; align-items: center; gap: 10px; width: 100%; }
-.row-title { font-weight: 600; flex: 1; min-width: 0; }
-.row-year { color: var(--muted); font-weight: 400; }
-.row-reason { font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.row-tags { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.row-tags:empty { display: none; }
-.row-none { font-style: italic; }
-.row-more { padding: 5px 10px; font-size: var(--fs-xs); }
+/* ---- the calendar button: small, with a 44px tap area ---- */
+.cal-btn {
+  position: relative; display: inline-grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px;
+  border-radius: var(--r-btn); background: var(--chip); color: var(--text);
+}
+.cal-btn::after { content: ''; position: absolute; top: -6px; bottom: -6px; left: -6px; right: -6px; }
+.cal-btn:hover { background: color-mix(in srgb, var(--chip) 85%, var(--text)); }
 
-/* expanded showtimes, grouped by format */
-.row-expand { width: 100%; display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
-.fmt-group { display: flex; flex-direction: column; gap: 6px; }
-.fmt-label { font-size: var(--fs-xs); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
-.fmt-slots { display: flex; flex-wrap: wrap; gap: 6px; }
-.fmt-slots .showtime-chip { font-size: var(--fs-xs); padding: 5px 9px; }
-
-/* page-level day picker */
-.day-picker { display: flex; gap: var(--sp-2); overflow-x: auto; padding: var(--sp-2) 0 var(--sp-3); margin: var(--sp-2) 0 0; scrollbar-width: none; scroll-snap-type: x proximity; }
+/* ---- day chips: the chosen day filled with the accent ---- */
+.day-strip { position: relative; margin: var(--sp-3) 0 var(--sp-2); }
+/* More days off to the right: the strip fades out at its edge. */
+.day-strip::after {
+  content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 48px; pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--bg)); opacity: 0; transition: opacity 200ms;
+}
+.day-strip.more::after { opacity: 1; }
+.day-picker { display: flex; gap: var(--sp-2); overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
 .day-picker::-webkit-scrollbar { display: none; }
 .day-btn {
-  flex: 0 0 60px; width: 60px; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  border-radius: var(--r-md); cursor: pointer; scroll-snap-align: start;
-  background: var(--surface); border: 1px solid var(--line); color: var(--text); padding: 0;
+  flex: 0 0 58px; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  padding: 0; border: none; border-radius: var(--r-btn); background: var(--chip); color: var(--text); cursor: pointer; scroll-snap-align: start;
 }
-.day-btn:hover { border-color: var(--line-strong); }
 .day-name { font-size: var(--fs-xs); font-weight: 500; color: var(--muted); line-height: var(--lh-tight); }
 .day-num { font-size: var(--fs-lg); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
-.day-btn.active { border-color: var(--text); background: color-mix(in srgb, var(--text) 10%, transparent); }
-.day-btn.active .day-name, .day-btn.active .day-num { color: var(--text); }
+.day-btn.active { background: var(--accent); color: var(--on-accent); }
+.day-btn.active .day-name { color: var(--on-accent); }
+@media (min-width: 900px) { .day-btn { flex-basis: 72px; height: 64px; } }
+
+/* ---- What should I watch? ---- */
+.wsw-bar { display: flex; margin: var(--sp-2) 0; }
+@media (max-width: 600px) { .wsw-bar .wsw-btn { width: 100%; } }
+
+/* ---- picks 2 to 4: cards ---- */
+.pick-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
+.pick-card { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; padding: var(--sp-3); border-radius: 16px; background: var(--raised); }
+.pc-top { display: flex; gap: var(--sp-3); min-width: 0; }
+.pick-poster { flex: 0 0 96px; align-self: flex-start; }
+.poster-card { width: 96px; height: 144px; }
+.pick-body { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.pick-head { display: flex; align-items: baseline; gap: 6px; margin: 0; font-size: inherit; font-weight: inherit; }
+.pick-rank { flex: 0 0 auto; font-family: var(--font-display); font-weight: var(--display-weight); font-size: var(--fs-lg); line-height: var(--lh-display); color: var(--accent-text); }
+.pick-title { font-size: var(--fs-lg); line-height: var(--lh-display); min-width: 0; }
+.pick-title:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .12em; }
+.pick-meta { margin: 0; color: var(--muted); font-size: var(--fs-xs); }
+.pc-times { padding-top: var(--sp-2); border-top: 1px solid var(--divider); }
+.pick-card > .owner-tools { padding-top: var(--sp-2); border-top: 1px solid var(--divider); }
 @media (min-width: 900px) {
-  .day-btn { flex-basis: 76px; width: 76px; height: 64px; }
+  .pick-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4); }
+  .home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+.owner-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2); width: 100%; min-width: 0; }
+.rate-inline { display: flex; align-items: center; min-width: 0; }
+.owner-buttons { display: flex; align-items: center; gap: var(--sp-2); margin-left: auto; flex: 0 0 auto; }
+.is-leaving { opacity: 0; transform: scale(.98); transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out); pointer-events: none; }
 
-/* collapsible section header */
-.section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+/* ---- showtime rows: one fixed grid, so every row lines up ----
+   time · format · ends · fits · Book · calendar. The Book link covers the
+   whole row (its ::after), so a tap anywhere books; the calendar button sits
+   above it. At 320 the same cells take two fixed lines. */
+.st-list { display: flex; flex-direction: column; }
+.st-list > .st-row + .st-row { border-top: 1px solid var(--divider); }
+.st-row {
+  position: relative; display: grid; align-items: center; column-gap: 5px; min-height: 44px; min-width: 0;
+  /* Measured on IBM Plex: "10:45 PM" bold, the widest format chip, "ends
+     12:59 AM", the Fits mark, Book and the calendar button. 314px in all,
+     inside the 319px of a card at 375. */
+  grid-template-columns: 56px 46px minmax(76px, 1fr) 38px auto 28px;
+  grid-template-areas: "time fmt end fit book cal";
+  font-size: var(--fs-xs); color: var(--text); border-radius: 8px;
+}
+.st-time { grid-area: time; font-size: var(--fs-sm); font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.st-fmt { grid-area: fmt; display: flex; }
+.st-fmt .tag { padding: 2px 6px; }
+.st-end { grid-area: end; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.st-fit { grid-area: fit; display: inline-flex; align-items: center; gap: 2px; color: var(--good); font-weight: 600; white-space: nowrap; }
+.st-book { grid-area: book; justify-self: end; display: inline-flex; align-items: center; gap: 2px; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
+a.st-book::after { content: ''; position: absolute; inset: 0; border-radius: 8px; }
+a.st-book:focus-visible { outline: none; }
+a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset: 1px; }
+.st-row:has(a.st-book:hover) { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.st-cal { grid-area: cal; justify-self: end; z-index: 1; }
+.st-row .cal-btn { width: 28px; height: 28px; flex-basis: 28px; }
+.st-row .cal-btn::after { top: -8px; bottom: -8px; left: -8px; right: -8px; }
+.st-row.past, .st-row.past .st-time { color: var(--muted); }
+.st-row.past .st-time { font-weight: 500; }
+.st-row.past .st-book { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
+@media (max-width: 359px) {
+  .st-row { grid-template-columns: auto auto minmax(0, 1fr) auto; grid-template-areas: "time fmt . book" "end fit . cal"; row-gap: 2px; padding: 4px 0; }
+  .st-fit { justify-self: start; }
+}
+/* Nothing on the chosen day: the next showing, and Book. */
+.next-line { position: relative; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); min-height: 44px; margin: 0; font-size: var(--fs-sm); }
+.next-line a.st-book::after { border-radius: 8px; }
+
+/* ---- the lists: rows with thin dividers, no boxes ---- */
+.list { display: flex; flex-direction: column; }
+.list > .list-row + .list-row { border-top: 1px solid var(--divider); }
+.list-row { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--sp-3); row-gap: var(--sp-2); align-items: start; padding: var(--sp-3) 0; }
+/* The showtime, All times and the controls run under the poster, across the row. */
+.list-row > .row-wide { grid-column: 1 / -1; min-width: 0; }
+.list-row.excluded, .list-row.seen, .list-row.is-hidden { opacity: .85; }
+.row-poster { flex: 0 0 auto; }
+.row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.row-head { display: flex; align-items: flex-start; gap: var(--sp-2); width: 100%; }
+.row-title { flex: 1; min-width: 0; font-weight: 600; padding-top: 2px; }
+.row-year { color: var(--muted); font-weight: 400; }
+.row-head .not-for-me { margin: -4px 0 -4px auto; }
+.row-match { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.row-more.row-wide { justify-self: start; }
+.row-expand { display: flex; flex-direction: column; gap: var(--sp-2); }
+.fmt-theatre { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; font-size: var(--fs-sm); font-weight: 600; margin-top: var(--sp-2); }
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
 .section-head .section-title { flex: 1; min-width: 0; }
-.section-toggle { flex: 0 0 auto; padding: 5px 10px; font-size: var(--fs-xs); }
+.section-toggle { flex: 0 0 auto; }
+.section-link { display: inline-flex; align-items: center; gap: var(--sp-1); min-height: 44px; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
+.section-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.hidden-line { color: var(--muted); font-size: var(--fs-sm); margin: var(--sp-2) 0 0; }
+.hidden-list { display: flex; flex-direction: column; }
+.hidden-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) 0; }
+.hidden-row + .hidden-row { border-top: 1px solid var(--divider); }
+.hidden-name { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.hidden-title { font-weight: 600; min-width: 0; }
+.hidden-title:hover { text-decoration: underline; }
 
-/* started showtimes stay visible but aren't bookable */
-/* Started: quiet but still readable (it was faded to .45, about 2.2:1). */
-.showtime-chip.past { background: transparent; border-style: dashed; border-color: var(--line-strong); }
-.showtime-chip.past, .showtime-chip.past :is(.st-time, .st-seat, .st-end, .st-fit, .badge) { color: var(--muted); }
-.showtime-chip.past .badge { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); }
-.st-past { color: var(--muted); font-size: var(--fs-xs); font-weight: 600; margin-left: auto; }
-.badge.fmt { background: var(--surface-3); color: var(--text); }
-
-/* ---- tiles (coming / watchlist) ---- */
-.tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px; }
-.tile { display: flex; flex-direction: column; gap: 6px; }
+/* ---- tiles (Coming soon, Watchlist) ---- */
+.tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--sp-5) var(--sp-3); }
+.tile { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .tile-poster { position: relative; }
-.tile-corner { position: absolute; top: 6px; left: 6px; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
-.tile-corner.right { left: auto; right: 6px; align-items: flex-end; }
+.tile-link { display: block; }
+.tile-corner { position: absolute; top: 6px; right: 6px; }
 .tile-cap { font-size: var(--fs-sm); font-weight: 600; line-height: var(--lh-tight); }
 .tile-sub { font-size: var(--fs-xs); color: var(--muted); }
+.tile-tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* ---- Last chance tiles ---- */
+.lc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-5) var(--sp-3); }
+@media (min-width: 900px) { .lc-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.lc-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+.lc-poster { position: relative; width: 100%; }
+.lc-saved { position: absolute; top: 6px; left: 6px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: color-mix(in srgb, var(--bg) 78%, transparent); color: var(--gold); }
+.lc-saved .icon { fill: currentColor; }
+.lc-hedge { font-size: var(--fs-xs); color: var(--muted); }
+.lc-title { font-size: var(--fs-sm); font-weight: 600; line-height: var(--lh-tight); }
+.lc-meta { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.lc-left { font-size: var(--fs-xs); color: var(--muted); }
+
+/* ---- Schedule: Leaving, a week of departure deadlines ---- */
+.lv-intro { margin: 0 0 var(--sp-3); line-height: var(--lh-body); max-width: 60ch; }
+.lv-week { display: flex; flex-direction: column; gap: var(--sp-4); margin-bottom: var(--sp-5); }
+.lv-day-head { display: flex; align-items: baseline; gap: var(--sp-2); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--divider); }
+.lv-day-name { font-family: var(--font-display); font-weight: var(--display-weight); font-size: var(--fs-lg); line-height: var(--lh-display); }
+.lv-day-num { color: var(--muted); font-size: var(--fs-sm); }
+.lv-day-count { margin-left: auto; font-size: var(--fs-sm); color: var(--muted); }
+.lv-day:is(.urgent, .soon) .lv-day-count { color: var(--bad); font-weight: 600; }
+.lv-day.no-films .lv-day-head { border-bottom: none; padding-bottom: 0; }
+.lv-day.no-films .lv-day-name { font-size: var(--fs-md); color: var(--muted); }
+.lv-day.no-films .lv-day-body { display: none; }
+.lv-day-body, .lv-later, .lv-hedged { display: flex; flex-direction: column; }
+:is(.lv-day-body, .lv-later, .lv-hedged) > .lv-film + .lv-film { border-top: 1px solid var(--divider); }
+.lv-film { display: flex; gap: var(--sp-3); padding: var(--sp-3) 0; min-width: 0; }
+.lv-poster { position: relative; flex: 0 0 auto; }
+.lv-film-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.lv-film-title { font-weight: 600; line-height: var(--lh-tight); }
+.lv-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.lv-when { font-size: var(--fs-sm); font-weight: 600; }
+.lv-when:is(.urgent, .soon) { color: var(--bad); }
+.lv-when.hedge { color: var(--muted); font-weight: 500; }
+.lv-sub, .lv-handoff { font-size: var(--fs-xs); color: var(--muted); line-height: var(--lh-snug); }
+.lv-more { display: inline-flex; align-items: center; align-self: flex-start; min-height: 44px; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; }
+.lv-none { margin-bottom: var(--sp-4); }
 
 /* ---- detail ---- */
 .detail { display: flex; flex-direction: column; gap: var(--sp-5); }
@@ -994,106 +1119,7 @@ body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h)
   .poster-lg { width: 140px; flex-basis: 140px; }
 }
 
-/* ---- last chance (leaving the theatre soon) ---- */
-/* ---- Leaving: a week of departure deadlines ---- */
-.lv-intro { margin: -4px 0 12px; line-height: var(--lh-body); }
-/* One column per day on a phone; the week fans out side by side once there's
-   room. minmax(0, …) from the start — a plain 1fr track cannot shrink below
-   its content, which is how a single wide film row would distort the week. */
-.lv-week { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-bottom: 18px; }
-.lv-day { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); padding: 10px; min-width: 0; }
-.lv-day.empty { background: transparent; border-style: dashed; }
-.lv-day.empty .lv-day-name { color: var(--muted); font-weight: 600; }
-.lv-day-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
-.lv-day-name { font-weight: 700; font-size: var(--fs-base); white-space: nowrap; }
-.lv-day-num { color: var(--muted); font-size: var(--fs-xs); white-space: nowrap; }
-.lv-day-count { margin-left: auto; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-/* Soonest = loudest. Same tier colours the Last chance cards use. */
-.lv-day.urgent { border-color: var(--urgent); box-shadow: 0 0 0 1px var(--urgent) inset; }
-.lv-day.urgent .lv-day-name, .lv-day.urgent .lv-day-count { color: var(--urgent); }
-.lv-day.soon { border-color: color-mix(in srgb, var(--urgent) 55%, transparent); }
-.lv-day.soon .lv-day-name, .lv-day.soon .lv-day-count { color: var(--urgent); }
-.lv-day.near .lv-day-name { color: var(--text); }
-.lv-day-body { display: flex; flex-direction: column; gap: 10px; }
-
-.lv-film { display: flex; gap: 10px; min-width: 0; }
-.lv-poster { position: relative; width: 58px; flex: 0 0 58px; }
-.lv-score { position: absolute; bottom: 4px; right: 4px; z-index: 1; transform: scale(0.82); transform-origin: bottom right; }
-.lv-star { position: absolute; top: 4px; left: 4px; z-index: 1; color: var(--text); font-size: var(--fs-sm); text-shadow: 0 1px 3px color-mix(in srgb, var(--bg) 80%, transparent); }
-.lv-film-body { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.lv-film-title { font-size: var(--fs-sm); font-weight: 700; line-height: var(--lh-tight); }
-.lv-when { font-size: var(--fs-xs); font-weight: 700; color: var(--text); }
-.lv-when.urgent { color: var(--urgent); }
-.lv-when.soon { color: var(--urgent); }
-.lv-when.near { color: var(--text); }
-/* A hedge must never read like a deadline: quiet, italic, never coloured. */
-.lv-when.hedge { color: var(--muted); font-weight: 600; font-style: italic; }
-.lv-sub { font-size: var(--fs-xs); color: var(--muted); line-height: var(--lh-snug); }
-.lv-handoff { font-size: var(--fs-xs); color: var(--text-2); line-height: var(--lh-snug); }
-.lv-slots { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
-.lv-slot { font-size: var(--fs-xs); font-weight: 600; padding: 2px 7px; border-radius: 7px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text); white-space: nowrap; }
-.lv-slot.more { color: var(--muted); font-weight: 500; }
-
-.lv-none { margin-bottom: 18px; }
-.lv-later, .lv-hedged { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
-.lv-film.hedged { opacity: 0.82; }
-
-/* Must follow the base .lv-* rules above, not sit in the earlier responsive
-   block — same specificity, so whichever comes last wins. */
-@media (min-width: 720px) {
-  /* The week fans out: seven day columns side by side. */
-  .lv-week { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
-  .lv-day { padding: 8px; }
-  /* Poster on top but small: this view is scanned, so the title, the label and
-     the showtimes matter more than the artwork. A full-width poster per film
-     would push a five-film day well past a screen. */
-  .lv-film { flex-direction: column; gap: 6px; }
-  .lv-poster { width: 62px; flex-basis: auto; }
-  .lv-film-title { font-size: var(--fs-xs); }
-  .lv-when, .lv-sub, .lv-handoff { font-size: var(--fs-xs); }
-  .lv-later, .lv-hedged { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-.lc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4) var(--sp-3); }
-@media (min-width: 900px) { .lc-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
-.lc-card { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
-.lc-poster .poster { box-shadow: none; border: 1px solid var(--line); }
-.lc-card.committed .lc-poster .poster { border: 2px solid var(--urgent); }
-.lc-pill {
-  align-self: flex-start; font-size: var(--fs-xs); font-weight: 700; line-height: 1;
-  padding: 6px 10px; border-radius: 999px; background: var(--urgent-fill); color: var(--on-urgent);
-}
-/* A hedge stays quiet: plain muted text, no colour, no pill. */
-.lc-hedge { font-size: var(--fs-xs); font-weight: 600; font-style: italic; color: var(--muted); }
-.lc-body { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
-.lc-title { font-size: var(--fs-sm); font-weight: 600; line-height: var(--lh-tight); }
-.lc-meta { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
-.lc-meta .score-pill { min-width: 0; padding: 3px 7px; }
-.lc-meta .score-num { font-size: var(--fs-sm); }
-.lc-star { color: var(--text); display: inline-grid; }
-.lc-star .icon { fill: currentColor; }
-.lc-left { font-size: var(--fs-xs); color: var(--muted); }
-.section-link { display: inline-flex; align-items: center; gap: var(--sp-1); min-height: 44px; color: var(--text); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
-.section-link:hover { text-decoration: underline; }
-
-/* ---- runway badge + followed theatres ---- */
-.runway { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; }
-.runway.ending { color: var(--text); }
-.runway.urgent { color: var(--urgent); font-weight: 700; }
-.runway.upcoming { color: var(--muted); font-style: italic; }
-.runway-where { color: var(--muted); font-weight: 600; }
-.runway-head { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
-.row-sub { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; width: 100%; }
-.row-sub:empty { display: none; }
-.theatre-chips { display: inline-flex; flex-wrap: wrap; gap: 5px; }
-.t-chip { font-size: var(--fs-xs); padding: 2px 7px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
-.t-chip.primary { color: var(--text); border-color: var(--muted); }
-.t-dist { color: var(--muted); font-weight: 400; }
-.theatre-chips { align-items: center; }
-.t-only { font-size: var(--fs-xs); color: var(--muted); font-weight: 500; }
-.handoff { font-size: var(--fs-xs); color: var(--text-2); line-height: var(--lh-snug); }
-.lc-handoff { font-size: var(--fs-xs); color: var(--text-2); line-height: var(--lh-snug); margin-top: 2px; }
-.fmt-theatre { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; font-size: var(--fs-xs); font-weight: 700; margin-top: 6px; }
+/* ---- followed theaters (movie page, Settings) ---- */
 .theatre-block { padding: 10px 0; border-top: 1px solid var(--line); }
 .theatre-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin-bottom: 4px; }
 .theatre-title { font-weight: 700; font-size: var(--fs-base); }
@@ -1115,39 +1141,6 @@ body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h)
 .diag-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .diag-table th.num { text-align: right; }
 
-/* ---- runway line (cards + rows): second thing after title and score ---- */
-.runway-line {
-  display: flex; align-items: center; gap: 7px;
-  font-size: var(--fs-base); font-weight: 600; line-height: var(--lh-snug); letter-spacing: -0.005em;
-  color: var(--text-2);                 /* quiet tier: fully readable, not grey */
-  margin: 4px 0 6px;              /* its own band, not one more list item */
-  align-items: flex-start;        /* icon stays on the first line if the label wraps */
-}
-.runway-line .runway-icon { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 2px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; color: var(--text-2); }
-.runway-line .runway-text { display: inline-block; }
-.runway-line .runway-where { color: var(--muted); font-weight: 600; }
-.runway-line.upcoming { color: var(--text-2); font-style: italic; }
-/* committed with room to spare: plain white, still calm */
-.runway-line.ending { color: var(--text); }
-/* within ~4 days: gold, pill */
-.runway-line.urgent { color: var(--urgent); }
-.runway-line.urgent .runway-icon { color: var(--urgent); }
-.runway-line.urgent .runway-text { background: color-mix(in srgb, var(--urgent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--urgent) 45%, transparent); padding: 3px 9px; border-radius: 8px; font-weight: 700; }
-/* last day (today / tomorrow): red-orange, strongest */
-.runway-line.lastday { color: var(--urgent); }
-.runway-line.lastday .runway-icon { color: var(--urgent); }
-.runway-line.lastday .runway-text { background: var(--urgent-fill); color: var(--on-urgent); border-color: transparent; font-weight: 800; }
-/* compact rows: scaled down, still legible */
-.runway-line.compact { font-size: var(--fs-sm); gap: 6px; margin: 0 0 2px; }
-.runway-line.compact .runway-icon { width: 14px; height: 14px; stroke-width: 1.9; margin-top: 2px; }
-.runway-line.compact .runway-icon .cal-dot { r: 1.35; }
-.runway-line.compact.urgent .runway-text { padding: 2px 8px; }
-/* committed end date (kind 'ending'): filled glyph, outline otherwise */
-.runway-line .runway-icon .cal-dot { fill: currentColor; }
-.runway-line.committed .runway-icon .cal-body { fill: currentColor; }
-.runway-line.committed .runway-icon .cal-bar { stroke: var(--surface); stroke-width: 1.8; }
-.runway-line.committed .runway-icon .cal-dot { fill: var(--surface); }
-
 /* ---- unmatched AMC titles (Settings) ---- */
 .unmatched-list { display: flex; flex-direction: column; gap: 10px; }
 .unmatched-row { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--surface-2); border-radius: var(--r-sm); border: 1px solid transparent; }
@@ -1161,7 +1154,6 @@ body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h)
 .note .note-link { color: var(--text); font-weight: 700; white-space: nowrap; }
 
 /* ---- no-score movies: the number rests on a default, say so ---- */
-.score-pill.unscored { border-style: dashed; }
 .diag-table td.warn { color: var(--danger); font-weight: 700; }
 /* Phones: each theatre becomes a small card of labelled values. */
 @media (max-width: 599px) {
@@ -1179,94 +1171,6 @@ body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h)
 .review-why { font-size: var(--fs-xs); color: var(--text-2); }
 .confirm { display: flex; flex-direction: column; gap: 10px; }
 .confirm p { margin: 0; }
-
-/* ---- hero (Picks #1 and the movie page) ---- */
-/* Phone: the art sits on top and the text runs underneath on the page
-   background. Wide screens: the art fills the frame and a left-to-right scrim
-   keeps the text column readable over any image. */
-.hero-pick, .detail-hero { position: relative; margin: calc(-1 * var(--sp-4)) calc(-1 * var(--sp-4)) 0; isolation: isolate; }
-.hero-media { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: var(--surface); }
-.hero-media.plain { aspect-ratio: 16 / 6; background: linear-gradient(160deg, var(--surface-2), var(--surface)); }
-.hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; }
-.hero-media.from-poster .hero-img { filter: blur(28px) saturate(1.2) brightness(.7); transform: scale(1.25); }
-.hero-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, var(--bg) 100%); }
-.hero-content { position: relative; display: flex; flex-direction: column; gap: var(--sp-3); padding: 0 var(--sp-4) var(--sp-5); margin-top: calc(-1 * var(--sp-7)); }
-.eyebrow { font-size: var(--fs-xs); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); }
-.eyebrow-dot { color: var(--muted); }
-.eyebrow-score.good { color: var(--score-hi); }
-.eyebrow-score.ok { color: var(--score-mid); }
-.eyebrow-score.low { color: var(--score-lo); }
-.eyebrow-score.na { color: var(--muted); }
-/* The one title set tighter than --lh-display: at 46-72px the default gap reads loose. */
-.hero-title { font-size: var(--fs-hero-sm); line-height: .98; text-wrap: balance; }
-.hero-title a:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .12em; }
-.hero-facts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); color: var(--text-2); font-size: var(--fs-sm); }
-.hero-reason { margin: 0; color: var(--text-2); font-size: var(--fs-base); line-height: var(--lh-body); max-width: 32em; }
-.hero-content .runway-line { margin: 0; }
-.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-1); }
-.hero-actions .btn { min-height: 44px; }
-.btn.book { font-size: var(--fs-base); padding: 0 var(--sp-5); }
-.btn.book .badge { background: color-mix(in srgb, var(--on-accent) 16%, transparent); color: var(--on-accent); }
-.btn.book.none { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); cursor: default; font-weight: 600; }
-.btn.book.none:hover { filter: none; }
-.seat-line { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
-.hero-pick .hero-actions .btn.book { flex: 1 1 100%; }
-
-@media (min-width: 900px) {
-  .hero-pick, .detail-hero {
-    margin: 0 0 var(--sp-4); min-height: 520px; border-radius: var(--r-lg); overflow: hidden;
-    display: flex; align-items: flex-end; border: 1px solid var(--line);
-  }
-  .hero-pick .hero-media, .detail-hero .hero-media { position: absolute; inset: 0; aspect-ratio: auto; }
-  .hero-pick .hero-media.plain, .detail-hero .hero-media.plain { aspect-ratio: auto; }
-  .hero-pick .hero-scrim, .detail-hero .hero-scrim {
-    background:
-      linear-gradient(180deg, transparent 55%, var(--bg) 100%),
-      linear-gradient(90deg,
-        color-mix(in srgb, var(--bg) 97%, transparent) 0%,
-        color-mix(in srgb, var(--bg) 86%, transparent) 34%,
-        color-mix(in srgb, var(--bg) 25%, transparent) 68%,
-        color-mix(in srgb, var(--bg) 10%, transparent) 100%);
-  }
-  /* Wide enough for Book, Details, Watchlist and Not for me on one line. */
-  .hero-pick .hero-content, .detail-hero .hero-content { max-width: 660px; margin: 0; padding: var(--sp-9) var(--sp-9) var(--sp-8); gap: var(--sp-3); }
-  .hero-title { font-size: var(--fs-hero); }
-  .hero-pick .hero-actions .btn.book { flex: 0 0 auto; }
-}
-/* The #1 pick wears the signature colour: its Book button and, on wide
-   screens, its frame. (Its eyebrow stays neutral: text over the artwork.) */
-.hero-pick { border-color: var(--accent); }
-
-@media (min-width: 900px) {
-  /* minmax(0, ...) so no card's content can widen its own column. */
-  .pick-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4); }
-  .home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pick-card { padding: var(--sp-4); gap: var(--sp-4); }
-  .poster-card { width: 124px; height: 186px; flex-basis: 124px; }
-}
-
-/* ---- not for me ---- */
-.row-head .not-for-me { margin: -6px -4px -6px 0; }
-.owner-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2); width: 100%; min-width: 0; }
-.owner-tools .rate-inline { display: flex; align-items: center; gap: var(--sp-2); flex: 1 1 auto; min-width: 0; flex-wrap: wrap; }
-.owner-buttons { display: flex; align-items: center; gap: var(--sp-2); margin-left: auto; flex: 0 0 auto; }
-.pick-card .owner-tools { padding-top: var(--sp-2); border-top: 1px solid var(--line); }
-.is-leaving { opacity: 0; transform: scale(.98); transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out); pointer-events: none; }
-.list-row.is-hidden { opacity: .8; }
-.list-row.is-hidden:hover, .list-row.is-hidden:focus-within { opacity: .9; }
-.hidden-line { color: var(--muted); font-size: var(--fs-sm); margin: var(--sp-2) 2px 0; }
-.hidden-line .link-btn { padding: 0; min-height: 44px; }
-.hidden-list { display: flex; flex-direction: column; gap: var(--sp-2); }
-.hidden-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) 0; border-bottom: 1px solid var(--line); }
-.hidden-row:last-child { border-bottom: none; }
-.hidden-name { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
-.hidden-title { font-weight: 600; min-width: 0; }
-.hidden-title:hover { text-decoration: underline; }
-
-/* ---- revivals / tile captions ---- */
-.tile-tags { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
-.tile-tags .score-pill { min-width: 0; padding: 3px 8px; }
-.tile-tags .score-num { font-size: var(--fs-sm); }
 
 /* ---- loading skeleton (Picks) ---- */
 .sk { background: var(--surface-2); border-radius: var(--r-sm); position: relative; overflow: hidden; }
@@ -1320,23 +1224,6 @@ body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h)
 .focus-wrap { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .modal-card:focus { outline: none; }
 .modal-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-
-/* ---- leaving: empty days shrink to their header on wide screens ---- */
-@media (min-width: 720px) {
-  .lv-week { align-items: start; }
-  .lv-day.empty .lv-day-head { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
-  /* A seventh of the row is too narrow for "Tomorrow", the date and a count on
-     one line, and the count is what used to push the head onto two. Days with
-     films give the count its own line; an empty day's dashed border already
-     says "none", so its count is kept for screen readers only. */
-  .lv-day-head { flex-wrap: nowrap; }
-  .lv-day:not(.empty) .lv-day-head { flex-wrap: wrap; }
-  .lv-day:not(.empty) .lv-day-count { margin-left: 0; flex-basis: 100%; }
-  .lv-day.empty .lv-day-count {
-    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
-  }
-  .lv-day.empty .lv-day-body { display: none; }
-}
 
 /* ---- Together ---- */
 .tg-picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 2px 6px; }

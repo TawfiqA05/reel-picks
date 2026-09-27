@@ -30,7 +30,7 @@ export function openSearch(ctx = null) {
   const body = h('div', { class: 'search-body', id: listId, role: 'listbox', 'aria-label': 'Search results' });
   const credit = h('p', { class: 'stream-credit sr-credit', hidden: true }, CREDIT);
   // Not sure what to look for? "What should I watch?" (js/wsw.js) instead.
-  const wswBtn = ctx ? h('button', { class: 'link-btn search-wsw', type: 'button', 'aria-haspopup': 'dialog' }, icon('sparkle', { size: 16 }), 'Not sure? What should I watch?') : null;
+  const wswBtn = ctx ? h('button', { class: 'link-btn search-wsw', type: 'button', 'aria-haspopup': 'dialog' }, icon('ticket', { size: 16 }), 'Not sure? What should I watch?') : null;
   const content = h('div', { class: 'search-sheet' },
     h('div', { class: 'filter-field search-field' }, icon('search', { size: 18, cls: 'filter-icon' }), input, clearBtn),
     wswBtn, statusLine, body, credit);

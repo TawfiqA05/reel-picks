@@ -136,7 +136,7 @@ function buildPage(data, status, ctx, state, actions) {
   if (!guest) {
     page.appendChild(h('div', { class: 'wsw-bar' },
       h('button', { id: 'wsw-btn', class: 'btn soft wsw-btn', type: 'button', 'aria-haspopup': 'dialog', onClick: () => openWhatToWatch(ctx) },
-        icon('sparkle', { size: 18 }), 'What should I watch?')));
+        icon('ticket', { size: 18 }), 'What should I watch?')));
   }
   if (data.weekly4.length > 1) {
     page.appendChild(sectionTitle(guest ? `The rest of ${owner}'s four` : 'The rest of your four',
@@ -157,7 +157,7 @@ function buildPage(data, status, ctx, state, actions) {
   const lastChance = data.lastChance || [];
   if (lastChance.length) {
     page.appendChild(h('div', { class: 'section-head' },
-      sectionTitle('Last chance', `Leaving ${data.theatre?.name || 'your theatre'} soon`),
+      sectionTitle('Last chance', `Leaving ${data.theatre?.name || 'your theater'} soon`),
       h('a', { class: 'section-link', href: '#/schedule/leaving' }, 'See the week', icon('arrowRight', { size: 16 })),
     ));
     const lcGrid = h('div', { class: 'lc-grid' });
@@ -196,7 +196,7 @@ function buildPage(data, status, ctx, state, actions) {
   if (nearby.length) {
     const others = (data.theatres || []).filter((t) => !t.isPrimary).map((t) => t.short).join(' / ');
     page.appendChild(sectionTitle('Also nearby',
-      `Not at ${data.theatre?.short || 'your theatre'} this week · ${others}`));
+      `Not at ${data.theatre?.short || 'your theater'} this week · ${others}`));
     page.appendChild(nearbyList);
   }
 

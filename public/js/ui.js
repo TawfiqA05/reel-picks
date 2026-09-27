@@ -73,16 +73,19 @@ export function poster(movie, { size = 'md', link = true, file = null } = {}) {
   return box;
 }
 
-// unscored: the number rests on a default public score (no reviews yet), so
-// the pill is drawn dashed and says so on hover.
-export function scorePill(value, { label, big = false, unscored = false } = {}) {
-  return h('div', {
-    class: `score-pill ${scoreColor(value)}${big ? ' big' : ''}${unscored ? ' unscored' : ''}`,
-    title: unscored ? 'No public scores yet. This number uses a neutral 50 for reviews.' : (label || 'Score'),
-  },
-    h('span', { class: 'score-num' }, value == null ? '–' : value),
-    label ? h('span', { class: 'score-label' }, label) : null,
-  );
+// The match, one style everywhere: a soft accent pill, "97% match". `early`
+// (no public scores yet, so the number leans on taste and a neutral 50 for
+// reviews) adds a small "early".
+export function matchBadge(value, { early = false } = {}) {
+  return h('span', {
+    class: 'match',
+    title: early ? 'No public scores yet. This number uses a neutral 50 for reviews.' : 'How likely you are to enjoy it',
+  }, value == null ? 'No match yet' : `${value}% match`, early ? h('span', { class: 'match-early' }, 'early') : null);
+}
+
+// A part of the match on its own (public score, taste match), as a number.
+export function scoreNum(value) {
+  return h('span', { class: 'score-num' }, value == null ? 'n/a' : String(value));
 }
 
 // A tag: a small soft-filled label. `variant` picks its tint (styles.css, tags).

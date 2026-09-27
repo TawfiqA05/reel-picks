@@ -20,26 +20,32 @@ function steps(status) {
   const owner = status?.ownerName || 'the owner';
   const isOwner = status?.user?.isOwner !== false;
   return [
-    { route: 'home', targets: [['.hero-pick .eyebrow', '.hero-pick .hero-title']], title: 'Your picks',
-      text: 'Your 4 for this week, the movies at your theaters you\'ll most likely love. The match score shows how sure we are.' },
-    { route: 'home', targets: [['.pick-card .rate-inline'], ['.worth-list .rate-inline']], title: 'Ratings',
-      text: 'Rate what you\'ve seen. Every rating makes next week\'s picks better.' },
-    { route: 'home', targets: [['.pick-card .owner-buttons .icon-btn:not(.not-for-me)'], ['.hero-pick .hero-actions .icon-btn[aria-pressed]']], title: 'Watchlist',
-      text: 'Save movies you want to see. They get a boost and you\'ll get a heads-up before they leave.' },
-    { route: 'home', targets: [['.pick-card .not-for-me'], ['.hero-pick .not-for-me']], title: 'Not for me',
-      text: 'Not interested? Hide it and it won\'t come back. You can undo in Settings.' },
-    { route: 'home', targets: [['#at-home .section-head', '#at-home .home-card'], ['#at-home .section-head', '#at-home .home-setup'], ['#at-home .section-head']], title: 'At home',
-      text: 'Staying in? Your 4 best matches this week on the streaming services you have, scored the same way.' },
+    { route: 'home', targets: [['.hero-pick .hero-line', '.hero-pick .hero-title']], title: 'Your four',
+      text: 'The four films at your theaters you\'re most likely to love this week, best first. The match says how likely.' },
+    { route: 'home', targets: [['.hero-pick .btn.book']], title: 'Book',
+      text: 'Book opens the best showtime on AMC. Seat by, under it, is when the film itself starts after the previews.' },
+    { route: 'home', targets: [['.hero-pick .hero-buttons']], title: 'Save or skip',
+      text: 'Save keeps a film on your watchlist and gives it a boost. Not for me hides it; you can bring it back from Settings.' },
+    { route: 'home', targets: [['.day-strip']], title: 'Pick a day',
+      text: 'Every showtime on Picks follows the day you choose here.' },
+    { route: 'home', targets: [['.pick-card .rate-inline'], ['.worth-list .rate-inline']], title: 'Rate as you go',
+      text: 'Seen one already? Rate it right on the card. Every rating sharpens next week\'s four.' },
     { route: 'home', targets: [['#wsw-btn']], title: 'What should I watch?',
-      text: 'Can\'t decide? Answer three quick questions and get three films that fit, at the theater or at home. It\'s in Search too.' },
+      text: 'Can\'t decide? Answer three quick questions and get three films that fit, at the theater or at home.' },
+    { route: 'home', targets: [['#at-home .section-head', '#at-home .home-card'], ['#at-home .section-head', '#at-home .home-setup'], ['#at-home .section-head']], title: 'At home',
+      text: 'Staying in? Your best matches this week on the streaming services you have, scored the same way.' },
     { route: 'schedule', targets: tab('schedule').map((s) => [s]), title: 'Schedule',
-      text: 'What\'s leaving soon (last chance) and what\'s opening soon.' },
+      text: 'What\'s leaving soon, day by day, and what\'s opening soon.' },
+    { route: 'rate', targets: tab('rate').map((s) => [s]), title: 'Rate',
+      text: 'Find any film to rate, or bring in your ratings from Letterboxd or IMDb.' },
+    { route: 'watchlist', targets: tab('watchlist').map((s) => [s]), title: 'Watchlist',
+      text: 'Everything you\'ve saved, with a heads-up before it leaves your theater.' },
     { route: null, targets: [['#search-btn']], title: 'Search',
-      text: 'Find any movie, even old ones, to rate or save.' },
-    { route: 'stats', targets: tab('you').map((s) => [s]), title: 'You',
+      text: 'Find any film, even old ones, to rate or save. Press / on a keyboard.' },
+    { route: 'help', targets: tab('you').map((s) => [s]), title: 'You',
       text: isOwner ? 'Your stats, Together, Settings and this tour live under You.'
-        : `Your stats, Together (plan a movie with ${owner}), Settings and this tour live under You.` },
-  ].filter(Boolean);
+        : `Your stats, Together (plan a film with ${owner}), Settings and this tour live under You.` },
+  ];
 }
 
 let active = null;

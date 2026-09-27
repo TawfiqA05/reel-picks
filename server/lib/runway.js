@@ -25,7 +25,7 @@ export function dateWord(ymd, today) {
 
 // "through Thu" — with "at least" when the date is only a publishing edge.
 function throughPhrase(ymd, today, committed) {
-  return `${committed ? 'through' : 'through at least'} ${dateWord(ymd, today)}`;
+  return `${committed ? 'through' : 'playing through'} ${dateWord(ymd, today)}`;
 }
 
 // Prose for the reason line when urgency lifted a score: "it's gone after
@@ -76,20 +76,20 @@ export function computeRunway({
   let label;
   let detail = null;
   if (hedgeAll && gapDays >= minGap) {
-    label = `Through at least ${dateWord(lastDate, today)}`;
-    detail = 'Most of this theatre\'s lineup ends the same day — reading that as a schedule mid-update, not departures';
+    label = `Playing through ${dateWord(lastDate, today)}`;
+    detail = 'Most of this theater\'s lineup ends the same day, which looks like a schedule mid-update, not departures';
   } else if (committed) {
     if (daysLeft <= 0) label = 'Last day today';
     else if (daysLeft === 1) label = 'Last day tomorrow';
-    else label = `Through ${dateWord(lastDate, today)}`;
+    else label = `Last showing ${dateWord(lastDate, today)}`;
     if (daysLeft >= 2 && daysLeft <= urgentWithin) detail = `${daysLeft} days left`;
   } else if (daysLeft <= 0) {
     label = 'On today';
     detail = 'No later dates posted yet';
   } else {
-    label = `Through at least ${dateWord(lastDate, today)}`;
+    label = `Playing through ${dateWord(lastDate, today)}`;
     detail = kind === 'open'
-      ? `No end date yet — schedule posted through ${dateWord(horizon, today)}`
+      ? `No end date yet. The schedule is posted through ${dateWord(horizon, today)}`
       : `Schedule posted through ${dateWord(horizon, today)}; nothing listed after ${dateWord(lastDate, today)} yet`;
   }
 
@@ -152,7 +152,7 @@ export function handoffLine({ primaryShort, primaryRunway, others, today }) {
     : `Through ${dateWord(primaryRunway.lastDate, today)} at ${primaryShort}`;
   const tail = `still at ${o.short} ${throughPhrase(o.runway.lastDate, today, o.runway.kind === 'ending')}`;
   return {
-    text: `${head} — ${tail}.`,
+    text: `${head}. ${tail.charAt(0).toUpperCase()}${tail.slice(1)}.`,
     theatre: { id: o.id, short: o.short, name: o.name },
     lastDate: o.runway.lastDate,
     committed: o.runway.kind === 'ending',

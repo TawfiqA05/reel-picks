@@ -11,7 +11,8 @@
 // occupies a day. Labels are rendered verbatim from runway.label so the
 // "through at least" hedging is never re-worded or shortened here.
 import { api } from '../api.js';
-import { h, clear, spinner, emptyState, sectionTitle, poster, scorePill, icon } from '../ui.js';
+import { h, clear, spinner, emptyState, sectionTitle, poster, matchBadge, icon } from '../ui.js';
+import { showtimeRow } from './components.js';
 
 const DAYS_AHEAD = 7;
 
@@ -142,7 +143,7 @@ function dayColumn(date, films, today, ctx) {
   const d = daysApart(today, date) ?? 0;
   const tier = films.length ? tierFor(d) : '';
   const dateObj = new Date(`${date}T00:00:00`);
-  return h('div', { class: `lv-day ${tier}${films.length ? '' : ' empty'}` },
+  return h('div', { class: `lv-day ${tier}${films.length ? '' : ' no-films'}` },
     h('div', { class: 'lv-day-head' },
       h('span', { class: 'lv-day-name' }, friendly(date, today)),
       h('span', { class: 'lv-day-num' }, dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
@@ -154,53 +155,37 @@ function dayColumn(date, films, today, ctx) {
   );
 }
 
-// One departing film. `date` renders that day's remaining showtimes, which is
-// the actionable part of a deadline.
+// One departing film. `date` adds that day's remaining showtimes as rows
+// (the actionable part of a deadline).
 function filmRow(e, ctx, { date = null, showDate = false } = {}) {
   const tier = tierFor(e.runway.daysLeft ?? 0);
   const slots = date ? (e.showtimesByDay || []).find((x) => x.date === date)?.showtimes || [] : [];
-  const live = slots.filter((s) => !s.past).slice(0, 4);
-  const hiddenCount = slots.filter((s) => !s.past).length - live.length;
-
-  return h('a', { class: 'lv-film', href: `#/movie/${e.tmdb_id}` },
-    h('div', { class: 'lv-poster' },
-      poster(e, { size: 'grid', link: false, file: 'w185' }),
-      h('span', { class: 'lv-score' }, scorePill(e.final)),
-      e.flags?.watchlisted ? h('span', { class: 'lv-star', title: ctx?.isGuest?.() ? 'On the watchlist' : 'On your watchlist' }, icon('bookmark', { size: 13 })) : null,
-    ),
+  const live = slots.filter((s) => !s.past);
+  const shown = live.slice(0, 3);
+  return h('div', { class: 'lv-film' },
+    h('a', { class: 'lv-poster', href: `#/movie/${e.tmdb_id}`, tabindex: '-1', 'aria-hidden': 'true' },
+      poster(e, { size: 'sm', link: false }),
+      e.flags?.watchlisted ? h('span', { class: 'lc-saved', title: ctx?.isGuest?.() ? 'On the watchlist' : 'On your watchlist' }, icon('bookmark', { size: 13, label: 'Saved' })) : null),
     h('div', { class: 'lv-film-body' },
-      h('div', { class: 'lv-film-title' }, e.title),
-      // runway.label verbatim — the committed / hedged wording is decided
-      // server-side and must not be re-phrased here.
-      h('div', { class: `lv-when ${tier}` }, e.runway.label),
-      showDate && e.runway.lastDate
-        ? h('div', { class: 'lv-sub' }, e.runway.lastDate)
-        : null,
+      h('a', { class: 'lv-film-title', href: `#/movie/${e.tmdb_id}` }, e.title),
+      h('div', { class: 'lv-meta' }, matchBadge(e.final), h('span', { class: `lv-when ${tier}` }, e.runway.label)),
+      showDate && e.runway.lastDate ? h('div', { class: 'lv-sub' }, e.runway.lastDate) : null,
       e.runway.detail ? h('div', { class: 'lv-sub' }, e.runway.detail) : null,
-      // "still at Indianapolis through Sep 4" — a film leaving here but not gone.
+      // "Still at Indianapolis through Sep 4": leaving here, not gone.
       e.handoff ? h('div', { class: 'lv-handoff' }, icon('handoff', { size: 13 }), ' ', e.handoff.text) : null,
-      live.length
-        ? h('div', { class: 'lv-slots' },
-          ...live.map((s) => h('span', { class: 'lv-slot' }, s.time)),
-          hiddenCount > 0 ? h('span', { class: 'lv-slot more' }, `+${hiddenCount}`) : null,
-        )
-        : null,
+      shown.length ? h('div', { class: 'st-list' }, ...shown.map((st) => showtimeRow(st))) : null,
+      live.length > shown.length ? h('a', { class: 'lv-more', href: `#/movie/${e.tmdb_id}` }, `${live.length - shown.length} more that day`) : null,
     ),
   );
 }
 
-// Horizon-edge film: same shape, deliberately quieter, and the label is the
-// untouched "Through at least …".
+// Horizon-edge film: same shape, quieter, with the runway's own words.
 function hedgedRow(e, ctx) {
-  return h('a', { class: 'lv-film hedged', href: `#/movie/${e.tmdb_id}` },
-    h('div', { class: 'lv-poster' },
-      poster(e, { size: 'grid', link: false, file: 'w185' }),
-      h('span', { class: 'lv-score' }, scorePill(e.final)),
-      e.flags?.watchlisted ? h('span', { class: 'lv-star', title: ctx?.isGuest?.() ? 'On the watchlist' : 'On your watchlist' }, icon('bookmark', { size: 13 })) : null,
-    ),
+  return h('div', { class: 'lv-film hedged' },
+    h('a', { class: 'lv-poster', href: `#/movie/${e.tmdb_id}`, tabindex: '-1', 'aria-hidden': 'true' }, poster(e, { size: 'sm', link: false })),
     h('div', { class: 'lv-film-body' },
-      h('div', { class: 'lv-film-title' }, e.title),
-      h('div', { class: 'lv-when hedge' }, e.runway.label),
+      h('a', { class: 'lv-film-title', href: `#/movie/${e.tmdb_id}` }, e.title),
+      h('div', { class: 'lv-meta' }, matchBadge(e.final), h('span', { class: 'lv-when hedge' }, e.runway.label)),
       e.runway.detail ? h('div', { class: 'lv-sub' }, e.runway.detail) : null,
     ),
   );

@@ -1,6 +1,6 @@
 // Coming Soon: upcoming releases + advance screenings, ranked by predicted taste.
 import { api } from '../api.js';
-import { h, clear, spinner, emptyState, scorePill, badge, sectionTitle } from '../ui.js';
+import { h, clear, spinner, emptyState, matchBadge, badge, sectionTitle } from '../ui.js';
 import { posterTile, isOldRelease } from './components.js';
 
 export async function render(root, params, ctx) {
@@ -23,8 +23,8 @@ export async function render(root, params, ctx) {
   const grid = h('div', { class: 'tile-grid' });
   for (const mv of data.list) {
     const tags = [
-      scorePill(mv.predicted),
-      mv.advance ? badge('Advance', 'advance') : null,
+      matchBadge(mv.predicted),
+      mv.advance ? badge('Advance screening', 'accent') : null,
     ];
     // An old film coming back carries its original release date, which would
     // read as if it opened decades ago. Say what it is instead.
