@@ -5,7 +5,7 @@
 // VAPID_PRIVATE_KEY; with either missing the feature is off and the Settings
 // switch never shows.
 //
-// Sent right after Friday's refresh has computed the new week's four. The
+// Sent right after Friday's refresh has locked the new week's four. The
 // message carries only the #1 film's title and the Picks page link, never a
 // rating or score. push_sent is claimed (one row per person per week) before
 // anything goes out, so a restart, a redeploy or a second trigger can never
@@ -17,6 +17,7 @@ import crypto from 'node:crypto';
 import { run, all, get, getSetting } from '../db.js';
 import { runAs, OWNER_ID } from './user.js';
 import { getRecommendations } from './recommend.js';
+import { weekOpen } from './lock.js';
 import { localYMD, weekStartFriday } from './util.js';
 
 const TITLE = 'Your 4 for this week are ready';
@@ -234,8 +235,8 @@ export async function sendWeekly({ now = new Date() } = {}) {
   }
 }
 
-// The automatic path: only on a Friday, once that day's refresh has put the
-// new week's lineup in place. Called after every refresh and on the server's
+// The automatic path: only on a Friday, once the new week's four has locked
+// (lib/lock.js), so the push names the locked #1. Called after every refresh and on the server's
 // 15-minute tick (which catches someone who turns notifications on later that
 // Friday). The caller makes sure no refresh is mid-run.
 export function sendWeeklyIfDue(now = new Date()) {
@@ -244,5 +245,6 @@ export function sendWeeklyIfDue(now = new Date()) {
   if (today !== weekStartFriday(now)) return Promise.resolve(null);
   const last = getSetting('lastRefresh');
   if (!last || localYMD(new Date(last)) !== today) return Promise.resolve(null);
+  if (!weekOpen(weekStartFriday(now))) return Promise.resolve(null);
   return sendWeekly({ now });
 }

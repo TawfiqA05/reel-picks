@@ -1233,6 +1233,7 @@ body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-botto
 .pick-card .owner-tools { padding-top: var(--sp-2); border-top: 1px solid var(--line); }
 .is-leaving { opacity: 0; transform: scale(.98); transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out); pointer-events: none; }
 .badge.moved { background: var(--surface-3); color: var(--text); }
+.badge.new { background: var(--accent); color: var(--on-accent); }
 .list-row.is-hidden { opacity: .8; }
 .list-row.is-hidden:hover, .list-row.is-hidden:focus-within { opacity: .9; }
 .hidden-line { color: var(--muted); font-size: var(--fs-sm); margin: var(--sp-2) 2px 0; }

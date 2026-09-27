@@ -21,6 +21,7 @@ import { computeRunway, runwayDates, handoffLine, goneAfterPhrase } from './runw
 import { localYMD, addDays, timeLabel, weekStartFriday } from './util.js';
 import { ownerName } from './guest.js';
 import { currentUserId } from './user.js';
+import { SWAP_MARGIN, weekOpen, prevWeek, readLock, createLock, saveLock } from './lock.js';
 
 // Everything below is for the user in context (lib/user.js): their settings,
 // ratings, watchlist, watch log and hidden films. The guest link runs as the
@@ -516,7 +517,71 @@ export function scoredLineup() {
   ];
 }
 
-export function getRecommendations({ guest = false } = {}) {
+// Does the film still have a showing this week (the next 7 days, not yet
+// started) at any of the user's theaters? A film with no showtimes there at
+// all is a TMDB-fallback film, playing on the lineup's word.
+function stillShowing(ctx, tmdbId) {
+  let any = false;
+  for (const t of ctx.theatres) {
+    const rows = rowsAt(ctx, t.id, tmdbId);
+    if (rows.length) any = true;
+    if (rows.some((s) => s.date <= ctx.weekEnd && (s.start_epoch ?? 0) >= ctx.now)) return true;
+  }
+  return !any;
+}
+
+// This week's four for the user in context (lib/lock.js has the rules). The
+// lock is made from `eligible` in ranked order, which is exactly the four the
+// live ranking would show at that moment; after that the four only changes
+// by the rules below. The guest link reads the owner's lock and writes nothing.
+function weeklyFour(ctx, { list, eligible, nearbyEval, guest, lockHow }) {
+  const uid = currentUserId();
+  const week = weekStartFriday(new Date(ctx.now));
+  const at = new Date(ctx.now).toISOString();
+  const unscored = () => list.filter((e) => e.flags.noScores).map((e) => e.tmdb_id);
+  let lock = readLock(uid, week);
+  let pending = false;
+  if (!lock && weekOpen(week)) {
+    lock = guest
+      ? { user_id: uid, week_start: week, locked_at: at, how: 'preview', picks: eligible.slice(0, 4).map((e) => ({ tmdb_id: e.tmdb_id, via: 'lock' })), unscored: unscored(), swapped_at: null, preview: true }
+      : createLock(uid, week, eligible.slice(0, 4), unscored(), lockHow || 'first-view', at);
+  }
+  // Until this week's four lock, last week's stays up.
+  if (!lock) { lock = readLock(uid, prevWeek(week)); pending = true; }
+  // Nothing locked yet at all (someone brand new before Friday's refresh).
+  if (!lock) return { four: eligible.slice(0, 4), meta: { week, pending: true, lockedAt: null } };
+
+  const entries = new Map([...list, ...nearbyEval].map((e) => [e.tmdb_id, e]));
+  const seenThisWeek = new Set(all('SELECT DISTINCT tmdb_id FROM watched WHERE user_id = ? AND watched_date >= ?', uid, lock.week_start).map((r) => r.tmdb_id));
+  const out = (id) => ctx.rated.has(id) || ctx.hidden.has(id) || seenThisWeek.has(id) || !entries.has(id) || !stillShowing(ctx, id);
+  // A film leaves when rated, marked seen, hidden or no longer showing; the
+  // rest keep their places and the next best by current score fills in.
+  const picks = lock.picks.filter((p) => !out(p.tmdb_id));
+  for (const e of eligible) {
+    if (picks.length >= 4) break;
+    if (picks.some((p) => p.tmdb_id === e.tmdb_id) || seenThisWeek.has(e.tmdb_id) || !stillShowing(ctx, e.tmdb_id)) continue;
+    picks.push({ tmdb_id: e.tmdb_id, via: 'refill' });
+  }
+  // Once a week at most: a film unscored at the lock that now beats #4 by a
+  // clear margin takes #4's place.
+  let swappedAt = null;
+  if (!lock.swapped_at && picks.length === 4) {
+    const fourth = entries.get(picks[3].tmdb_id);
+    const wasUnscored = new Set(lock.unscored);
+    const swap = fourth && eligible.find((e) => wasUnscored.has(e.tmdb_id) && !e.flags.noScores
+      && !picks.some((p) => p.tmdb_id === e.tmdb_id) && !seenThisWeek.has(e.tmdb_id) && stillShowing(ctx, e.tmdb_id)
+      && e.final - fourth.final >= SWAP_MARGIN);
+    if (swap) { picks[3] = { tmdb_id: swap.tmdb_id, via: 'swap' }; swappedAt = at; }
+  }
+  if (!guest && !lock.preview && (swappedAt || JSON.stringify(picks) !== JSON.stringify(lock.picks))) saveLock(lock, picks, { swappedAt, at });
+  return {
+    four: picks.map((p) => ({ ...entries.get(p.tmdb_id), pick: { via: p.via, newThisWeek: p.via === 'swap' } })),
+    meta: { week: lock.week_start, lockedAt: lock.preview ? null : lock.locked_at, how: lock.how, pending },
+  };
+}
+
+// lockHow: set by the refresh that locks everyone's four (lib/lock.js).
+export function getRecommendations({ guest = false, lockHow = null } = {}) {
   const ctx = buildCtx({ guest });
   const playing = all('SELECT * FROM movies WHERE playing = 1').map(hydrate);
   const { main, nearby } = splitLineup(ctx, playing);
@@ -525,7 +590,8 @@ export function getRecommendations({ guest = false } = {}) {
   const list = evaluated.sort(byScore);
   // Hidden films drop out here, so the next-best film moves up into the four.
   const eligible = list.filter((e) => !e.flags.seen && !e.flags.excluded && !e.flags.hidden);
-  const weekly4 = eligible.slice(0, 4);
+  const nearbyEval = nearby.map(({ m, t }) => evaluate(m, ctx, t.id));
+  const { four: weekly4, meta: lock } = weeklyFour(ctx, { list, eligible, nearbyEval, guest, lockHow });
   if (!guest) recordWeekly4(weekly4);
   // Everything else that still clears the "good match" bar, so the picks page
   // isn't capped at four. Already-in-weekly4 movies are excluded, not repeated;
@@ -535,14 +601,16 @@ export function getRecommendations({ guest = false } = {}) {
   const worthSeeing = eligible.filter((e) => !top4.has(e.tmdb_id) && e.final >= cutoff && !e.flags.noScores);
   const lastChance = getLastChance(list, ctx);
 
-  const alsoNearby = nearby
-    .map(({ m, t }) => evaluate(m, ctx, t.id))
-    .filter((e) => !e.flags.hidden)
+  const alsoNearby = nearbyEval
+    .filter((e) => !e.flags.hidden && !top4.has(e.tmdb_id))
     .sort(byScore);
 
   const primary = ctx.theatres[0];
   return {
     weekly4,
+    // Which week's four this is, when it locked, and whether it is still last
+    // week's (Friday before the first good refresh).
+    lock,
     worthSeeing,
     goodMatchMinScore: cutoff,
     // Published days the page's day picker can offer (primary theatre).

@@ -25,8 +25,10 @@ import {
   findTmdbMatch, recordMatch, getMatch, unmatchedTitles, reviewTitles, setReview, setAmcYear, stripQualifiers,
 } from './match.js';
 import { upsertRating } from './ratings.js';
-import { localYMD, addDays } from './util.js';
+import { localYMD, addDays, weekStartFriday } from './util.js';
 import { isSettling, MIN_TMDB_VOTES } from './scoring.js';
+import { getRecommendations } from './recommend.js';
+import { lockEveryone } from './lock.js';
 import { computeHorizon, snapshotLineup } from './leaving.js';
 import {
   followedTheatres, homeBase, theatreDistance, readDistance, shortName, sharedTheatres, activeUserIds,
@@ -588,6 +590,9 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
     state.lastLog = log;
     startCreditsBackfill('refresh');
     reportHealth(log);
+    // The week's first good refresh locks everyone's four (lib/lock.js);
+    // later ones leave the locks as they are.
+    if (!refreshProblems(log).refresh) lockEveryone(weekStartFriday(start), 'refresh', getRecommendations);
     return log;
   } catch (e) {
     raiseLater('refresh', `The refresh stopped with an error: ${e.message}`);

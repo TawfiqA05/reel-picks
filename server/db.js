@@ -188,6 +188,22 @@ CREATE TABLE IF NOT EXISTS weekly4_log (
   PRIMARY KEY (user_id, week_start, tmdb_id)
 );
 
+-- The weekly four, locked (lib/lock.js): one row per person per A-List week,
+-- written at the week's first good refresh. picks is the four in order, each
+-- { tmdb_id, via: 'lock' | 'refill' | 'swap' }; unscored lists the films that
+-- had no public score when it locked (the only ones that may swap in);
+-- swapped_at marks the week's one swap.
+CREATE TABLE IF NOT EXISTS weekly4_lock (
+  user_id     INTEGER NOT NULL,
+  week_start  TEXT NOT NULL,   -- Friday that begins the A-List week (YYYY-MM-DD)
+  locked_at   TEXT NOT NULL,
+  how         TEXT NOT NULL,   -- refresh | first-view | fallback
+  picks       TEXT NOT NULL,
+  unscored    TEXT NOT NULL,
+  swapped_at  TEXT,
+  PRIMARY KEY (user_id, week_start)
+);
+
 -- One row per movie per theatre per refresh: the shape of that theatre's lineup
 -- at that moment. Lets the app observe departures and shrinking schedules across
 -- refreshes instead of guessing from a single snapshot.

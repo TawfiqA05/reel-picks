@@ -314,6 +314,7 @@ export function weeklyCard(entry, ctx, rank, { day = null, multi = 0, onHide = n
         backBadge(entry),
         entry.flags?.noScores ? badge('No scores yet', 'noscore') : null,
         movedUp ? movedTag() : null,
+        newTag(entry),
       ),
       entry.reason ? h('p', { class: 'pick-reason' }, withStars(entry.reason)) : null,
       runwayLine(entry.runway, { compact: true }),
@@ -406,6 +407,9 @@ export function notForMeButton(entry, onHide, { label = false } = {}) {
 
 // Tag for a film that just moved into the four after a hide.
 const movedTag = () => badge('Moved up', 'moved');
+// Tag for the week's one swap: a film that had no score when the four locked,
+// earned one, and took #4's place (server/lib/lock.js).
+const newTag = (entry) => (entry.pick?.newThisWeek ? badge('New this week', 'new') : null);
 
 // The #1 pick of the week, full width over its own backdrop.
 export function heroPick(entry, ctx, { day = null, multi = 0, onHide = null, movedUp = false, rank = 1 } = {}) {
@@ -421,6 +425,7 @@ export function heroPick(entry, ctx, { day = null, multi = 0, onHide = null, mov
         h('span', { class: `eyebrow-score ${scoreColor(entry.final)}`, title: entry.flags?.noScores ? 'No public scores yet. This number uses a neutral 50 for reviews.' : 'Match score' },
           `${entry.final ?? '-'} match`),
         movedUp ? movedTag() : null,
+        newTag(entry),
       ),
       h('h1', { class: 'hero-title', id: `hero-${entry.tmdb_id}` },
         h('a', { href: `#/movie/${entry.tmdb_id}` }, entry.title)),
