@@ -79,8 +79,16 @@
   --urgent: #8E2715;
   --urgent-fill: #B3361E;
   --on-urgent: #FFF6EE;
-  --danger: var(--urgent);
-  --star-fill: var(--text);
+  /* State colours, one each: gold marks what you keep (stars, a saved
+     bookmark), green OK, red missing, failing or hidden, amber a warning.
+     Each passes 4.5:1 on every surface, and always comes with words or an
+     icon, never alone. */
+  --gold: #806000;
+  --green: #1F6B35;
+  --red: #A8261A;
+  --amber: #A24D00;
+  --danger: var(--red);
+  --star-fill: var(--gold);
   --star-empty: #7A6E60;
   --field-edge: var(--star-empty);
   --selected-bg: var(--text);
@@ -117,8 +125,12 @@
     --urgent: #FF939C;
     --urgent-fill: #F56B78;
     --on-urgent: #22060A;
-    --danger: var(--urgent);
-    --star-fill: var(--text);
+    --gold: #F2C94C;
+    --green: #6FCF8A;
+    --red: #FF8A80;
+    --amber: #FFA94D;
+    --danger: var(--red);
+    --star-fill: var(--gold);
     --star-empty: #857E76;
     --field-edge: var(--star-empty);
     --selected-bg: var(--text);
@@ -232,6 +244,27 @@ pre { background: var(--surface-2); padding: 12px; border-radius: var(--r-sm); o
 .icon-btn:hover { background: var(--surface-2); }
 .icon-btn.active { color: var(--accent-text); border-color: color-mix(in srgb, var(--accent-text) 45%, transparent); }
 .icon-btn.active .icon { fill: currentColor; }
+/* Saved to the watchlist: the bookmark fills in gold, wherever it appears
+   (aria-pressed and the button's name say the same in words). */
+.wl-btn.active { color: var(--text); }
+.wl-btn.icon-btn.active { border-color: color-mix(in srgb, var(--gold) 55%, transparent); }
+.wl-btn.active .icon { color: var(--gold); fill: currentColor; }
+/* Hidden ("Not for me"): a muted red on the control and the tag that say so. */
+.not-for-me:disabled, .wsw-film.is-hidden .wsw-hide { color: var(--red); }
+.badge.hidden { background: color-mix(in srgb, var(--red) 10%, var(--surface)); color: var(--red); }
+.hidden-icon { color: var(--red); flex: 0 0 auto; }
+.wsw-hidden-note .hidden-icon { vertical-align: -2px; }
+/* Status lines (Settings): a dot in the state's colour before words that say it. */
+.status-line { display: flex; align-items: flex-start; gap: var(--sp-2); }
+.status-dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; margin-top: calc(0.5lh - 4px); background: var(--muted); }
+.status-dot.ok { background: var(--green); }
+.status-dot.bad { background: var(--red); }
+.status-dot.warn { background: var(--amber); }
+.status-line.bad { color: var(--red); }
+/* Toasts: a green check for done, a red mark for a problem. */
+.toast-icon { display: inline-flex; vertical-align: -3px; margin-right: 6px; }
+.toast-icon.ok { color: var(--green); }
+.toast-icon.bad { color: var(--red); }
 .attn-dot { display: none; position: absolute; top: 9px; right: 9px; width: 9px; height: 9px; border-radius: 50%; background: var(--text); box-shadow: 0 0 0 2px var(--surface); }
 .icon-btn.has-dot .attn-dot { display: block; }
 #refresh-btn.spinning .icon { animation: spin 0.9s linear infinite; }
@@ -445,7 +478,7 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
 .alert-item { display: flex; gap: 10px; align-items: flex-start; }
 .alert-item > svg { flex: 0 0 auto; margin-top: 2px; }
 .alert-item.problem > svg { color: var(--danger); }
-.alert-item.recovered > svg { color: var(--text-2); }
+.alert-item.recovered > svg { color: var(--green); }
 .alert-main { min-width: 0; overflow-wrap: anywhere; }
 .offsite { display: flex; flex-direction: column; gap: 10px; }
 .offsite > p { margin: 0; }
@@ -474,7 +507,7 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
 .wsw-nav { display: flex; justify-content: space-between; align-items: center; }
 .wsw-list { display: flex; flex-direction: column; gap: var(--sp-3); }
 .wsw-film { display: flex; flex-direction: column; gap: var(--sp-3); background: var(--surface-2, var(--surface)); border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--sp-3); min-width: 0; }
-.wsw-film.is-hidden .wsw-top, .wsw-film.is-hidden .wsw-tools { opacity: .45; }
+.wsw-film.is-hidden .wsw-top, .wsw-film.is-hidden .wsw-tools > :not(.wsw-hide) { opacity: .45; }
 .wsw-top { display: flex; gap: var(--sp-3); min-width: 0; }
 .wsw-poster { flex: 0 0 auto; align-self: flex-start; }
 .wsw-poster .poster-card { width: 72px; height: 108px; flex-basis: 72px; }
@@ -792,11 +825,11 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
 .key-list { display: flex; flex-direction: column; gap: 8px; }
 .key-row { display: flex; align-items: center; gap: 10px; }
 .key-dot { width: 10px; height: 10px; border-radius: 50%; }
-.key-dot.on { background: var(--text-2); }
-.key-dot.off { background: var(--danger); }
+.key-dot.on { background: var(--green); }
+.key-dot.off { background: var(--red); }
 .key-name { font-weight: 700; width: 52px; }
 .key-status { margin-left: auto; font-size: var(--fs-xs); font-weight: 700; }
-.key-status.on { color: var(--text); }
+.key-status.on { color: var(--green); }
 .key-status.off { color: var(--danger); }
 .theatre-results { display: flex; flex-direction: column; gap: 6px; }
 .theatre-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px; background: var(--surface-2); border-radius: var(--r-sm); }
@@ -1194,7 +1227,6 @@ body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-botto
 .pick-card .owner-tools { padding-top: var(--sp-2); border-top: 1px solid var(--line); }
 .is-leaving { opacity: 0; transform: scale(.98); transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out); pointer-events: none; }
 .badge.moved { background: var(--surface-3); color: var(--text); }
-.badge.hidden { background: var(--surface-3); color: var(--text-2); }
 .list-row.is-hidden { opacity: .8; }
 .list-row.is-hidden:hover, .list-row.is-hidden:focus-within { opacity: .9; }
 .hidden-line { color: var(--muted); font-size: var(--fs-sm); margin: var(--sp-2) 2px 0; }
@@ -1202,6 +1234,7 @@ body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-botto
 .hidden-list { display: flex; flex-direction: column; gap: var(--sp-2); }
 .hidden-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) 0; border-bottom: 1px solid var(--line); }
 .hidden-row:last-child { border-bottom: none; }
+.hidden-name { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
 .hidden-title { font-weight: 600; min-width: 0; }
 .hidden-title:hover { text-decoration: underline; }
 

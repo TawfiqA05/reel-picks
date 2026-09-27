@@ -197,6 +197,15 @@ export function makeStars({ value = 0, interactive = false, onChange, size = 22,
   return wrap;
 }
 
+// A status line: a dot in the state's colour, then the words that say it.
+// state: 'ok' | 'bad' | 'warn' | '' (no dot).
+export function setStatus(el, state, text) {
+  el.classList.add('status-line');
+  el.classList.toggle('bad', state === 'bad');
+  el.replaceChildren(...(state ? [h('span', { class: `status-dot ${state}`, 'aria-hidden': 'true' })] : []), h('span', {}, text));
+  return el;
+}
+
 // Always carries words: with reduced motion the ring is hidden and the text
 // is the whole indicator, so it can't be left empty.
 export function spinner(text = 'Loading…') {

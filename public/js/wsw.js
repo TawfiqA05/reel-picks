@@ -134,7 +134,7 @@ export function openWhatToWatch(ctx) {
       } catch (e) { hide.disabled = false; toast(e.message, 'error'); return; }
       cardEl.classList.add('is-hidden');
       const undo = h('button', { class: 'link-btn', type: 'button' }, 'Undo');
-      const note = h('p', { class: 'wsw-hidden-note', role: 'status' }, `Hidden. You won't see ${f.title} again. `, undo);
+      const note = h('p', { class: 'wsw-hidden-note', role: 'status' }, icon('eyeOff', { size: 14, cls: 'hidden-icon' }), ` Hidden. You won't see ${f.title} again. `, undo);
       undo.addEventListener('click', async () => {
         try { await api.unhide(f.tmdb_id); note.remove(); cardEl.classList.remove('is-hidden'); hide.disabled = false; hide.focus(); } catch (e) { toast(e.message, 'error'); }
       });

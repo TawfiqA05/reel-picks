@@ -191,7 +191,7 @@ export function watchlistButton(entry, ctx, { compact = false, onToggle } = {}) 
   let on = Boolean(entry.watchlisted || entry.flags?.watchlisted);
   // Compact: a round icon button. The filled bookmark is the "on" state, and
   // aria-pressed says the same thing to a screen reader.
-  const btn = h('button', { class: compact ? 'icon-btn round' : 'chip-btn', type: 'button' },
+  const btn = h('button', { class: compact ? 'icon-btn round wl-btn' : 'chip-btn wl-btn', type: 'button' },
     icon('bookmark', { size: compact ? 20 : 16 }), compact ? null : h('span', {}, 'Watchlist'));
   const paint = () => {
     btn.classList.toggle('active', on);
@@ -685,7 +685,8 @@ export async function openHiddenList(unhide) {
     body.appendChild(h('p', { class: 'muted small' }, 'These stay out of your picks until you unhide them. Their scores are unchanged.'));
     for (const m of movies) {
       const row = h('div', { class: 'hidden-row' },
-        h('a', { class: 'hidden-title', href: `#/movie/${m.tmdb_id}`, onClick: () => modal.close() }, m.title || `Movie ${m.tmdb_id}`),
+        h('span', { class: 'hidden-name' }, icon('eyeOff', { size: 16, cls: 'hidden-icon' }),
+          h('a', { class: 'hidden-title', href: `#/movie/${m.tmdb_id}`, onClick: () => modal.close() }, m.title || `Movie ${m.tmdb_id}`)),
         h('button', {
           class: 'btn ghost small', type: 'button', 'aria-label': `Unhide ${m.title}`,
           onClick: async (e) => {

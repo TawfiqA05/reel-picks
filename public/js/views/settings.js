@@ -1,6 +1,6 @@
 // Settings: keys status, theatre, weights, filters, showtime windows, pricing, data.
 import { api } from '../api.js';
-import { h, clear, spinner, toast, chip, labeled, sectionTitle, badge, openModal, icon, withStars } from '../ui.js';
+import { h, clear, spinner, toast, chip, labeled, sectionTitle, badge, openModal, icon, withStars, setStatus } from '../ui.js';
 import { NUMBER_RULES, HOME_RULES, numberProblem } from '../settingsRules.js';
 import { openHiddenList } from './components.js';
 import { PLANS, PLAN_IDS, planOf, planWords } from '../plans.js';
@@ -57,16 +57,17 @@ function notificationsCard(publicKey) {
   if (isIOS() && !isStandalone()) {
     return card('Notifications', h('div', { class: 'notify-static' },
       h('p', {}, label),
-      h('p', { class: 'muted small notify-note' }, 'On iPhone, notifications need Reel Picks on your Home Screen first. In Safari, tap Share, then Add to Home Screen, and open it from there.')));
+      setStatus(h('p', { class: 'muted small notify-note' }), 'warn', 'On iPhone, notifications need Reel Picks on your Home Screen first. In Safari, tap Share, then Add to Home Screen, and open it from there.')));
   }
   if (!pushSupported()) {
     return card('Notifications', h('div', { class: 'notify-static' },
-      h('p', {}, label), h('p', { class: 'muted small notify-note' }, 'This browser can\'t show notifications.')));
+      h('p', {}, label), setStatus(h('p', { class: 'muted small notify-note' }), 'warn', 'This browser can\'t show notifications.')));
   }
 
   const toggle = h('input', { type: 'checkbox', disabled: true });
   const note = h('p', { class: 'muted small notify-note', hidden: true });
-  const showNote = (text) => { note.textContent = text || ''; note.hidden = !text; };
+  const showNote = (text, state = '') => { setStatus(note, state, text || ''); note.hidden = !text; };
+  const onText = 'On for this device.';
   const blocked = () => Notification.permission === 'denied';
   const blockedText = 'Notifications are blocked for Reel Picks in this browser\'s settings. Allow them there, then turn this on.';
 
@@ -78,13 +79,14 @@ function notificationsCard(publicKey) {
       toggle.checked = Boolean(sub && Notification.permission === 'granted' && (await api.pushCheck(sub.endpoint)).subscribed);
     } catch { toggle.checked = false; }
     toggle.disabled = false;
-    if (!toggle.checked && blocked()) showNote(blockedText);
+    if (toggle.checked) showNote(onText, 'ok');
+    else if (blocked()) showNote(blockedText, 'bad');
   })();
 
   const turnOn = async () => {
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') {
-      showNote(perm === 'denied' ? blockedText : '');
+      showNote(perm === 'denied' ? blockedText : '', perm === 'denied' ? 'bad' : '');
       return false;
     }
     const key = keyBytes(publicKey);
@@ -93,7 +95,7 @@ function notificationsCard(publicKey) {
     if (sub && !sameKey(sub.options?.applicationServerKey, key)) { await sub.unsubscribe(); sub = null; }
     if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
     await api.pushSubscribe(sub.toJSON());
-    showNote('');
+    showNote(onText, 'ok');
     return true;
   };
 
@@ -102,6 +104,7 @@ function notificationsCard(publicKey) {
     if (!sub) return;
     await api.pushUnsubscribe(sub.endpoint);
     await sub.unsubscribe().catch(() => {});
+    showNote('');
   };
 
   toggle.addEventListener('change', async () => {
@@ -829,7 +832,8 @@ export async function render(root, params, ctx) {
   // Automatic backups (owner only): nightly at 3am and before schema changes.
   const bk = status?.backup;
   const mb = (n) => `${(n / 1048576).toFixed(1)} MB`;
-  const backupLine = !isOwner ? null : h('div', bk?.lastError ? { class: 'small', style: { color: 'var(--low)' } } : { class: 'muted small' },
+  const backupLine = !isOwner ? null : setStatus(h('div', { class: bk?.lastError ? 'small' : 'muted small' }),
+    bk?.lastError ? 'bad' : bk?.last ? 'ok' : 'warn',
     bk?.lastError
       ? `Last backup attempt failed (${new Date(bk.lastError.at).toLocaleString()}): ${bk.lastError.message}`
       : bk?.last
@@ -844,17 +848,15 @@ export async function render(root, params, ctx) {
     const paintOff = (o) => {
       if (!o?.enabled) { offsiteSlot.hidden = true; return; }
       offsiteSlot.hidden = false;
-      offLine.classList.toggle('lb-error', Boolean(o.lastError));
       const next = new Date(o.next).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-      offLine.textContent = o.uploading ? 'Uploading…'
+      setStatus(offLine, o.uploading ? '' : o.lastError ? 'bad' : o.last ? 'ok' : 'warn', o.uploading ? 'Uploading…'
         : o.lastError ? `Last off-site upload failed (${new Date(o.lastError.at).toLocaleString()}): ${o.lastError.message}`
           : o.last ? `Last off-site copy ${new Date(o.last.at).toLocaleString()}, ${mb(o.last.bytes)}. A copy goes up every Sunday at 4am (next ${next}); the last ${o.keep} are kept.`
-            : `No off-site copy yet. One goes up every Sunday at 4am; the last ${o.keep} are kept.`;
+            : `No off-site copy yet. One goes up every Sunday at 4am; the last ${o.keep} are kept.`);
     };
     offBtn.addEventListener('click', async () => {
       offBtn.disabled = true;
-      offLine.classList.remove('lb-error');
-      offLine.textContent = 'Uploading…';
+      setStatus(offLine, '', 'Uploading…');
       try {
         const o = await api.offsiteUpload();
         paintOff(o);
@@ -998,12 +1000,12 @@ function alertsCard() {
   const when = (iso) => new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   api.alerts().then((r) => {
     const failing = r.failing.map((f) => f.label.toLowerCase());
-    note.textContent = [
+    setStatus(note, failing.length ? 'bad' : 'ok', [
       failing.length ? `Failing now: ${failing.join(', ')}.` : 'Everything is working.',
       !r.pushEnabled ? 'Push notifications are off on this server, so alerts only show here.'
         : r.devices ? `Alerts also go to ${r.devices === 1 ? 'the device' : `all ${r.devices} devices`} you turned notifications on for.`
           : 'Turn on notifications above to get these on your phone too.',
-    ].join(' ');
+    ].join(' '));
     if (!r.alerts.length) { list.replaceWith(h('p', { class: 'muted small' }, 'No alerts yet.')); return; }
     for (const a of r.alerts) {
       list.appendChild(h('li', { class: `alert-item ${a.kind}` },
@@ -1013,7 +1015,7 @@ function alertsCard() {
           h('div', { class: 'muted small' }, `${a.label} · ${when(a.at)}`)),
       ));
     }
-  }).catch((e) => { note.textContent = e.message; });
+  }).catch((e) => { setStatus(note, 'bad', e.message); });
   return card('Alerts',
     h('p', { class: 'muted small' }, 'If the daily refresh or a backup fails, or no showtimes come back for your primary theater, you get one alert that day, and one more when it works again. Friends never see these.'),
     note, list);
@@ -1035,18 +1037,17 @@ function letterboxdCard(ctx, words) {
   const when = (iso) => new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
   const paint = () => {
-    line.classList.toggle('lb-error', Boolean(st?.error));
     syncRow.hidden = !st?.username;
-    if (!st?.username) { line.textContent = 'Not linked.'; return; }
-    if (st.syncing) { line.textContent = 'Syncing…'; return; }
-    if (st.error) { line.textContent = st.error; return; }
-    if (!st.lastOkAt) { line.textContent = `Linked to ${st.username}. Not synced yet.`; return; }
+    if (!st?.username) { setStatus(line, '', 'Not linked.'); return; }
+    if (st.syncing) { setStatus(line, '', 'Syncing…'); return; }
+    if (st.error) { setStatus(line, 'bad', st.error); return; }
+    if (!st.lastOkAt) { setStatus(line, 'warn', `Linked to ${st.username}. Not synced yet.`); return; }
     const extra = [
       st.ratingsUpdated ? `${plural(st.ratingsUpdated, 'rating')} updated` : '',
       st.kept ? `${plural(st.kept, 'rating')} you changed here kept` : '',
       st.unmatched ? `${plural(st.unmatched, 'film')} not found on TMDB` : '',
     ].filter(Boolean);
-    line.textContent = `Last synced ${when(st.lastOkAt)}: ${plural(st.added, 'film')} added.${extra.length ? ` ${extra.join(', ')}.` : ''}`;
+    setStatus(line, 'ok', `Last synced ${when(st.lastOkAt)}: ${plural(st.added, 'film')} added.${extra.length ? ` ${extra.join(', ')}.` : ''}`);
   };
   const busy = (on) => { saveBtn.disabled = on; syncBtn.disabled = on; };
   const done = (r) => {
@@ -1069,7 +1070,7 @@ function letterboxdCard(ctx, words) {
     paint();
     try { done(await api.letterboxdSync()); } catch (e) { toast(e.message, 'error'); try { done(await api.letterboxd()); } catch { /* keep the line */ } } finally { busy(false); }
   });
-  api.letterboxd().then(done).catch((e) => { line.textContent = e.message; });
+  api.letterboxd().then(done).catch((e) => { setStatus(line, 'bad', e.message); });
   paint();
 
   return card('Letterboxd',
