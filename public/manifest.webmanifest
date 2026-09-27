@@ -5,8 +5,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#F2EADB",
-  "theme_color": "#F2EADB",
+  "background_color": "#0f1526",
+  "theme_color": "#0f1526",
   "orientation": "portrait",
   "categories": ["entertainment", "lifestyle"],
   "icons": [

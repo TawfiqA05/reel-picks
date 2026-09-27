@@ -49,111 +49,125 @@
 @media (min-width: 900px) { :root { --chrome-bottom: 0px; } }
 
 /* Stand-ins drawn only until the web fonts arrive (display=swap in
-   index.html): Arial and Georgia resized so a line takes the same width in
-   either, so nothing rewraps or jumps when the real font swaps in. Measured
-   against each family on the app's own text, at the weights it uses. */
-@font-face { font-family: "Work Sans Fallback"; src: local("Arial"), local("ArialMT"); font-weight: 100 500; size-adjust: 108.7%; ascent-override: 85.6%; descent-override: 22.1%; line-gap-override: 0%; }
-@font-face { font-family: "Work Sans Fallback"; src: local("Arial Bold"), local("Arial-BoldMT"); font-weight: 600 900; size-adjust: 103.9%; ascent-override: 89.5%; descent-override: 23.1%; line-gap-override: 0%; }
+   index.html): Arial resized so a line takes the same width in either, so
+   nothing rewraps or jumps when the real font swaps in. Measured against
+   each family on the app's own text, at the weights it uses. */
 @font-face { font-family: "IBM Plex Sans Fallback"; src: local("Arial"), local("ArialMT"); font-weight: 100 500; size-adjust: 100.7%; ascent-override: 101.3%; descent-override: 26.8%; line-gap-override: 0%; }
 @font-face { font-family: "IBM Plex Sans Fallback"; src: local("Arial Bold"), local("Arial-BoldMT"); font-weight: 600 900; size-adjust: 97.8%; ascent-override: 104.3%; descent-override: 27.6%; line-gap-override: 0%; }
-@font-face { font-family: "Zilla Slab Fallback"; src: local("Georgia Bold"), local("Georgia-Bold"); font-weight: 100 900; size-adjust: 84.3%; ascent-override: 111.5%; descent-override: 30.8%; line-gap-override: 0%; }
 @font-face { font-family: "Big Shoulders Display Fallback"; src: local("Arial Bold"), local("Arial-BoldMT"); font-weight: 100 900; size-adjust: 72.6%; ascent-override: 135%; descent-override: 28.9%; line-gap-override: 0%; }
 
-/* ---- palettes ----
-   Ticket stub (light) is the default; Projector (dark) follows the device's
-   dark mode. Three hues at most. The accent marks primary buttons, the #1
-   pick, the active tab and focus rings; match scores are that one hue,
-   brighter and more opaque as the score rises. Urgent (leaving soon, last
-   day, and errors) has its own hue. Everything else is neutral. Text tokens
-   pass 4.5:1 on every surface, and in a faded (.8) row; the field edge and a
-   rater's empty stars pass 3:1 on the surfaces they sit on. */
+/* One type system in both themes: Big Shoulders Display for page titles,
+   film titles and section headings; IBM Plex Sans for everything else. */
+:root {
+  --font-display: "Big Shoulders Display", "Big Shoulders Display Fallback", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", "IBM Plex Sans Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --display-weight: 700;
+  --display-tracking: 0.005em;
+}
 
-/* Ticket stub: cream paper, ink, one teal accent. */
+/* ---- palettes ----
+   Ticket stub (light) is the default: cream paper, ink, one teal accent.
+   Midnight marquee (dark) follows the device's dark mode: night navy, warm
+   paper text, marquee amber. The two share one set of roles:
+
+   accent       the one main action on a screen (filled), the selected day
+                and choice, the active tab, focus
+   accent-soft  secondary actions and choices, positive tags (accent text)
+   bad-soft     remove, revoke, Not for me, Last chance (bad text)
+   gold         what you keep: filled stars, the saved bookmark
+   good / warn  status: OK and warning, always with a word
+   tints        format chips (IMAX blue, Dolby purple, RealD 3D teal, other
+                amber) and status tags
+
+   Text tokens pass 4.5:1 on every surface they sit on; field edges and empty
+   stars pass 3:1. */
 :root {
   color-scheme: light;
   --bg: #F2EADB;
-  --surface: #FBF6EC;
-  --surface-2: #ECE3D2;
-  --surface-3: #E0D4BE;
-  --line: rgba(46, 32, 16, .12);
-  --line-strong: rgba(46, 32, 16, .24);
+  --raised: #FBF6EC;
+  --chip: #E9DFCC;
+  --tabbar: rgba(251, 246, 236, .9);
+  --divider: #DCD0BB;
   --text: #1D1813;
-  --text-2: #3E362D;
   --muted: #4D443A;
   --accent: #0A6160;
   --on-accent: #FCF8EF;
   --accent-text: #005451;
+  --accent-soft: rgba(10, 97, 96, .12);
+  --gold: #7A5A00;
+  --good: #1F6B35;
+  --warn: #9A4800;
+  --bad: #A8261A;
+  --bad-soft: rgba(168, 38, 26, .10);
+  --field-edge: #7A6E60;
   --focus: var(--accent-text);
-  --score-hi: #004238;
-  --score-mid: #324242;
-  --score-lo: #464646;
-  --urgent: #8E2715;
-  --urgent-fill: #B3361E;
-  --on-urgent: #FFF6EE;
-  /* State colours, one each: gold marks what you keep (stars, a saved
-     bookmark), green OK, red missing, failing or hidden, amber a warning.
-     Each passes 4.5:1 on every surface, and always comes with words or an
-     icon, never alone. */
-  --gold: #806000;
-  --green: #1F6B35;
-  --red: #A8261A;
-  --amber: #A24D00;
-  --danger: var(--red);
-  --star-fill: var(--gold);
-  --star-empty: #7A6E60;
-  --field-edge: var(--star-empty);
-  --selected-bg: var(--text);
-  --on-selected: var(--surface);
-  --control: var(--text);
-  --shadow: 0 8px 30px rgba(60, 40, 20, .14);
-  --shadow-soft: 0 1px 2px rgba(60, 40, 20, .10), 0 4px 14px rgba(60, 40, 20, .08);
-  --font-display: "Zilla Slab", "Zilla Slab Fallback", ui-serif, Rockwell, Georgia, serif;
-  --font-body: "Work Sans", "Work Sans Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --display-weight: 600;
-  --display-tracking: -0.01em;
+  --blue: #1E4E9E;
+  --blue-soft: rgba(30, 78, 158, .11);
+  --purple: #69399F;
+  --purple-soft: rgba(105, 57, 159, .11);
+  --teal: #075E57;
+  --teal-soft: rgba(7, 94, 87, .11);
+  --amber: #884600;
+  --amber-soft: rgba(162, 77, 0, .12);
+  --shadow: 0 10px 30px rgba(60, 40, 20, .16);
+  --glow: transparent;
 }
 
-/* Projector: warm greys, amber kept for the few things that lead. */
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --bg: #1C1A18;
-    --surface: #252220;
-    --surface-2: #2E2B28;
-    --surface-3: #3F3A35;
-    --line: rgba(255, 244, 230, .08);
-    --line-strong: rgba(255, 244, 230, .16);
-    --text: #F3EFE9;
-    --text-2: #D4CEC5;
-    --muted: #B3ACA2;
-    --accent: #F0A43A;
-    --on-accent: #201403;
-    --accent-text: #F3AE4C;
-    --focus: var(--accent-text);
-    --score-hi: #F8BD62;
-    --score-mid: #D2B58E;
-    --score-lo: #BCB2A5;
-    --urgent: #FF939C;
-    --urgent-fill: #F56B78;
-    --on-urgent: #22060A;
-    --gold: #F2C94C;
-    --green: #6FCF8A;
-    --red: #FF8A80;
-    --amber: #FFA94D;
-    --danger: var(--red);
-    --star-fill: var(--gold);
-    --star-empty: #857E76;
-    --field-edge: var(--star-empty);
-    --selected-bg: var(--text);
-    --on-selected: var(--bg);
-    --control: var(--text);
-    --shadow: 0 8px 30px rgba(0, 0, 0, .45);
-    --shadow-soft: 0 1px 2px rgba(0, 0, 0, .35), 0 4px 14px rgba(0, 0, 0, .28);
-    --font-display: "Big Shoulders Display", "Big Shoulders Display Fallback", "Arial Narrow", Impact, sans-serif;
-    --font-body: "IBM Plex Sans", "IBM Plex Sans Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --display-weight: 700;
-    --display-tracking: 0.005em;
+    --bg: #0f1526;
+    --raised: #18203a;
+    --chip: #1c2540;
+    --tabbar: rgba(18, 26, 46, .9);
+    --divider: #232d48;
+    --text: #f4efe6;
+    --muted: #9aa4bd;
+    --accent: #f2a93b;
+    --on-accent: #1a1206;
+    --accent-text: #f2a93b;
+    --accent-soft: rgba(242, 169, 59, .14);
+    --gold: #f5c04e;
+    --good: #5fd3a4;
+    --warn: #f2a93b;
+    --bad: #ff7b72;
+    --bad-soft: rgba(255, 123, 114, .13);
+    --field-edge: #66718f;
+    --blue: #8fb8ff;
+    --blue-soft: rgba(143, 184, 255, .14);
+    --purple: #c9a8ff;
+    --purple-soft: rgba(201, 168, 255, .14);
+    --teal: #5fd3c4;
+    --teal-soft: rgba(95, 211, 196, .13);
+    --amber: #f2a93b;
+    --amber-soft: rgba(242, 169, 59, .14);
+    --shadow: 0 12px 34px rgba(0, 0, 0, .5);
   }
+}
+
+/* Older role names, kept pointing at the new palette. */
+:root {
+  --surface: var(--raised);
+  --surface-2: var(--chip);
+  --surface-3: color-mix(in srgb, var(--chip) 70%, var(--text) 10%);
+  --line: var(--divider);
+  --line-strong: color-mix(in srgb, var(--divider) 60%, var(--muted));
+  --text-2: var(--text);
+  --score-hi: var(--accent-text);
+  --score-mid: var(--text);
+  --score-lo: var(--muted);
+  --urgent: var(--bad);
+  --urgent-fill: var(--bad);
+  --on-urgent: var(--bg);
+  --green: var(--good);
+  --red: var(--bad);
+  --danger: var(--bad);
+  --star-fill: var(--gold);
+  --star-empty: var(--field-edge);
+  --selected-bg: var(--accent);
+  --on-selected: var(--on-accent);
+  --control: var(--accent);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, .12);
 }
 
 * { box-sizing: border-box; }
@@ -175,7 +189,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: 0; }
 h3 { font-size: var(--fs-md); }
 button, input, select, textarea { font-family: inherit; }
 
-/* Display face (Zilla Slab light, Big Shoulders dark): hero, page and section
+/* Display face (Big Shoulders Display): hero, page and section
    titles, pick-card titles. Each theme loads one weight of it, which
    --display-weight names. */
 .display, .section-title h1, .section-title h2, .pick-title, .hero-title, .detail-title, .brand-name, .empty-title {
