@@ -290,10 +290,13 @@ function openTrailer(m) {
 function watchFrameFocus(wrap) {
   const frame = wrap.querySelector('iframe');
   let tabAt = 0;
-  const onKey = (e) => { if (e.key === 'Tab') tabAt = Date.now(); };
+  const ring = () => { if (document.activeElement === frame) frame.classList.add('kb-focus'); };
+  // Also look right after the Tab itself: the window's blur can come late, or
+  // not at all, on a busy device.
+  const onKey = (e) => { if (e.key === 'Tab') { tabAt = Date.now(); setTimeout(ring, 50); } };
   const onBlur = () => setTimeout(() => {
-    if (document.activeElement !== frame || Date.now() - tabAt > 500) return;
-    frame.classList.add('kb-focus');
+    if (Date.now() - tabAt > 500) return;
+    ring();
   }, 0);
   const onFocus = () => frame.classList.remove('kb-focus');
   document.addEventListener('keydown', onKey);
