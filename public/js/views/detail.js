@@ -200,7 +200,7 @@ function showtimesSection(d, ctx) {
     wrap.appendChild(h('div', { class: 'muted' },
       d.playing ? (guest ? 'No showtimes listed.' : 'No showtimes listed. AMC isn\'t connected.')
         : guest ? 'Not in the current lineup.'
-        : `Not currently playing at your theatre${d.multiTheatre ? 's' : ''}.`));
+        : `Not currently playing at your theater${d.multiTheatre ? 's' : ''}.`));
   } else if (!d.multiTheatre) {
     const g = groups[0];
     if (g.runway) {

@@ -82,7 +82,7 @@ function assertRoomFor(id) {
   const shared = sharedTheatres();
   if (shared.some((t) => t.id === id)) return;
   if (shared.length >= MAX_SHARED_THEATRES) {
-    throw Object.assign(new Error(`Reel Picks follows up to ${MAX_SHARED_THEATRES} theatres across everyone, and that's full. Pick one that's already followed, or drop one first.`), { status: 400 });
+    throw Object.assign(new Error(`Reel Picks follows up to ${MAX_SHARED_THEATRES} theaters across everyone, and that's full. Pick one that's already followed, or drop one first.`), { status: 400 });
   }
 }
 
@@ -117,7 +117,7 @@ export function addFollowed(raw) {
   const extras = (s.extraTheatres || []).map(normalize);
   if (extras.some((x) => x.id === t.id)) return s;
   if (extras.length + 1 >= MAX_THEATRES) {
-    throw Object.assign(new Error(`You can follow up to ${MAX_THEATRES} theatres (primary + ${MAX_THEATRES - 1}). Remove one first.`), { status: 400 });
+    throw Object.assign(new Error(`You can follow up to ${MAX_THEATRES} theaters (primary + ${MAX_THEATRES - 1}). Remove one first.`), { status: 400 });
   }
   assertRoomFor(t.id);
   return updateSettings({ extraTheatres: [...extras, t] });
@@ -139,7 +139,7 @@ export function promoteToPrimary(id) {
   const s = getSettings();
   const extras = (s.extraTheatres || []).map(normalize);
   const next = extras.find((x) => x.id === String(id));
-  if (!next) throw Object.assign(new Error('That theatre is not in your followed list.'), { status: 400 });
+  if (!next) throw Object.assign(new Error('That theater is not in your followed list.'), { status: 400 });
   const old = { id: String(s.theatreId || ''), name: s.theatreName || '', slug: s.theatreSlug || '' };
   const rest = extras.filter((x) => x.id !== next.id);
   return updateSettings({

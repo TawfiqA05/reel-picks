@@ -418,7 +418,7 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
         }
       }
     } else if (amc.amcConfigured()) {
-      log.errors.push('AMC key set but no theatre found. Set your theatre in Settings.');
+      log.errors.push('AMC key set but no theater found. Set your theater in Settings.');
     }
 
     // 3. Fallback: TMDB Now Playing so the app still ranks something. That list

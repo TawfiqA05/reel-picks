@@ -34,9 +34,12 @@ export async function render(root, params, ctx, { quiet = false } = {}) {
   const words = planWords(plan);
   const monthly = plan.period === 'month';
   const monthName = new Date().toLocaleDateString(undefined, { month: 'long' });
+  // "week of Sep 25", not the raw 2026-09-25 the API sends.
+  const [wy, wm, wd] = String(week.weekStart || '').split('-').map(Number);
+  const weekOf = wy ? new Date(wy, wm - 1, wd).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
   page.appendChild(sectionTitle(words.statsTitle,
-    !plan.subscription ? `Pay per ticket · week of ${week.weekStart}`
-      : monthly ? `Resets on the 1st · ${monthName}` : `Resets Friday · week of ${week.weekStart}`, { level: 1 }));
+    !plan.subscription ? `Pay per ticket · week of ${weekOf}`
+      : monthly ? `Resets on the 1st · ${monthName}` : `Resets Friday · week of ${weekOf}`, { level: 1 }));
   page.appendChild(h('div', { class: 'stat-grid' }, ...(plan.subscription ? [
     plan.unlimited
       ? bigStat(String(week.used), `${plan.units} this ${plan.period}`, 'no limit')

@@ -347,7 +347,7 @@ router.delete('/home', h(async (req, res) => {
 }));
 
 router.get('/theatres', h(async (req, res) => {
-  if (!amc.amcConfigured()) return res.status(400).json({ error: 'AMC_API_KEY is not set. Add it to .env to search theatres.' });
+  if (!amc.amcConfigured()) return res.status(400).json({ error: 'AMC_API_KEY is not set. Add it to .env to search theaters.' });
   res.json({ theatres: await amc.searchTheatres(req.query.query || '') });
 }));
 
@@ -386,7 +386,7 @@ router.delete('/theatres/follow/:id', (req, res) => {
 // Promote a followed theatre to primary; the old primary stays followed.
 router.post('/theatres/primary', (req, res) => {
   const { id } = req.body || {};
-  if (!id) return res.status(400).json({ error: 'Theatre id is required.' });
+  if (!id) return res.status(400).json({ error: 'Theater id is required.' });
   try {
     const settings = promoteToPrimary(id);
     // Showtimes for both are already loaded; re-run so the per-theatre horizon

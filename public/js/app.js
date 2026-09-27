@@ -121,8 +121,8 @@ function renderChrome() {
 
   const extra = Math.max(0, (status?.theatres?.length || 1) - 1);
   const primary = status?.theatre;
-  // "Set your theatre" only when status says there is none, not while it's unknown.
-  els.theatre.textContent = (primary?.short || primary?.name || (guest || !status ? '' : 'Set your theatre')) + (extra ? ` +${extra}` : '');
+  // "Set your theater" only when status says there is none, not while it's unknown.
+  els.theatre.textContent = (primary?.short || primary?.name || (guest || !status ? '' : 'Set your theater')) + (extra ? ` +${extra}` : '');
   els.theatre.hidden = !els.theatre.textContent;
   // Guests can't open Settings, so the label just goes back to Picks.
   els.theatre.setAttribute('href', guest ? '#/home' : '#/settings');
@@ -180,7 +180,7 @@ async function pollUntilDone(maxMs = 20 * 60000) {
     const min = Math.floor((Date.now() - start) / 60000);
     if (min >= 1 && min > nudgedMin) {
       nudgedMin = min;
-      toast(`Still refreshing (${min} min). First runs with several theatres take a while.`);
+      toast(`Still refreshing (${min} min). First runs with several theaters take a while.`);
     }
   }
   return false;

@@ -148,7 +148,7 @@ export async function render(root, params, ctx) {
     h('div', { class: 'key-list' },
       keyRow('TMDB', keyState.tmdb, 'posters, metadata, matching'),
       keyRow('OMDb', keyState.omdb, 'IMDb / RT / Metacritic scores'),
-      keyRow('AMC', keyState.amc, 'your theatre\'s showtimes'),
+      keyRow('AMC', keyState.amc, 'your theater\'s showtimes'),
     ),
     status?.host === 'railway'
       ? h('p', { class: 'muted small' }, 'Keys are set as Railway variables. Change them there, then redeploy.')
@@ -186,7 +186,7 @@ export async function render(root, params, ctx) {
         h('button', { class: 'btn', onClick: async () => { modal.close(); await act(() => api.unfollowTheatre(t.id), `Stopped following ${t.short}`); } }, 'Stop following'),
         h('button', { class: 'btn ghost', onClick: () => modal.close() }, 'Cancel'),
       ),
-    ), { title: 'Unfollow theatre' });
+    ), { title: 'Unfollow theater' });
   };
 
   const paintTheatres = () => {
@@ -200,16 +200,16 @@ export async function render(root, params, ctx) {
             : 'Drive time appears after the next refresh'),
         ),
         t.isPrimary ? null : h('div', { class: 'ti-actions' },
-          h('button', { class: 'btn ghost small', title: 'Rank by this theatre instead', onClick: () =>
-            act(() => api.setPrimaryTheatre(t.id), `${t.short} is now your primary theatre`) }, 'Make primary'),
+          h('button', { class: 'btn ghost small', title: 'Rank by this theater instead', onClick: () =>
+            act(() => api.setPrimaryTheatre(t.id), `${t.short} is now your primary theater`) }, 'Make primary'),
           h('button', { class: 'btn ghost small', title: 'Stop following', 'aria-label': `Stop following ${t.name}`, onClick: () => confirmUnfollow(t) }, icon('x', { size: 16 })),
         ),
       ));
     }
     const extras = theatres.length - 1;
     followedNote.textContent = extras
-      ? `Following ${extras} more theatre${extras > 1 ? 's' : ''} (up to ${maxTheatres - 1}). Ranking and runway badges use the primary; movies only playing elsewhere appear under "Also nearby".`
-      : `Follow more theatres to see where else a movie is playing. Up to ${maxTheatres - 1} extra. Each adds about 14 AMC calls to the daily refresh. Drive times are never shown on the shared guest link.`;
+      ? `Following ${extras} more theater${extras > 1 ? 's' : ''} (up to ${maxTheatres - 1}). Ranking and runway badges use the primary; movies only playing elsewhere appear under "Also nearby".`
+      : `Follow more theaters to see where else a movie is playing. Up to ${maxTheatres - 1} extra. Each adds about 14 AMC calls to the daily refresh. Drive times are never shown on the shared guest link.`;
   };
   paintTheatres();
 
@@ -222,7 +222,7 @@ export async function render(root, params, ctx) {
     try {
       const { theatres: found } = await api.theatres(theatreInput.value.trim());
       clear(theatreResults);
-      if (!found.length) theatreResults.appendChild(h('div', { class: 'muted small' }, 'No theatres found.'));
+      if (!found.length) theatreResults.appendChild(h('div', { class: 'muted small' }, 'No theaters found.'));
       found.forEach((t) => {
         const followed = theatres.find((x) => x.id === String(t.id));
         const full = theatres.length >= maxTheatres;
@@ -231,18 +231,18 @@ export async function render(root, params, ctx) {
           h('div', { class: 'ti-actions' },
             followed
               ? h('span', { class: 'muted small' }, followed.isPrimary ? 'Primary' : 'Following')
-              : h('button', { class: 'btn ghost small', disabled: full, title: full ? `Already following ${maxTheatres}` : 'Pull this theatre\'s showtimes too', onClick: () =>
+              : h('button', { class: 'btn ghost small', disabled: full, title: full ? `Already following ${maxTheatres}` : 'Pull this theater\'s showtimes too', onClick: () =>
                 act(() => api.followTheatre({ id: t.id, name: t.name, slug: t.slug }), `Following ${t.name}. Refreshing showtimes.`) }, 'Follow'),
-            followed?.isPrimary ? null : h('button', { class: 'btn small', title: 'Rank by this theatre; your current primary stays followed', onClick: () =>
+            followed?.isPrimary ? null : h('button', { class: 'btn small', title: 'Rank by this theater; your current primary stays followed', onClick: () =>
               act(() => (followed ? api.setPrimaryTheatre(t.id) : api.setTheatre({ id: t.id, name: t.name, slug: t.slug })),
-                `${t.name} is now your primary theatre. ${theatres[0]?.short || 'The old primary'} stays followed.`) }, 'Set primary'),
+                `${t.name} is now your primary theater. ${theatres[0]?.short || 'The old primary'} stays followed.`) }, 'Set primary'),
           ),
         ));
       });
     } catch (e) { clear(theatreResults); toast(e.message, 'error'); }
   };
   theatreInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') theatreSearch(); });
-  page.appendChild(card('Theatres', theatreList, followedNote,
+  page.appendChild(card('Theaters', theatreList, followedNote,
     h('div', { class: 'row-gap' }, theatreInput, h('button', { class: 'btn', onClick: theatreSearch }, 'Search')),
     theatreResults,
   ));
@@ -547,7 +547,7 @@ export async function render(root, params, ctx) {
     geoResults,
     h('div', { class: 'grid-3' }, spanAll(labeled('Label', homeLabelIn)), labeled('Latitude', homeLat), labeled('Longitude', homeLng)),
     h('p', { class: 'muted small' },
-      'Drive times next to each theatre are measured from here, and re-measured within seconds of saving a change.'),
+      'Drive times next to each theater are measured from here, and re-measured within seconds of saving a change.'),
     h('p', { class: 'muted small' },
       h('strong', {}, 'Where your location data goes: '),
       'it\'s stored only in this app\'s local database. Two keyless OpenStreetMap services see location data: '
@@ -635,7 +635,7 @@ export async function render(root, params, ctx) {
   const recencyInput = h('input', { class: 'input num', type: 'number', min: '1', step: '1', value: String(s.fallbackRecencyWeeks ?? 8) });
   if (isOwner) page.appendChild(card('Now-playing fallback',
     labeled('Only show films released in the last N weeks', recencyInput),
-    h('p', { class: 'muted small' }, 'Applies only when no AMC key is connected (Reel Picks ranks TMDB\'s current US releases). Widen this if the list gets thin. With an AMC key, your theatre\'s actual lineup (re-releases and special screenings included) is used as-is.'),
+    h('p', { class: 'muted small' }, 'Applies only when no AMC key is connected (Reel Picks ranks TMDB\'s current US releases). Widen this if the list gets thin. With an AMC key, your theater\'s actual lineup (re-releases and special screenings included) is used as-is.'),
   ));
 
   // ---- Showtime windows
@@ -786,7 +786,7 @@ export async function render(root, params, ctx) {
     // Wide screens scroll the table sideways inside the card, with a fade on
     // the right edge while there's more to see; phones stack each theatre.
     const diagWrap = h('div', { class: 'diag-wrap' }, h('table', { class: 'diag-table' },
-      h('thead', {}, h('tr', {}, th('Theatre'), th('Published through'), th('Days', true), th('Typical movies / showtimes per day', true),
+      h('thead', {}, h('tr', {}, th('Theater'), th('Published through'), th('Days', true), th('Typical movies / showtimes per day', true),
         th('Threshold (movies / showtimes)', true), th('Furthest showtime'), th('Movies', true), th('Showtimes', true), th('AMC calls', true), th('Stale days', true))),
       h('tbody', {}, ...rows),
     ));
@@ -797,11 +797,11 @@ export async function render(root, params, ctx) {
     page.appendChild(card('Schedule diagnostics',
       diagScroll,
       h('p', { class: 'muted small' },
-        '"Published through" is where each theatre\'s schedule stops being densely posted (the horizon). '
+        '"Published through" is where each theater\'s schedule stops being densely posted (the horizon). '
         + 'A movie\'s runway badge only commits to an end date when its last showtime falls at least the "Days before horizon" setting short of it; '
-        + 'otherwise it says "through at least". Typical values are medians over the nearest 3 days at that theatre; '
+        + 'otherwise it says "through at least". Typical values are medians over the nearest 3 days at that theater; '
         + 'a day below either threshold (half of typical) is treated as the unpublished advance-sale tail. '
-        + 'AMC calls are real HTTP requests on the last refresh: per-day responses are cached 24h, and a manual Refresh always re-pulls today and tomorrow (2 calls per theatre) so same-day schedule changes show up. '
+        + 'AMC calls are real HTTP requests on the last refresh: per-day responses are cached 24h, and a manual Refresh always re-pulls today and tomorrow (2 calls per theater) so same-day schedule changes show up. '
         + '"Stale days" counts days whose live AMC call failed and an older cached copy was used instead. The schedule shown for those days may be out of date.'),
     ));
   }
@@ -888,8 +888,8 @@ export async function render(root, params, ctx) {
       h('a', { class: 'btn ghost', href: '#/onboarding' }, icon('zap', { size: 16 }), 'Re-run quick rate'),
     ),
     h('p', { class: 'muted small' }, isOwner
-      ? 'Full setup carries settings, theatres, home base, ratings, watchlist, watch history, AMC match decisions, and hidden films. Everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'
-      : 'Your export carries your own settings, theatres, home base, ratings, watchlist, watch history and hidden films.'),
+      ? 'Full setup carries settings, theaters, home base, ratings, watchlist, watch history, AMC match decisions, and hidden films. Everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'
+      : 'Your export carries your own settings, theaters, home base, ratings, watchlist, watch history and hidden films.'),
     backupLine,
     offsiteSlot,
     status?.lastRefreshLog?.errors?.length
