@@ -311,6 +311,8 @@ main { padding: var(--sp-4); padding-bottom: 104px; }
   .header-actions { gap: var(--sp-1); }
   .bottom-nav { justify-content: space-between; }
   .nav-item { flex: 1 1 auto; min-width: 44px; padding-left: 2px; padding-right: 2px; }
+  /* "RealD 3D  Book 9:20 PM tomorrow" fits one line. */
+  .hero-actions .btn.book { padding: 0 var(--sp-3); }
 }
 
 @media (min-width: 900px) {
