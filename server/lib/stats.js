@@ -40,11 +40,14 @@ export function getStats() {
   let suggestion = null;
   if (ratedPicks.length >= 5 && avgRating != null && pickAvg != null) {
     if (pickAvg < avgRating - 0.4) {
-      suggestion = {
-        text: 'Your weekly picks are rating below your average. Try weighting taste match higher.',
-        weightPublic: 0.35,
-        weightTaste: 0.65,
-      };
+      // Already weighted that way (or more): nothing to apply, say so instead.
+      suggestion = Number(settings.weightTaste) >= 0.649
+        ? { text: 'Your weekly picks are rating below your average, even with taste match weighted higher. Rating more films sharpens the taste side.' }
+        : {
+          text: 'Your weekly picks are rating below your average. Try weighting taste match higher.',
+          weightPublic: 0.35,
+          weightTaste: 0.65,
+        };
     } else if (pickAvg >= avgRating) {
       suggestion = { text: 'Your picks are landing at or above your average. The current balance is working well.' };
     }

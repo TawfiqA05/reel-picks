@@ -67,10 +67,15 @@ export async function render(root, params, ctx, { quiet = false } = {}) {
       h('span', {}, s.suggestion.text),
     );
     if (s.suggestion.weightTaste != null) {
-      tip.appendChild(h('button', { class: 'btn small', onClick: async () => {
-        await api.saveSettings({ weightPublic: s.suggestion.weightPublic, weightTaste: s.suggestion.weightTaste });
+      const apply = h('button', { class: 'btn small', onClick: async () => {
+        try {
+          await api.saveSettings({ weightPublic: s.suggestion.weightPublic, weightTaste: s.suggestion.weightTaste });
+        } catch (e) { toast(e.message, 'error'); return; }
         toast('Weights updated', 'success');
-      } }, 'Apply'));
+        tip.querySelector('span:not(.alert-icon)').textContent = `Applied: taste match now counts for ${Math.round(s.suggestion.weightTaste * 100)}% of the score.`;
+        apply.remove();
+      } }, 'Apply');
+      tip.appendChild(apply);
     }
     page.appendChild(tip);
   }
