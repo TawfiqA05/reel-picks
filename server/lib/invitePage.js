@@ -5,6 +5,17 @@
 // draw a card; they get the page, never a cookie, and the invite stays unused.
 // Same stylesheet, fonts and components as the app.
 
+import fs from 'node:fs';
+
+// The fonts and the browser-bar colours come from the app's own page, so the
+// Join page can't fall behind a palette change again.
+const INDEX = fs.readFileSync(new URL('../../public/index.html', import.meta.url), 'utf8');
+const APP_HEAD = [
+  ...INDEX.match(/<meta name="theme-color"[^>]*>/g) || [],
+  ...INDEX.match(/<link rel="preconnect"[^>]*>/g) || [],
+  ...INDEX.match(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com[^>]*>/g) || [],
+].join('\n  ');
+
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // From the app's icon set (public/js/icons.js): the ticket, and the reel mark.
@@ -18,7 +29,6 @@ function shell({ title, description, body }) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0A0A0C" />
   <meta name="robots" content="noindex, nofollow" />
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(description)}" />
@@ -29,9 +39,7 @@ function shell({ title, description, body }) {
   <meta name="twitter:card" content="summary" />
   <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Instrument+Serif&display=swap" />
+  ${APP_HEAD}
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
