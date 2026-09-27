@@ -483,14 +483,35 @@ router.get('/ratings', (req, res) => {
   });
 });
 
+// What a client may say about a film it rates: a TMDB id, a half-star value,
+// and short text. A poster is only ever TMDB's own image address, since it
+// lands in the shared movies table everyone sees.
+const TMDB_POSTER = /^https:\/\/image\.tmdb\.org\/t\/p\/\w+\/[\w.-]+$/;
+// A whole number that arrived as a number or as digits, never as [5] or true.
+const intId = (v) => (typeof v === 'number' || (typeof v === 'string' && /^\d{1,10}$/.test(v)) ? Number(v) : NaN);
+function ratingInput(b = {}) {
+  const tmdb_id = intId(b.tmdb_id);
+  const rating = typeof b.rating === 'number' || typeof b.rating === 'string' ? Number(b.rating) : NaN;
+  if (!Number.isInteger(tmdb_id) || tmdb_id <= 0 || !Number.isInteger(rating * 2) || rating < 0.5 || rating > 5) return null;
+  if (b.title != null && (typeof b.title !== 'string' || b.title.length > 300)) return null;
+  if (b.source != null && (typeof b.source !== 'string' || b.source.length > 40)) return null;
+  const text = (v, n) => (typeof v === 'string' ? v.slice(0, n) : null);
+  return {
+    tmdb_id, rating,
+    title: text(b.title, 300),
+    year: b.year != null && Number.isInteger(Number(b.year)) && Number(b.year) > 1800 && Number(b.year) < 2200 ? Number(b.year) : null,
+    poster: typeof b.poster === 'string' && TMDB_POSTER.test(b.poster) ? b.poster : null,
+    genres: Array.isArray(b.genres) ? b.genres.filter((g) => typeof g === 'string').slice(0, 10).map((g) => g.slice(0, 40)) : [],
+  };
+}
+
 router.post('/ratings', (req, res) => {
-  const { tmdb_id, rating, title, year, poster, genres, source = 'manual' } = req.body || {};
-  if (!tmdb_id || !(rating >= 0.5 && rating <= 5)) {
-    return res.status(400).json({ error: 'tmdb_id and a rating between 0.5 and 5 are required.' });
-  }
-  if (!getMovie(tmdb_id) && (title || poster)) {
-    upsertLightMovie({ tmdb_id, title, year, poster, genres: genres || [] });
-  }
+  const r = ratingInput(req.body || {});
+  if (!r) return res.status(400).json({ error: 'tmdb_id and a rating between 0.5 and 5, in half stars, are required.' });
+  const { tmdb_id, rating, title, year } = r;
+  const source = req.body.source || 'manual';
+  // The film's own record comes from TMDB (ingestOne, below), never from what
+  // a client says about it: the movies table is shared by everyone.
   upsertRating({ tmdb_id, title, year, rating, source });
   if (!req.body?.awaitDetails) {
     ingestOne(tmdb_id).catch(() => {}); // deepen taste profile in the background
@@ -522,6 +543,9 @@ router.post('/ratings/import', (req, res) => {
   }
   const rows = parseCsv(csv);
   if (!rows.length) return res.status(400).json({ error: 'That file is empty.' });
+  // A big Letterboxd history is a few thousand rows; far past that, the
+  // inserts would hold up the server for everyone.
+  if (rows.length > 20001) return res.status(400).json({ error: 'That file has more than 20,000 rows. Split it and import the parts one at a time.' });
   const format = detectFormat(rows[0]);
 
   // Right service, wrong file: watched.csv / watchlist.csv (Letterboxd) or a
@@ -606,8 +630,11 @@ router.get('/letterboxd', (req, res) => res.json(letterboxdStatus(currentUserId(
 
 router.put('/letterboxd', h(async (req, res) => {
   const uid = currentUserId();
+  const before = letterboxdStatus(uid).username;
   const name = setLetterboxdUser(uid, req.body?.username);
-  res.json(name ? await syncLetterboxd(uid) : letterboxdStatus(uid));
+  // A new name syncs at once; saving the same name again waits out the same
+  // short gap as Sync now, so re-saving can't fetch the feed over and over.
+  res.json(name ? await syncLetterboxd(uid, { manual: name === before }) : letterboxdStatus(uid));
 }));
 
 router.post('/letterboxd/sync', h(async (req, res) => {
@@ -618,9 +645,9 @@ router.post('/letterboxd/sync', h(async (req, res) => {
 
 router.get('/ratings/search', h(async (req, res) => {
   if (!tmdb.tmdbConfigured()) return res.status(400).json({ error: 'TMDB_API_KEY is not set.' });
-  const q = (req.query.q || '').trim();
-  if (!q) return res.json({ results: [] });
-  const results = await tmdb.liveSearch(q);
+  const q = String((Array.isArray(req.query.q) ? req.query.q[0] : req.query.q) ?? '').trim();
+  if (!q || typeof q !== 'string') return res.json({ results: [] });
+  const results = await tmdb.liveSearch(q.slice(0, 200));
   const mine = new Map(all('SELECT tmdb_id, rating FROM ratings WHERE user_id = ?', currentUserId()).map((r) => [r.tmdb_id, r.rating]));
   res.json({ results: results.map((r) => ({ ...r, myRating: mine.get(r.tmdb_id) ?? null })) });
 }));
@@ -706,11 +733,11 @@ router.get('/onboarding/movies', h(async (req, res) => {
 }));
 
 router.post('/onboarding/rate', (req, res) => {
-  const items = req.body?.ratings || [];
+  const items = Array.isArray(req.body?.ratings) ? req.body.ratings.slice(0, 50) : [];
   let count = 0;
-  for (const it of items) {
-    if (!it.tmdb_id || !(it.rating >= 0.5)) continue;
-    upsertLightMovie({ tmdb_id: it.tmdb_id, title: it.title, year: it.year, poster: it.poster, genres: it.genres || [] });
+  for (const raw of items) {
+    const it = raw && typeof raw === 'object' ? ratingInput(raw) : null;
+    if (!it) continue;
     upsertRating({ tmdb_id: it.tmdb_id, title: it.title, year: it.year, rating: it.rating, source: 'onboarding' });
     ingestOne(it.tmdb_id).catch(() => {});
     count++;
@@ -735,8 +762,8 @@ router.get('/watchlist', (req, res) => {
 });
 
 router.post('/watchlist/toggle', (req, res) => {
-  const { tmdb_id } = req.body || {};
-  if (!tmdb_id) return res.status(400).json({ error: 'tmdb_id required.' });
+  const tmdb_id = intId(req.body?.tmdb_id);
+  if (!Number.isInteger(tmdb_id) || tmdb_id <= 0) return res.status(400).json({ error: 'tmdb_id required.' });
   const uid = currentUserId();
   const exists = get('SELECT tmdb_id FROM watchlist WHERE user_id = ? AND tmdb_id = ?', uid, tmdb_id);
   if (exists) {
@@ -781,9 +808,10 @@ router.get('/alist', (req, res) => res.json(getWeek()));
 
 router.post('/watched', (req, res) => {
   const tmdb_id = Number(req.body?.tmdb_id);
-  const title = req.body?.title;
+  const title = typeof req.body?.title === 'string' ? req.body.title.slice(0, 300) : null;
   if (!Number.isInteger(tmdb_id) || tmdb_id <= 0) return res.status(400).json({ error: 'tmdb_id required.' });
-  let inWeekly4 = req.body?.in_weekly4;
+  // Only a real yes or no is taken from the client; anything else reads the log.
+  let inWeekly4 = typeof req.body?.in_weekly4 === 'boolean' || req.body?.in_weekly4 === 0 || req.body?.in_weekly4 === 1 ? req.body.in_weekly4 : null;
   if (inWeekly4 == null) {
     // Membership means "was in the weekly 4 at any point this A-List week",
     // read from weekly4_log. It must NOT be recomputed here: by the time a

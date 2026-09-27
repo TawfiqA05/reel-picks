@@ -123,9 +123,15 @@ export function parseSubscription(sub) {
 }
 
 // A device belongs to whoever subscribed it last (a shared phone that
-// switches accounts moves with them).
+// switches accounts moves with them). Moving it takes the subscription's own
+// keys, which only that browser has: knowing someone's endpoint address alone
+// can't take their notifications.
 export function saveSubscription(userId, sub) {
   const s = parseSubscription(sub);
+  const had = get('SELECT user_id, p256dh, auth FROM push_subs WHERE endpoint = ?', s.endpoint);
+  if (had && had.user_id !== userId && (had.p256dh !== s.p256dh || had.auth !== s.auth)) {
+    throw Object.assign(new Error('That notification subscription belongs to another account.'), { status: 409 });
+  }
   run(`INSERT INTO push_subs(endpoint, user_id, p256dh, auth, created_at) VALUES(?,?,?,?,?)
        ON CONFLICT(endpoint) DO UPDATE SET user_id = excluded.user_id, p256dh = excluded.p256dh, auth = excluded.auth`,
   s.endpoint, userId, s.p256dh, s.auth, new Date().toISOString());

@@ -102,6 +102,8 @@ export function parseBackupCsv(text) {
       });
     } else if (type === 'watched') {
       const price = parseFloat(cell(cols, 'price'));
+      const at = cell(cols, 'watchedat') || null;
+      if (at && Number.isNaN(Date.parse(at))) { skip(i, 'the watched date isn\'t a date'); continue; }
       watched.push({
         tmdb_id,
         title: cell(cols, 'title'),
