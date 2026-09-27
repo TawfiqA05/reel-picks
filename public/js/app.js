@@ -13,6 +13,9 @@ import * as you from './views/you.js';
 import * as onboarding from './views/onboarding.js';
 import * as welcome from './views/welcome.js';
 
+// Every import above has loaded: the start-up watchdog in index.html stands down.
+window.__rpStarted = true;
+
 const routes = {
   home: home.render,
   movie: detail.render,

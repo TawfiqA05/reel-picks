@@ -2,6 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <script>
+    // An installed app can open with its files stuck half-loaded (seen right
+    // after a launch with no network): the page stays on "Loading" and never
+    // gets to its update check. If the app hasn't started 12 seconds in, load
+    // the page again. Only in the installed app (a browser tab is left to the
+    // browser), and at most twice a minute, so it can never loop. First in the
+    // head, so no stylesheet still loading can hold it back.
+    setTimeout(function () {
+      var installed = navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+      if (window.__rpStarted || !installed) return;
+      try {
+        var now = Date.now();
+        var tries = JSON.parse(sessionStorage.getItem('rp-boot-retry') || '[]').filter(function (t) { return now - t < 60000; });
+        if (tries.length >= 2) return;
+        tries.push(now);
+        sessionStorage.setItem('rp-boot-retry', JSON.stringify(tries));
+      } catch (e) { return; }
+      location.reload();
+    }, 12000);
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#F2EADB" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0f1526" media="(prefers-color-scheme: dark)" />
