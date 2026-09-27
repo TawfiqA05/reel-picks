@@ -37,6 +37,17 @@
   --ease-out: cubic-bezier(.22, 1, .36, 1);
 }
 
+/* Stand-ins drawn only until the web fonts arrive (display=swap in
+   index.html): Arial and Georgia resized so a line takes the same width in
+   either, so nothing rewraps or jumps when the real font swaps in. Measured
+   against each family on the app's own text, at the weights it uses. */
+@font-face { font-family: "Work Sans Fallback"; src: local("Arial"), local("ArialMT"); font-weight: 100 500; size-adjust: 108.7%; ascent-override: 85.6%; descent-override: 22.1%; line-gap-override: 0%; }
+@font-face { font-family: "Work Sans Fallback"; src: local("Arial Bold"), local("Arial-BoldMT"); font-weight: 600 900; size-adjust: 103.9%; ascent-override: 89.5%; descent-override: 23.1%; line-gap-override: 0%; }
+@font-face { font-family: "IBM Plex Sans Fallback"; src: local("Arial"), local("ArialMT"); font-weight: 100 500; size-adjust: 100.7%; ascent-override: 101.3%; descent-override: 26.8%; line-gap-override: 0%; }
+@font-face { font-family: "IBM Plex Sans Fallback"; src: local("Arial Bold"), local("Arial-BoldMT"); font-weight: 600 900; size-adjust: 97.8%; ascent-override: 104.3%; descent-override: 27.6%; line-gap-override: 0%; }
+@font-face { font-family: "Zilla Slab Fallback"; src: local("Georgia Bold"), local("Georgia-Bold"); font-weight: 100 900; size-adjust: 84.3%; ascent-override: 111.5%; descent-override: 30.8%; line-gap-override: 0%; }
+@font-face { font-family: "Big Shoulders Display Fallback"; src: local("Arial Bold"), local("Arial-BoldMT"); font-weight: 100 900; size-adjust: 72.6%; ascent-override: 135%; descent-override: 28.9%; line-gap-override: 0%; }
+
 /* ---- palettes ----
    Ticket stub (light) is the default; Projector (dark) follows the device's
    dark mode. Three hues at most. The accent marks primary buttons, the #1
@@ -77,8 +88,8 @@
   --control: var(--text);
   --shadow: 0 8px 30px rgba(60, 40, 20, .14);
   --shadow-soft: 0 1px 2px rgba(60, 40, 20, .10), 0 4px 14px rgba(60, 40, 20, .08);
-  --font-display: "Zilla Slab", ui-serif, Rockwell, Georgia, serif;
-  --font-body: "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: "Zilla Slab", "Zilla Slab Fallback", ui-serif, Rockwell, Georgia, serif;
+  --font-body: "Work Sans", "Work Sans Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --display-weight: 600;
   --display-tracking: -0.01em;
 }
@@ -115,8 +126,8 @@
     --control: var(--text);
     --shadow: 0 8px 30px rgba(0, 0, 0, .45);
     --shadow-soft: 0 1px 2px rgba(0, 0, 0, .35), 0 4px 14px rgba(0, 0, 0, .28);
-    --font-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
-    --font-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-display: "Big Shoulders Display", "Big Shoulders Display Fallback", "Arial Narrow", Impact, sans-serif;
+    --font-body: "IBM Plex Sans", "IBM Plex Sans Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --display-weight: 700;
     --display-tracking: 0.005em;
   }
@@ -1095,7 +1106,7 @@ body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-botto
 .hero-title { font-size: var(--fs-hero-sm); line-height: .98; text-wrap: balance; }
 .hero-title a:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .12em; }
 .hero-facts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); color: var(--text-2); font-size: var(--fs-sm); }
-.hero-reason { margin: 0; color: var(--text-2); font-size: var(--fs-base); line-height: 1.5; max-width: 52ch; }
+.hero-reason { margin: 0; color: var(--text-2); font-size: var(--fs-base); line-height: var(--lh-body); max-width: 32em; }
 .hero-content .runway-line { margin: 0; }
 .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-1); }
 .hero-actions .btn { min-height: 44px; }
