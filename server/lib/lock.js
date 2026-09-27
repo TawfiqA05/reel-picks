@@ -25,13 +25,18 @@ export const SWAP_MARGIN = 5;
 export const prevWeek = (week) => localYMD(addDays(new Date(`${week}T12:00:00`), -7));
 
 // The newest week whose four may lock. Set by the first good refresh in that
-// week, or by the last retry of a failing one (lib/refresh.js). Before this
-// existed, a refresh this week counts.
+// week, or by the last retry of a failing one (lib/refresh.js).
 export function weekOpen(week = weekStartFriday()) {
   const open = getSetting('lockWeek');
-  if (open) return open >= week;
+  return Boolean(open) && open >= week;
+}
+
+// Once, on a database from before the lock: the week of its last refresh is
+// open, so the four locks at first view instead of waiting for Friday.
+export function initLockWeek() {
+  if (getSetting('lockWeek')) return;
   const last = getSetting('lastRefresh');
-  return Boolean(last) && weekStartFriday(new Date(last)) >= week;
+  if (last) setSetting('lockWeek', weekStartFriday(new Date(last)));
 }
 
 export function openWeek(week) {

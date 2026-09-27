@@ -21,6 +21,7 @@ import { raiseLater, resolveLater } from './lib/alerts.js';
 import { startWeeklyOffsite, offsiteEnabled } from './lib/offsite.js';
 import { warmHomePicks } from './lib/home.js';
 import { activeUserIds } from './lib/theatres.js';
+import { initLockWeek } from './lib/lock.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 
@@ -179,6 +180,7 @@ app.listen(config.port, () => {
       })
       .catch((e) => console.error(`  ✗ Refresh failed (${why}):`, e.message));
   };
+  initLockWeek();
   if (shouldAutoRefresh()) autoRefresh('startup');
   // Pick up any credits backfill a restart interrupted (a no-op when nothing is missing).
   startCreditsBackfill('startup');
