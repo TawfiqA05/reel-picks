@@ -5,9 +5,9 @@
 // poster changes. "-" means the poster has no colour worth a glow (greys,
 // black and white); the page then uses a faint amber one.
 //
-// The colour is the most common strong hue on the poster, averaged, then
-// held to a middle lightness and saturation, so a pale or neon poster can't
-// wash out the text drawn over its glow.
+// The colour is the most common strong hue on the poster, averaged, then set
+// to one brightness (relative luminance) whatever the hue, so a yellow glow
+// is no brighter behind the text than a blue one, and text over it keeps AA.
 import jpeg from 'jpeg-js';
 import { all, run, get } from '../db.js';
 
@@ -58,9 +58,21 @@ export function dominantColor({ data, width, height }) {
   if (!best || best.n < counted * 0.04) return null;
   let h = (Math.atan2(best.y, best.x) * 180) / Math.PI;
   if (h < 0) h += 360;
-  const s = Math.min(0.75, Math.max(0.35, best.s / best.n));
-  const l = Math.min(0.5, Math.max(0.38, best.l / best.n));
-  return hslToHex(h, s, l);
+  const s = Math.min(0.8, Math.max(0.4, best.s / best.n));
+  // The lightness that gives this hue a relative luminance of TARGET.
+  let lo = 0.15; let hi = 0.75;
+  for (let i = 0; i < 20; i++) {
+    const mid = (lo + hi) / 2;
+    if (luminance(hslToHex(h, s, mid)) < TARGET) lo = mid; else hi = mid;
+  }
+  return hslToHex(h, s, (lo + hi) / 2);
+}
+
+const TARGET = 0.1;
+function luminance(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 async function colorOf(posterUrl) {

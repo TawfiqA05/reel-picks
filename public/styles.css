@@ -289,8 +289,20 @@ body.has-save main { padding-bottom: calc(var(--chrome-bottom) + var(--savebar-h
 .page { display: flex; flex-direction: column; gap: var(--sp-1); }
 /* One page's box inside main (app.js); it takes no part in the layout. */
 .view { display: contents; }
-/* The glow behind the top of the page, dark theme only (app.js setGlow). */
+/* The glow behind the top of the page, dark theme only (app.js setGlow):
+   the film's poster colour, or a faint amber for a film without one, fading
+   into the page by about 700px. The server keeps the colour at a middle
+   brightness, and it's mixed in at under a third, so text over it keeps AA. */
 .page-glow { display: none; }
+@media (prefers-color-scheme: dark) {
+  .shell.has-glow .page-glow {
+    display: block; position: absolute; top: 0; left: 0; right: 0; height: 760px; pointer-events: none;
+    background: radial-gradient(ellipse 110% 700px at 50% 0, color-mix(in srgb, var(--glow-color, var(--accent)) 30%, transparent) 0%, color-mix(in srgb, var(--glow-color, var(--accent)) 12%, transparent) 55%, transparent 100%);
+  }
+  .shell.has-glow.glow-faint .page-glow {
+    background: radial-gradient(ellipse 110% 700px at 50% 0, color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 100%);
+  }
+}
 
 /* ---- the tab bar: five tabs, the active one in the accent ---- */
 .bottom-nav {
@@ -616,7 +628,10 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
 .hero-pick, .detail-hero { position: relative; margin: calc(-1 * var(--sp-4)) calc(-1 * var(--sp-4)) 0; isolation: isolate; }
 .hero-media { position: relative; aspect-ratio: 16 / 10; overflow: hidden; }
 .hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; }
-.hero-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, var(--bg) 100%); }
+/* Phones: the art fades out into whatever is behind it (the page, or the
+   glow), so there's no seam where it ends. */
+.hero-media:not(.from-poster):not(.plain) { -webkit-mask-image: linear-gradient(180deg, #000 50%, transparent 100%); mask-image: linear-gradient(180deg, #000 50%, transparent 100%); }
+.hero-scrim { display: none; }
 /* No backdrop: the poster itself, small and upright, over the glow. */
 .hero-media.from-poster { aspect-ratio: auto; display: flex; justify-content: center; padding: var(--sp-6) 0 var(--sp-2); }
 .hero-media.from-poster .hero-scrim, .hero-media.plain .hero-scrim { display: none; }
@@ -640,7 +655,8 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
 .seat-line { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); color: var(--muted); font-size: var(--fs-sm); }
 @media (min-width: 900px) {
   .hero-pick, .detail-hero { margin: 0 0 var(--sp-4); min-height: 540px; border-radius: 20px; overflow: hidden; display: flex; align-items: flex-end; }
-  .hero-pick .hero-media, .detail-hero .hero-media { position: absolute; inset: 0; aspect-ratio: auto; }
+  .hero-pick .hero-media, .detail-hero .hero-media { position: absolute; inset: 0; aspect-ratio: auto; -webkit-mask-image: none; mask-image: none; }
+  .hero-media:not(.from-poster):not(.plain) .hero-scrim { display: block; position: absolute; inset: 0; }
   .hero-media.from-poster { justify-content: flex-end; align-items: center; padding: var(--sp-7) var(--sp-9); }
   .hero-poster { width: 230px; }
   .hero-media.plain { height: auto; }

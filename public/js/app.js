@@ -63,6 +63,7 @@ function setGlow(color) {
   const shell = document.querySelector('.shell');
   if (!shell) return;
   shell.classList.toggle('has-glow', color !== undefined);
+  shell.classList.toggle('glow-faint', color === null);
   if (color) shell.style.setProperty('--glow-color', color);
   else shell.style.removeProperty('--glow-color');
 }

@@ -13,6 +13,8 @@ export async function render(root, params, ctx) {
   const [d, week] = await Promise.all([api.movie(params[0]), guest ? null : api.alist().catch(() => null)]);
   const m = d.movie;
   clear(root);
+  // Dark theme: the film's poster colour glows behind the top of the page.
+  ctx.setGlow?.(m.glow ?? null);
 
   const page = h('div', { class: 'detail' });
 

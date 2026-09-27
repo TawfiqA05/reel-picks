@@ -245,6 +245,8 @@ function buildPage(data, status, ctx, state, actions) {
     const heroAt = Math.max(0, four.findIndex(({ e }) => !e.prerelease || e.prerelease.soon));
     const hero = four[heroAt];
     if (hero) heroSlot.appendChild(heroPick(hero.e, ctx, { day, multi, onHide, movedUp: moved(hero.e), rank: hero.rank }));
+    // Dark theme: the #1 film's poster colour glows behind the top of the page.
+    ctx.setGlow?.(hero ? hero.e.glow ?? null : undefined);
     clear(pickGrid);
     four.filter((_, i) => i !== heroAt).forEach(({ e, rank }) => pickGrid.appendChild(weeklyCard(e, ctx, rank, { day, multi, onHide, movedUp: moved(e) })));
     clear(worthList);
