@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { get, all, run, getSettings, updateSettings, getSetting, setSetting, dataDir, dbPath, USER_SETTING_KEYS, DEFAULT_SETTINGS } from './db.js';
 import { exportState, importState } from './lib/state.js';
-import { keyStatus } from './env.js';
+import { keyStatus, onRailway } from './env.js';
 import {
   refreshAll, shouldAutoRefresh, state as refreshState, ingestOne, drainUnmatched,
 } from './lib/refresh.js';
@@ -165,7 +165,7 @@ router.get('/status', (req, res) => {
     // showtime math use? (Containers default to UTC unless TZ is set.)
     data: { dir: dataDir, dbBytes, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || process.env.TZ || null },
     // Where keys are edited: Railway sets these variables in every deployment.
-    host: process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID ? 'railway' : 'local',
+    host: onRailway() ? 'railway' : 'local',
     // Automatic backups (lib/backup.js): the newest copy, and a failure since it.
     backup: backupStatus(dataDir),
     theatre: { ...theatres[0] },

@@ -10,7 +10,13 @@
 // Owner unlock: passing ?owner=<OWNER_TOKEN> sets a signed, HttpOnly cookie whose
 // value is an HMAC (keyed by the token) — never the token itself. A valid cookie
 // makes isGuest() return false, so the owner gets full access over the tunnel.
+//
+// On Railway every request is remote, whatever GUEST_MODE says: without it a
+// deployment would make everyone who opens the site the owner. There the
+// owner cookie and friend cookies are the only ways past the guest view, and
+// index.js alerts the owner when GUEST_MODE isn't on.
 import crypto from 'node:crypto';
+import { onRailway } from '../env.js';
 import { FRIEND_COOKIE, verifyFriendCookie } from './accounts.js';
 import { OWNER_ID } from './user.js';
 
@@ -23,22 +29,22 @@ export function ownerName() {
   return process.env.OWNER_NAME || 'Tawfiq';
 }
 
-function hostIsLocal(req) {
+export function hostIsLocal(req) {
   const host = (req.headers.host || '').toLowerCase().split(':')[0].replace(/^\[|\]$/g, '');
   return host === 'localhost' || host === '127.0.0.1' || host === '::1';
 }
 
-function viaCloudflare(req) {
+export function viaCloudflare(req) {
   return Boolean(req.headers['cf-connecting-ip'] || req.headers['cf-ray']);
 }
 
 function isRemote(req) {
-  return viaCloudflare(req) || (guestModeEnabled() && !hostIsLocal(req));
+  return onRailway() || viaCloudflare(req) || (guestModeEnabled() && !hostIsLocal(req));
 }
 
 // The owner at their own machine: localhost, not through the tunnel.
 export function isLocalRequest(req) {
-  return hostIsLocal(req) && !viaCloudflare(req);
+  return !onRailway() && hostIsLocal(req) && !viaCloudflare(req);
 }
 
 // Who a request belongs to, in this order: the owner cookie (the owner, even

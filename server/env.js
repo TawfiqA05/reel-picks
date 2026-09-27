@@ -52,6 +52,13 @@ export const config = {
   },
 };
 
+// Running on Railway? Railway sets these in every deployment by itself; only
+// their presence is read, never their values.
+export function onRailway() {
+  return ['RAILWAY_ENVIRONMENT_NAME', 'RAILWAY_ENVIRONMENT', 'RAILWAY_PROJECT_ID', 'RAILWAY_SERVICE_ID']
+    .some((k) => Boolean((process.env[k] || '').trim()));
+}
+
 export function keyStatus() {
   return {
     amc: Boolean(config.amcKey),

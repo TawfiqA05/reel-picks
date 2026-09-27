@@ -3,10 +3,10 @@ import './env.js';
 import express from 'express';
 import compression from 'compression';
 import { fileURLToPath } from 'node:url';
-import { config } from './env.js';
+import { config, onRailway } from './env.js';
 import router from './routes.js';
 import {
-  isGuest, isOwner, isLocalRequest, guestAllowed, tokenMatches, ownerCookieName, ownerCookieValue, ownerCookieMaxAgeMs, requestUser, ownerName,
+  isGuest, isOwner, isLocalRequest, guestAllowed, guestModeEnabled, tokenMatches, ownerCookieName, ownerCookieValue, ownerCookieMaxAgeMs, requestUser, ownerName,
 } from './lib/guest.js';
 import { FRIEND_COOKIE, FRIEND_TTL_MS, findInvite, redeemInvite, signFriendCookie, touchLastSeen } from './lib/accounts.js';
 import { joinPage, expiredPage } from './lib/invitePage.js';
@@ -17,7 +17,7 @@ import { startCreditsBackfill } from './lib/backfill.js';
 import { startNightlyBackups } from './lib/backup.js';
 import { pushEnabled, sendWeeklyIfDue } from './lib/push.js';
 import { syncAllDue as syncLetterboxdDue } from './lib/letterboxd.js';
-import { raiseLater, resolveLater } from './lib/alerts.js';
+import { raiseLater, resolveLater, raiseEveryStart } from './lib/alerts.js';
 import { startWeeklyOffsite, offsiteEnabled } from './lib/offsite.js';
 import { warmHomePicks } from './lib/home.js';
 import { activeUserIds } from './lib/theatres.js';
@@ -114,7 +114,7 @@ app.use('/api', (req, res, next) => {
 });
 
 // A change from another site's page is refused before it's read: at
-// localhost (and on a server without GUEST_MODE) every request is the owner,
+// localhost every request is the owner,
 // so a page elsewhere could otherwise post to this one. The browser marks
 // where a request came from; our own pages are same-origin.
 app.use('/api', (req, res, next) => {
@@ -182,6 +182,14 @@ app.listen(config.port, () => {
       })
       .catch((e) => console.error(`  ✗ Refresh failed (${why}):`, e.message));
   };
+  // On Railway without GUEST_MODE every visitor is the guest (lib/guest.js):
+  // say so to the owner, once per start.
+  if (onRailway() && !guestModeEnabled()) {
+    console.warn('  ⚠ GUEST_MODE is not on, so every visitor gets the read-only guest view. Set GUEST_MODE to 1 in Railway.');
+    raiseEveryStart('guestmode', 'GUEST_MODE isn\'t set to 1 on Railway, so everyone who opens the site gets the read-only guest view. Your owner link and friends\' logins still work.')
+      .catch((e) => console.error('[alerts]', e.message));
+  } else if (onRailway()) resolveLater('guestmode');
+
   initLockWeek();
   if (shouldAutoRefresh()) autoRefresh('startup');
   // Pick up any credits backfill a restart interrupted (a no-op when nothing is missing).
