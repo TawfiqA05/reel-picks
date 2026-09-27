@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { config, onRailway } from './env.js';
 import router from './routes.js';
 import {
-  isGuest, isOwner, isLocalRequest, guestAllowed, guestModeEnabled, tokenMatches, ownerCookieName, ownerCookieValue, ownerCookieMaxAgeMs, requestUser, ownerName,
+  isGuest, isOwner, isLocalRequest, guestAllowed, guestModeEnabled, hostIsLocal, viaCloudflare, tokenMatches, ownerCookieName, ownerCookieValue, ownerCookieMaxAgeMs, requestUser, ownerName,
 } from './lib/guest.js';
 import { FRIEND_COOKIE, FRIEND_TTL_MS, findInvite, redeemInvite, signFriendCookie, touchLastSeen } from './lib/accounts.js';
 import { joinPage, expiredPage } from './lib/invitePage.js';
@@ -29,6 +29,17 @@ const RETRY_CHECK_MS = 60 * 1000;
 
 const app = express();
 app.disable('x-powered-by');
+
+// Off Railway, only requests addressed to this machine are answered: a page
+// on another site can point its own hostname at 127.0.0.1 (DNS rebinding) and
+// would otherwise reach the app as the owner. RP_ALLOW_LAN opens it to other
+// devices on the network. The share tunnel's requests (Cloudflare's edge
+// headers) still get through, as the read-only guest they always were.
+const lanAllowed = () => ['1', 'true', 'yes', 'on'].includes((process.env.RP_ALLOW_LAN || '').trim().toLowerCase());
+app.use((req, res, next) => {
+  if (onRailway() || lanAllowed() || hostIsLocal(req) || viaCloudflare(req)) return next();
+  res.status(403).type('text').send('Reel Picks only answers at localhost here. Set RP_ALLOW_LAN to 1 to open it to your network.');
+});
 // Gzip or Brotli for anything worth it: the Picks list alone is ~900 KB of
 // JSON and ~70 KB compressed.
 app.use(compression({ threshold: 1024 }));

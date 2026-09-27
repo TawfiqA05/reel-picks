@@ -30,7 +30,9 @@ export function ownerName() {
 }
 
 export function hostIsLocal(req) {
-  const host = (req.headers.host || '').toLowerCase().split(':')[0].replace(/^\[|\]$/g, '');
+  // "[::1]:5170" keeps its colons inside the brackets.
+  const raw = (req.headers.host || '').toLowerCase();
+  const host = raw.startsWith('[') ? raw.slice(1, raw.indexOf(']')) : raw.split(':')[0];
   return host === 'localhost' || host === '127.0.0.1' || host === '::1';
 }
 
