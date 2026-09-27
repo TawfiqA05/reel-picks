@@ -108,11 +108,25 @@ export function chip(text, { active = false, onClick, removable = false } = {}) 
 // Delete or Backspace clears when `allowClear`. Escape or leaving the control
 // puts an unsaved value back. A click saves at once, as always, and clicking
 // the saved value clears it.
-// Built once and cloned: a list of hundreds of ratings draws two rows each.
+// One SVG holds all five stars (a list of hundreds of ratings draws two rows
+// each), built once and cloned.
 let starTemplate = null;
+const STAR = 'M12 3.2l2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17.1 6.6 20l1-6.1-4.4-4.3 6.1-.9z';
 const starRow = () => {
-  starTemplate ||= icon('star', { size: '1em', cls: 'star-glyph' });
-  return Array.from({ length: 5 }, () => starTemplate.cloneNode(true));
+  if (!starTemplate) {
+    const ns = 'http://www.w3.org/2000/svg';
+    starTemplate = document.createElementNS(ns, 'svg');
+    starTemplate.setAttribute('viewBox', '0 0 120 24');
+    starTemplate.setAttribute('class', 'star-row');
+    starTemplate.setAttribute('aria-hidden', 'true');
+    for (let i = 0; i < 5; i++) {
+      const path = document.createElementNS(ns, 'path');
+      path.setAttribute('d', STAR);
+      path.setAttribute('transform', `translate(${i * 24} 0)`);
+      starTemplate.appendChild(path);
+    }
+  }
+  return starTemplate.cloneNode(true);
 };
 
 // A small drawn star for running text ("4.5★", "★ Watchlist"). Text that

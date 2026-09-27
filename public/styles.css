@@ -453,7 +453,9 @@ main { padding: var(--sp-4); padding-bottom: 104px; }
 .stars-base, .stars-fill { display: flex; }
 .stars-base { color: var(--star-empty); }
 .stars-fill { position: absolute; top: 0; left: 0; overflow: hidden; white-space: nowrap; color: var(--star-fill); }
-/* Drawn stars (ui.js): each one a 1em cell, filled with the text colour. */
+/* Drawn stars (ui.js): a row of five 1em cells in one SVG, and single ones
+   in running text, filled with their colour. */
+.star-row { flex: 0 0 auto; width: 5em; height: 1em; fill: currentColor; }
 .star-glyph { flex: 0 0 auto; fill: currentColor; stroke: none; }
 .inline-star { vertical-align: -0.08em; margin: 0 0.06em; color: var(--gold); }
 .stars.interactive { cursor: pointer; }
