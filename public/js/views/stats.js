@@ -1,6 +1,6 @@
 // Stats: movie-plan usage and savings (or ticket spend), ratings, recommendation hit-rate + tuning tip.
 import { api } from '../api.js';
-import { h, clear, spinner, money, pct, makeStars, toast, sectionTitle, openModal, icon, withStars } from '../ui.js';
+import { h, clear, spinner, money, pct, makeStars, toast, openModal, icon, withStars, emptyState } from '../ui.js';
 import { starRater, watchlistButton, opensBadge } from './components.js';
 import { filterBox } from '../filter.js';
 import { streamLine, CREDIT } from '../stream.js';
@@ -41,10 +41,10 @@ export async function render(root, params, ctx, { quiet = false } = {}) {
   // "week of Sep 25", not the raw 2026-09-25 the API sends.
   const [wy, wm, wd] = String(week.weekStart || '').split('-').map(Number);
   const weekOf = wy ? new Date(wy, wm - 1, wd).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
-  page.appendChild(sectionTitle(words.statsTitle,
+  const planGroup = group(words.statsTitle,
     !plan.subscription ? `Pay per ticket · week of ${weekOf}`
-      : monthly ? `Resets on the 1st · ${monthName}` : `Resets Friday · week of ${weekOf}`));
-  page.appendChild(h('div', { class: 'stat-grid' }, ...(plan.subscription ? [
+      : monthly ? `Resets on the 1st · ${monthName}` : `Resets Friday · week of ${weekOf}`,
+    h('div', { class: 'stat-grid' }, ...(plan.subscription ? [
     plan.unlimited
       ? bigStat(String(week.used), `${plan.units} this ${plan.period}`, 'no limit')
       : bigStat(`${week.used}/${week.limit}`, `${plan.units} used`, `${week.remaining} left`),
@@ -54,21 +54,21 @@ export async function render(root, params, ctx, { quiet = false } = {}) {
     bigStat(String(week.used), `ticket${week.used === 1 ? '' : 's'} this week`, 'logged with Mark seen'),
     bigStat(money(week.savings.ticketValue), 'spent on tickets', `${week.savings.monthTickets} ticket${week.savings.monthTickets === 1 ? '' : 's'} this month`),
   ])));
-  if (week.movies.length) page.appendChild(watchLog(week.movies, ctx, words));
+  if (week.movies.length) planGroup.querySelector('.group-body').append(...watchLog(week.movies, ctx, words));
+  page.appendChild(planGroup);
 
-  page.appendChild(sectionTitle('Your year', String(s.year)));
-  page.appendChild(h('div', { class: 'stat-grid' },
+  page.appendChild(group('Your year', String(s.year), h('div', { class: 'stat-grid' },
     // Only films logged as seen (Mark seen), not imported ratings.
     bigStat(s.seenThisYear, 'seen in theaters', 'logged this year'),
     bigStat(s.totalRatings, 'ratings', 'in your profile'),
     bigStat(s.avgRating != null ? withStars(`${s.avgRating}★`) : '–', 'average rating', ''),
     bigStat(s.hitRate != null ? pct(s.hitRate) : '–', 'pick hit-rate', s.ratedPicks ? `of ${s.ratedPicks} picks watched` : 'rate your picks'),
-  ));
+  )));
 
   if (s.suggestion) {
-    const tip = h('div', { class: 'alert tip' },
-      h('span', { class: 'alert-icon' }, icon('target', { size: 18 })),
-      h('span', {}, s.suggestion.text),
+    const tip = h('div', { class: 'tip-row' },
+      h('span', { class: 'tip-icon' }, icon('target', { size: 18 })),
+      h('span', { class: 'tip-text' }, s.suggestion.text),
     );
     if (s.suggestion.weightTaste != null) {
       const apply = h('button', { class: 'btn small', onClick: async () => {
@@ -76,12 +76,12 @@ export async function render(root, params, ctx, { quiet = false } = {}) {
           await api.saveSettings({ weightPublic: s.suggestion.weightPublic, weightTaste: s.suggestion.weightTaste });
         } catch (e) { toast(e.message, 'error'); return; }
         toast('Weights updated', 'success');
-        tip.querySelector('span:not(.alert-icon)').textContent = `Applied: taste match now counts for ${Math.round(s.suggestion.weightTaste * 100)}% of the score.`;
+        tip.querySelector('.tip-text').textContent = `Applied: taste match now counts for ${Math.round(s.suggestion.weightTaste * 100)}% of the score.`;
         apply.remove();
       } }, 'Apply');
       tip.appendChild(apply);
     }
-    page.appendChild(tip);
+    page.appendChild(h('section', { class: 'group' }, h('div', { class: 'group-body' }, tip)));
   }
 
   const ranked = "ranked by films you've rated";
@@ -91,11 +91,12 @@ export async function render(root, params, ctx, { quiet = false } = {}) {
   // Imported films arrive with genres only; director and cast follow in the
   // background. Say so while it's happening, so a short list isn't a mystery.
   if (s.backfilling && s.detailsPending > 0) {
-    page.appendChild(h('div', { class: 'muted small pad' },
-      `Still loading details for ${s.detailsPending} of your film${s.detailsPending === 1 ? '' : 's'}`));
+    page.appendChild(h('p', { class: 'group-foot' },
+      `Still loading details for ${s.detailsPending} of your film${s.detailsPending === 1 ? '' : 's'}.`));
   }
   if (!s.totalRatings) {
-    page.appendChild(h('div', { class: 'muted pad' }, 'Rate some movies to unlock genre/director insights and personalized picks.'));
+    page.appendChild(emptyState('star', 'No ratings yet', 'Rate a few films you\'ve seen and your favorite genres, directors and actors show up here.',
+      h('a', { class: 'btn', href: '#/rate' }, 'Rate films')));
   }
 
   root.appendChild(page);
@@ -105,12 +106,12 @@ export async function render(root, params, ctx, { quiet = false } = {}) {
 // delete; nothing reached it, so an accidental "Mark seen" could only be undone
 // in SQLite. Removal only — dates and rewatches are not editable here.
 function watchLog(movies, ctx, words) {
-  const list = h('div', { class: 'theatre-list' });
+  const list = [];
   for (const m of movies) {
-    list.appendChild(h('div', { class: 'theatre-item' },
-      h('div', { class: 'ti-main' },
-        h('div', { class: 'ti-name' }, m.title || `Movie ${m.tmdb_id}`),
-        h('div', { class: 'muted small' }, watchedLabel(m.watched_at)),
+    list.push(h('div', { class: 'row-line log-row' },
+      h('div', { class: 'row-text' },
+        h('div', { class: 'row-title' }, m.title || `Movie ${m.tmdb_id}`),
+        h('p', { class: 'muted small' }, watchedLabel(m.watched_at)),
       ),
       h('div', { class: 'ti-actions' },
         h('button', {
@@ -149,6 +150,13 @@ function watchedLabel(iso) {
   return `Logged ${d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}`;
 }
 
+// A titled group of rows (styles.css, grouped lists).
+function group(title, sub, ...body) {
+  return h('section', { class: 'group' },
+    h('div', { class: 'group-head' }, h('h2', { class: 'group-title' }, title), sub ? h('span', { class: 'section-sub' }, sub) : null),
+    h('div', { class: 'group-body' }, ...body));
+}
+
 function bigStat(value, label, sub) {
   return h('div', { class: 'big-stat' },
     h('div', { class: 'bs-value' }, value),
@@ -162,13 +170,16 @@ const filmsLabel = (n, avg) => withStars(`${n} film${n === 1 ? '' : 's'} · ${av
 // One numbered row per entry: "2 films · 4.5★" (the user's own average).
 // Each row is a button that opens the films behind it.
 function barList(items, id, kind, ctx) {
+  const most = Math.max(1, ...items.map((it) => it.n));
   return h('ol', { class: 'bar-list', id }, ...items.map((it, i) => {
     const btn = h('button', {
       class: 'bar-row', type: 'button', 'aria-haspopup': 'dialog',
       'aria-label': `${i + 1}. ${it.name}: ${it.n} film${it.n === 1 ? '' : 's'}, average ${it.avg.toFixed(1)} stars. Show the films`,
     },
       h('span', { class: 'bar-rank', 'aria-hidden': 'true' }, String(i + 1)),
-      h('span', { class: 'bar-name' }, it.name),
+      h('span', { class: 'bar-main' },
+        h('span', { class: 'bar-name' }, it.name),
+        h('span', { class: 'bar-track', 'aria-hidden': 'true' }, h('span', { class: 'bar-fill', style: { width: `${Math.max(4, Math.round((it.n / most) * 100))}%` } }))),
       makeStars({ value: it.avg, size: 14 }),
       h('span', { class: 'bar-meta' }, filmsLabel(it.n, it.avg)),
       icon('chevronRight', { size: 16, cls: 'row-chevron' }),
@@ -357,14 +368,16 @@ function topList(title, sub, items, key, ctx) {
   const id = `top-${key}`;
   const list = barList(items, id, key, ctx);
   const extra = [...list.children].slice(TOP);
-  const wrap = h('section', { class: 'stat-list' }, sectionTitle(title, sub), list);
+  const wrap = h('section', { class: 'group stat-list' },
+    h('div', { class: 'group-head' }, h('h2', { class: 'group-title' }, title), h('span', { class: 'section-sub' }, sub)),
+    h('div', { class: 'group-body bar-group' }, list));
   if (!extra.length) return wrap;
   let open = expanded.has(key);
   const btn = h('button', { class: 'btn soft small show-all', type: 'button', 'aria-controls': id });
   // With every row showing, a filter box sits between the heading and the list.
   const filter = filterBox({ label: `Filter ${title.toLowerCase()}`, placeholder: `Filter ${items.length} ${title.replace(/^Top /, '')}` });
   const rows = [...list.children].map((li, i) => ({ el: li, fields: [items[i].name] }));
-  wrap.insertBefore(filter.el, list);
+  wrap.insertBefore(filter.el, list.parentElement);
   const paint = () => {
     filter.reset();
     filter.el.hidden = !open;

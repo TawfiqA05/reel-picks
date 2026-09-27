@@ -15,8 +15,12 @@ const MPAA = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'];
 // On phones, a field that takes a whole row of its grid (see .span-all).
 const spanAll = (field) => { field.classList.add('span-all'); return field; };
 
+// One grouped list (styles.css): its heading, then its rows. Help text in it
+// reads as the note under the row before it.
 function card(title, ...children) {
-  return h('section', { class: 'settings-card' }, h('h2', { class: 'card-title' }, title), ...children);
+  return h('section', { class: 'group settings-group' },
+    h('h2', { class: 'group-title' }, title),
+    h('div', { class: 'group-body' }, ...children));
 }
 
 // ---- Weekly picks notifications ------------------------------------------
@@ -196,7 +200,7 @@ export async function render(root, params, ctx) {
     for (const t of theatres) {
       theatreList.appendChild(h('div', { class: 'theatre-item' },
         h('div', { class: 'ti-main' },
-          h('div', { class: 'ti-name' }, t.name, t.isPrimary ? badge('Primary', 'watch') : null),
+          h('div', { class: 'ti-name' }, t.name, t.isPrimary ? badge('Primary', 'accent') : null),
           h('div', { class: 'muted small' }, t.distance
             ? `${t.distance.label} from ${homeLabel()}${t.distance.estimated ? ' (estimated)' : ''}`
             : 'Drive time appears after the next refresh'),
@@ -581,13 +585,13 @@ export async function render(root, params, ctx) {
   };
   uRange.addEventListener('input', paintU); uMult.addEventListener('input', paintU); paintU();
 
-  page.appendChild(card('Ranking balance', wLabel, wRange,
+  page.appendChild(card('Ranking balance', h('div', { class: 'field-block' }, wLabel, wRange),
     h('p', { class: 'muted small' }, 'How much public reviews vs. your personal taste drive the final score.'),
-    uLabel, uRange,
+    h('div', { class: 'field-block' }, uLabel, uRange),
     h('p', { class: 'muted small' },
       'How much a confirmed end date pulls a movie up, so the weekly 4 answers "what should I see this week". '
-      + 'Full on a movie\'s last day, fading to nothing a week out, and only when the run is confirmed ending (filled calendar), never a hedged "through at least". '
-      + 'A few points breaks ties and nudges a good movie that\'s leaving ahead of a slightly better one that isn\'t; 15+ (about 10 for starred films) starts overriding quality.'),
+      + 'Full on a movie\'s last day, fading to nothing a week out, and only when the run is confirmed ending (filled calendar), never a hedged "playing through". '
+      + 'A few points breaks ties and nudges a good movie that\'s leaving ahead of a slightly better one that isn\'t; 15+ (about 10 for saved films) starts overriding quality.'),
   ));
 
   // ---- Preferences & filters
@@ -604,11 +608,9 @@ export async function render(root, params, ctx) {
   }));
   page.appendChild(card('Preferences',
     h('label', { class: 'switch-row' }, imaxToggle, h('span', {}, 'Prefer IMAX (boosts IMAX showings)')),
-    h('div', { class: 'sub-label' }, 'Never recommend these genres in the weekly 4'),
-    genreChips,
-    h('div', { class: 'sub-label' }, 'Never recommend these ratings'),
-    mpaaChips,
-    h('p', { class: 'muted small' }, 'Filtered movies still appear in the full list, greyed out.'),
+    h('div', { class: 'field-block' }, h('div', { class: 'sub-label' }, 'Never recommend these genres in the weekly four'), genreChips),
+    h('div', { class: 'field-block' }, h('div', { class: 'sub-label' }, 'Never recommend these ratings'), mpaaChips),
+    h('p', { class: 'muted small' }, 'Filtered films still appear in the full list, faded.'),
   ));
 
   // ---- Hidden films: everything marked "Not for me", each with Unhide.
@@ -649,7 +651,7 @@ export async function render(root, params, ctx) {
     const before = h('input', { class: 'input time', type: 'time', value: w.before || '23:30' });
     return { el: h('div', { class: 'window-row' },
       h('label', { class: 'switch-row tight' }, en, h('span', {}, label)),
-      h('div', { class: 'grid-2' }, labeled('after', after), labeled('before', before)),
+      h('div', { class: 'grid-2 window-times' }, labeled('After', after), labeled('Before', before)),
     ), read: () => ({ enabled: en.checked, after: after.value, before: before.value }) };
   };
   const weekday = mkWindow('weekday', 'Weekdays');
@@ -735,7 +737,7 @@ export async function render(root, params, ctx) {
       labeled('Watchlist urgency ×', uMult),
     ),
     h('p', { class: 'muted small' },
-      'Watchlist urgency × scales the urgency boost (Ranking balance) for starred movies. You\'ve already said you want to see them, so "it\'s leaving" counts for more.'),
+      'Watchlist urgency × scales the urgency boost (Ranking balance) for saved movies. You\'ve already said you want to see them, so "it\'s leaving" counts for more.'),
   ));
 
   // ---- Picks sections
@@ -801,7 +803,7 @@ export async function render(root, params, ctx) {
       h('p', { class: 'muted small' },
         '"Published through" is where each theater\'s schedule stops being densely posted (the horizon). '
         + 'A movie\'s runway badge only commits to an end date when its last showtime falls at least the "Days before horizon" setting short of it; '
-        + 'otherwise it says "through at least". Typical values are medians over the nearest 3 days at that theater; '
+        + 'otherwise it says "playing through". Typical values are medians over the nearest 3 days at that theater; '
         + 'a day below either threshold (half of typical) is treated as the unpublished advance-sale tail. '
         + 'AMC calls are real HTTP requests on the last refresh: per-day responses are cached 24h, and a manual Refresh always re-pulls today and tomorrow (2 calls per theater) so same-day schedule changes show up. '
         + '"Stale days" counts days whose live AMC call failed and an older cached copy was used instead. The schedule shown for those days may be out of date.'),
@@ -915,7 +917,7 @@ export async function render(root, params, ctx) {
     const id = `err-${Math.random().toString(36).slice(2, 8)}`;
     const note = h('p', { class: 'form-error', id }, label ? `${label}: ${message}` : message);
     // Under the row the field sits in, after any message already there.
-    let at = input.closest('.settings-card > *');
+    let at = input.closest('.group-body > *');
     while (at.nextElementSibling?.classList.contains('form-error')) at = at.nextElementSibling;
     at.after(note);
     input.setAttribute('aria-invalid', 'true');
@@ -1142,7 +1144,7 @@ function friendsCard() {
         };
         list.appendChild(h('div', { class: 'theatre-item' },
           h('div', { class: 'ti-main' },
-            h('div', { class: 'ti-name' }, f.name, f.revoked_at ? badge('Revoked', 'muted') : null),
+            h('div', { class: 'ti-name' }, f.name, f.revoked_at ? badge('Revoked', 'bad') : null),
             h('div', { class: 'muted small' }, `Added ${when(f.created_at)} · ${f.ratings} rating${f.ratings === 1 ? '' : 's'} · ${status}`),
           ),
           h('div', { class: 'ti-actions' },
