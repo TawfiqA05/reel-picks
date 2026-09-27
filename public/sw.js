@@ -110,17 +110,26 @@ self.addEventListener('fetch', (e) => {
 
   // Navigations: the app shell, from the network; the cached shell offline.
   if (request.mode === 'navigate') {
-    e.respondWith(
-      fetch(request).catch(() => caches.match('/index.html', { cacheName: CACHE })
-        .then((r) => r || caches.match('/', { cacheName: CACHE }))),
-    );
+    e.respondWith(networkFirst(request, () => caches.match('/index.html', { cacheName: CACHE })
+      .then((r) => r || caches.match('/', { cacheName: CACHE }))));
     return;
   }
 
   // Everything else of ours (JS, CSS, icons, manifest): network first, this
   // version's precache when offline.
-  e.respondWith(
-    fetch(request).catch(() => caches.match(request, { cacheName: CACHE, ignoreSearch: true })
-      .then((r) => r || Response.error())),
-  );
+  e.respondWith(networkFirst(request, () => caches.match(request, { cacheName: CACHE, ignoreSearch: true })));
 });
+
+// The network's answer, or the cached copy when there is none. A reply that
+// isn't a success counts as none: while a phone's network wakes up, or while
+// the server restarts for a deploy, requests can come back as a 408 or a 5xx,
+// and a script that arrives as an error stops the whole app from starting
+// (update checks included) until it's closed and opened again.
+async function networkFirst(request, cached) {
+  let res = null;
+  try {
+    res = await fetch(request);
+    if (res.ok || res.type === 'opaqueredirect') return res;
+  } catch { /* no answer at all */ }
+  return (await cached()) || res || Response.error();
+}
