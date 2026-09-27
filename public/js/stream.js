@@ -94,7 +94,7 @@ export function streamLine(id, row, { cls = 'stream-line', onShown = null } = {}
 // logos, the JustWatch credit, and a link to TMDB's page for the film. Starts
 // hidden and stays out of the page when the film has nothing in the US.
 export function streamSection(id) {
-  const section = h('section', { class: 'stream-card', 'aria-labelledby': 'stream-title', hidden: true });
+  const section = h('section', { class: 'group stream-card', 'aria-labelledby': 'stream-title', hidden: true });
   providersFor(id).then((p) => {
     if (!p || p.playing || !(p.stream?.length || p.rent?.length || p.buy?.length)) { section.remove(); return; }
     const row = (label, list) => (list?.length
@@ -105,10 +105,15 @@ export function streamSection(id) {
             x.logo ? h('img', { class: 'stream-logo', src: x.logo, alt: x.name, width: '40', height: '40', decoding: 'async' })
               : h('span', { class: 'stream-logo stream-noname' }, x.name.slice(0, 1))))))
       : null);
+    // Rent and buy from the same places: one row.
+    const ids = (list) => (list || []).map((x) => x.id).sort().join(',');
+    const same = p.rent?.length && ids(p.rent) === ids(p.buy);
     section.append(
-      h('h3', { id: 'stream-title' }, 'Where to watch'),
-      row('Stream', p.stream), row('Rent', p.rent), row('Buy', p.buy),
-      h('p', { class: 'stream-credit' },
+      h('h2', { class: 'group-title', id: 'stream-title' }, 'Where to watch'),
+      h('div', { class: 'group-body' },
+        row('Stream', p.stream),
+        ...(same ? [row('Rent or buy', p.rent)] : [row('Rent', p.rent), row('Buy', p.buy)])),
+      h('p', { class: 'group-foot stream-credit' },
         CREDIT,
         p.link ? h('a', { class: 'stream-more', href: p.link, target: '_blank', rel: 'noopener' }, 'All options on TMDB', icon('external', { size: 12 })) : null),
     );

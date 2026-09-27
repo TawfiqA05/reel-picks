@@ -1,9 +1,9 @@
 // Movie detail: hero, rating, score breakdown, showtimes, trailer.
 import { api } from '../api.js';
-import { h, clear, spinner, scoreNum, badge, makeStars, toast, openModal, scoreColor, icon, money, withStars } from '../ui.js';
+import { h, clear, spinner, scoreNum, matchBadge, badge, makeStars, toast, openModal, icon, money } from '../ui.js';
 import { planOf, planWords, loggedLine } from '../plans.js';
 import { streamSection } from '../stream.js';
-import { fmtRuntime, dayLabel, showtimeRow, watchlistButton, starRater, runwayBadge, handoffLine, backBadge, heroMedia, opensBadge } from './components.js';
+import { dayLabel, showtimeRow, watchlistButton, starRater, runwayLine, handoffLine, heroMedia, filmTags, reasonLine, metaLine } from './components.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -18,65 +18,55 @@ export async function render(root, params, ctx) {
 
   const page = h('div', { class: 'detail' });
 
-  // Hero: the same backdrop-and-scrim treatment as the #1 pick, so the title
-  // and metadata always sit on a dark, readable ground.
-  const meta = [m.year, fmtRuntime(m.runtime), m.mpaa].filter(Boolean);
+  // Hero: the same art treatment as the #1 pick.
+  const tags = filmTags({ ...d, ...m, flags: d.flags, runway: d.playing ? d.runway : null, year: d.playing ? m.year : null, prerelease: d.prerelease }, { max: 4, noScores: false });
+  tags?.classList.add('one-line');
   page.appendChild(h('section', { class: 'detail-hero', 'aria-labelledby': 'detail-title' },
     heroMedia(m),
     h('div', { class: 'hero-content' },
-      h('div', { class: 'eyebrow' },
-        h('span', { class: `eyebrow-score ${scoreColor(d.final)}`, title: d.flags?.noScores ? 'No public scores yet. This number uses a neutral 50 for reviews.' : 'Match score' },
-          `${d.final ?? '-'} ${guest ? 'match' : 'your match'}`),
-        d.flags?.noScores ? h('span', { class: 'eyebrow-dot' }, ' · no public scores yet') : null,
-      ),
+      h('div', { class: 'hero-line' }, matchBadge(d.final, { early: d.flags?.noScores })),
       h('h1', { class: 'hero-title', id: 'detail-title' }, m.title),
-      h('div', { class: 'hero-facts' },
-        meta.length ? h('span', {}, meta.join(' · ')) : null,
-        d.flags?.imax ? badge('IMAX', 'imax') : null,
-        d.playing ? backBadge(m) : null,
-        opensBadge(d),
-      ),
+      metaLine(m) ? h('p', { class: 'hero-meta' }, metaLine(m)) : null,
       (m.genres || []).length || m.director
-        ? h('div', { class: 'hero-facts muted' }, [(m.genres || []).join(', '), m.director ? `Directed by ${m.director}` : null].filter(Boolean).join(' · '))
+        ? h('p', { class: 'hero-meta' }, [(m.genres || []).join(', '), m.director ? `Directed by ${m.director}` : null].filter(Boolean).join(' · '))
         : null,
-      d.reason ? h('p', { class: 'hero-reason' }, withStars(d.reason)) : null,
-      h('div', { class: 'hero-actions' },
+      tags,
+      reasonLine(d, ctx, { cls: 'reason-line hero-reason', lastChance: d.runway?.urgent }),
+      (!guest || m.trailer_key) ? h('div', { class: `detail-actions${guest || !m.trailer_key ? ' one' : ''}` },
         guest ? null : watchlistButton({ tmdb_id: m.tmdb_id, title: m.title, watchlisted: d.watchlisted }, ctx, { words: true }),
         m.trailer_key ? h('button', {
           class: 'btn soft', type: 'button', 'aria-haspopup': 'dialog',
           onClick: () => openTrailer(m),
         }, icon('play', { size: 16 }), 'Trailer') : null,
-      ),
+      ) : null,
     ),
   ));
 
   // Rate + Mark seen, worded for the user's movie plan (not the guest)
   if (!guest) page.appendChild(ratingRow(d, m, ctx, week));
 
+  page.appendChild(showtimesSection(d, ctx));
+
   // Score breakdown
   const owner = guest ? (ctx.getStatus()?.ownerName || 'the owner') : null;
-  page.appendChild(h('div', { class: 'cards-2' }, publicCard(d), tasteCard(d, owner)));
+  page.appendChild(h('div', { class: 'score-groups' }, publicCard(d), tasteCard(d, owner)));
 
-  page.appendChild(showtimesSection(d, ctx));
   // Where to stream it in the US. Not on the guest link, which can't ask TMDB.
   if (!guest) page.appendChild(streamSection(m.tmdb_id));
 
   // Synopsis + cast
-  if (m.synopsis) page.appendChild(h('p', { class: 'synopsis' }, m.synopsis));
-  if ((m.cast || []).length) {
-    page.appendChild(h('div', { class: 'cast' }, h('span', { class: 'muted small' }, 'Starring '), (m.cast || []).slice(0, 6).join(', ')));
+  if (m.synopsis || (m.cast || []).length) {
+    page.appendChild(h('section', { class: 'group about', 'aria-labelledby': 'about-title' },
+      h('h2', { class: 'group-title', id: 'about-title' }, 'About'),
+      m.synopsis ? h('p', { class: 'synopsis' }, m.synopsis) : null,
+      (m.cast || []).length ? h('p', { class: 'cast' }, h('span', { class: 'muted' }, 'Starring '), (m.cast || []).slice(0, 6).join(', ')) : null));
   }
 
   root.appendChild(page);
 }
 
 function ratingRow(d, m, ctx, week) {
-  const label = h('span', { class: 'muted' }, d.myRating ? 'Your rating' : 'Rate it');
-  const stars = starRater(m, ctx, {
-    value: d.myRating || 0,
-    size: 30,
-    onRated: (v) => { label.textContent = v ? 'Your rating' : 'Rate it'; },
-  });
+  const stars = starRater(m, ctx, { value: d.myRating || 0, size: 30 });
   const seenSlot = h('div', { class: 'seen-slot' });
 
   // Marked seen: "Seen · Undo", with the watch-log entry it undoes. Otherwise
@@ -90,12 +80,12 @@ function ratingRow(d, m, ctx, week) {
         undo.disabled = true;
         try {
           await api.undoWatched(entry.id);
-          toast('Removed from your watch log', 'success');
+          toast('Taken off your watch log', 'success');
           paint(null, { focus: true });
           ctx.refreshStatus();
         } catch (e) { undo.disabled = false; toast(e.message, 'error'); }
       });
-      seenSlot.append(h('span', { class: 'seen-state' }, icon('check', { size: 16 }), 'Seen'), h('span', { class: 'seen-dot', 'aria-hidden': 'true' }, '·'), undo);
+      seenSlot.append(h('span', { class: 'seen-state' }, icon('check', { size: 16 }), 'Seen'), undo);
       if (focus) undo.focus();
       return;
     }
@@ -114,10 +104,9 @@ function ratingRow(d, m, ctx, week) {
   };
   paint(week?.movies?.find((x) => x.tmdb_id === m.tmdb_id));
 
-  return h('div', { class: 'rating-row' },
-    h('div', { class: 'rr-left' }, label, stars),
-    seenSlot,
-  );
+  return h('section', { class: 'group', 'aria-labelledby': 'rating-title' },
+    h('h2', { class: 'group-title', id: 'rating-title' }, 'Your rating'),
+    h('div', { class: 'group-body' }, h('div', { class: 'row-line rating-row' }, stars, seenSlot)));
 }
 
 function publicCard(d) {
@@ -130,28 +119,28 @@ function publicCard(d) {
   if (disp.tmdb != null) rows.push(sourceRow('TMDB', `${disp.tmdb.toFixed(1)}/10`, disp.tmdb * 10));
 
   const checked = p.omdbCheckedAt ? new Date(p.omdbCheckedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null;
-  return h('div', { class: 'stat-card' },
-    h('div', { class: 'stat-head' }, h('h3', {}, 'Public score'), scoreNum(p.combined)),
-    d.flags?.settling ? badge('Scores still settling (new release)', 'settling') : null,
-    p.divergence ? h('div', { class: 'diverge-note' }, icon('alert', { size: 14 }), ` ${p.divergence.label} (${p.divergence.gap} pts apart)`) : null,
-    rows.length ? h('div', { class: 'sources' }, ...rows) : h('div', { class: 'muted small' }, 'No public scores found yet.'),
-    p.noOmdbRecord
-      ? h('div', { class: 'muted small' }, `No IMDb, Rotten Tomatoes or Metacritic scores for this title${checked ? ` (checked ${checked})` : ''}. ${rows.length ? 'TMDB is the only source.' : 'The match score uses a neutral 50 for reviews.'}`)
-      : null,
+  const notes = [
+    d.flags?.settling ? 'Scores are still settling: it\'s a new release.' : null,
+    p.divergence ? `${p.divergence.label} (${p.divergence.gap} points apart).` : null,
+    p.noOmdbRecord ? `No IMDb, Rotten Tomatoes or Metacritic scores for this title${checked ? ` (checked ${checked})` : ''}. ${rows.length ? 'TMDB is the only source.' : 'The match uses a neutral 50 for reviews.'}` : null,
     p.tmdbIgnored
-      ? h('div', { class: 'muted small' }, p.tmdbIgnored.reason === 'unreleased'
+      ? (p.tmdbIgnored.reason === 'unreleased'
         ? `TMDB's ${Number(p.tmdbIgnored.rating).toFixed(1)} isn't counted until it opens${p.tmdbIgnored.opens ? ` on ${new Date(`${p.tmdbIgnored.opens}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}.`
         : `TMDB's ${Number(p.tmdbIgnored.rating).toFixed(1)} rests on ${p.tmdbIgnored.votes} vote${p.tmdbIgnored.votes === 1 ? '' : 's'}, too few to count yet.`)
       : null,
-    p.critic != null && p.audience != null
-      ? h('div', { class: 'muted small' }, `Critics ${p.critic} · Audience ${p.audience}`) : null,
+    p.critic != null && p.audience != null ? `Critics ${p.critic} · Audience ${p.audience}` : null,
+  ].filter(Boolean);
+  return h('section', { class: 'group', 'aria-labelledby': 'public-title' },
+    h('div', { class: 'group-head' }, h('h2', { class: 'group-title', id: 'public-title' }, 'Public score'), scoreNum(p.combined)),
+    h('div', { class: 'group-body' }, ...(rows.length ? rows : [h('p', { class: 'muted' }, 'No public scores found yet.')])),
+    ...notes.map((n) => h('p', { class: 'group-foot' }, n)),
   );
 }
 
 function sourceRow(name, valueText, norm) {
   return h('div', { class: 'source-row' },
     h('span', { class: 'src-name' }, name),
-    h('div', { class: 'src-bar' }, h('div', { class: `src-fill ${scoreColor(norm)}`, style: { width: `${norm}%` } })),
+    h('div', { class: 'src-bar', 'aria-hidden': 'true' }, h('div', { class: 'src-fill', style: { width: `${norm}%` } })),
     h('span', { class: 'src-val' }, valueText),
   );
 }
@@ -168,11 +157,11 @@ function tasteCard(d, owner = null) {
   const lowData = d.profile?.lowData
     ? (owner ? `Based on ${n} of ${owner}'s rating${n === 1 ? '' : 's'}.` : `Based on ${n} rating${n === 1 ? '' : 's'}. Add more to sharpen this.`)
     : null;
-  return h('div', { class: 'stat-card' },
-    h('div', { class: 'stat-head' }, h('h3', {}, 'Taste match'), scoreNum(t.score)),
-    lowData ? h('div', { class: 'muted small' }, lowData) : null,
-    factors.length ? h('div', { class: 'factors' }, ...factors)
-      : h('div', { class: 'muted small' }, owner ? `No overlap with ${owner}'s ratings yet.` : 'No overlap with your ratings yet.'),
+  return h('section', { class: 'group', 'aria-labelledby': 'taste-title' },
+    h('div', { class: 'group-head' }, h('h2', { class: 'group-title', id: 'taste-title' }, 'Taste match'), scoreNum(t.score)),
+    h('div', { class: 'group-body' }, ...(factors.length ? factors
+      : [h('p', { class: 'muted' }, owner ? `No overlap with ${owner}'s ratings yet.` : 'No overlap with your ratings yet.')])),
+    lowData ? h('p', { class: 'group-foot' }, lowData) : null,
   );
 }
 
@@ -180,56 +169,61 @@ function factorRow(name, avg, n) {
   return h('div', { class: 'factor-row' },
     h('span', { class: 'factor-name' }, name),
     makeStars({ value: avg, size: 13 }),
-    h('span', { class: 'factor-n' }, `${avg.toFixed(1)} · ${n}×`),
+    h('span', { class: 'factor-n' }, `${avg.toFixed(1)} · ${n} rated`),
   );
 }
 
+// A day's showtimes as rows, under its own heading ("Today · Sep 27").
 function dayBlocks(showtimesByDay) {
   return showtimesByDay.map((day) => h('div', { class: 'day-block' },
-    h('div', { class: 'day-label' }, `${dayLabel(day.date)} · ${new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`),
-    h('div', { class: 'day-times' }, ...day.showtimes.map((st) => showtimeRow(st))),
+    h('h3', { class: 'day-label' }, `${dayLabel(day.date)} · ${new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`),
+    h('div', { class: 'st-list' }, ...day.showtimes.map((st) => showtimeRow(st))),
   ));
 }
 
-// Every published showtime, per followed theatre, each with its own runway.
-// With a single theatre this is the same flat day list as before.
+// Every published showtime, per followed theater, each with its own runway.
+// With a single theater this is the same flat day list as before.
 function showtimesSection(d, ctx) {
-  const wrap = h('div', { class: 'showtimes' }, h('h3', {}, 'Showtimes'));
+  const wrap = h('section', { class: 'showtimes', id: 'showtimes', 'aria-labelledby': 'showtimes-title' },
+    h('h2', { class: 'group-title', id: 'showtimes-title' }, 'Showtimes'));
   const groups = d.showtimesByTheatre || (d.showtimesByDay?.length ? [{ theatre: null, runway: d.runway, showtimesByDay: d.showtimesByDay }] : []);
   if (d.handoff) wrap.appendChild(handoffLine(d));
   if (!groups.length) {
     const guest = ctx.isGuest?.();
-    wrap.appendChild(h('div', { class: 'muted' },
+    wrap.appendChild(h('p', { class: 'muted' },
       d.playing ? (guest ? 'No showtimes listed.' : 'No showtimes listed. AMC isn\'t connected.')
         : guest ? 'Not in the current lineup.'
-        : `Not currently playing at your theater${d.multiTheatre ? 's' : ''}.`));
+        : `Not playing at your theater${d.multiTheatre ? 's' : ''} right now.`));
   } else if (!d.multiTheatre) {
     const g = groups[0];
-    if (g.runway) {
-      wrap.appendChild(h('div', { class: 'runway-head' }, runwayBadge(g.runway),
-        g.runway.detail && !g.runway.urgent ? h('span', { class: 'muted small' }, `. ${g.runway.detail}`) : null));
-    }
+    if (g.runway) wrap.appendChild(runwayLine(g.runway));
+    if (g.runway?.detail && !g.runway.urgent) wrap.appendChild(h('p', { class: 'muted small' }, `${g.runway.detail}.`));
     wrap.append(...dayBlocks(g.showtimesByDay));
   } else {
     for (const g of groups) {
       wrap.appendChild(h('div', { class: 'theatre-block' },
         h('div', { class: 'theatre-head' },
-          h('span', { class: 'theatre-title' }, g.theatre.short, g.theatre.isPrimary ? h('span', { class: 'muted small' }, ' · primary') : null),
+          h('h3', { class: 'theatre-title' }, g.theatre.short),
+          g.theatre.isPrimary ? badge('Primary', 'accent') : null,
           g.theatre.distance ? h('span', { class: 'muted small' }, g.theatre.distance.label) : null,
-          runwayBadge(g.runway),
         ),
-        g.runway?.detail && !g.runway.urgent ? h('div', { class: 'muted small' }, g.runway.detail) : null,
+        runwayLine(g.runway, { compact: true }),
+        g.runway?.detail && !g.runway.urgent ? h('p', { class: 'muted small' }, `${g.runway.detail}.`) : null,
         ...dayBlocks(g.showtimesByDay),
       ));
     }
   }
   // Any matched movie can be re-pointed, not just low-confidence ones: a
-  // confident-but-wrong match ("Idiots" → a 1998 film) needs a way out too.
+  // confident-but-wrong match ("Idiots" to a 1998 film) needs a way out too.
+  // "Matched to 'AMC's title' · Fix", with the last word, the dot and Fix
+  // kept together so Fix never sits alone on a line.
   if (d.match && ctx.isOwner?.()) {
-    wrap.appendChild(h('button', { class: 'link-btn', onClick: () => openFixMatch(d, ctx) },
-      d.match.low
-        ? `Wrong movie? Matched to AMC's "${d.match.amc_title}" with low confidence. Fix it`
-        : `Matched to AMC's "${d.match.amc_title}". Wrong movie? Fix it`));
+    const words = `'${d.match.amc_title}'`.split(' ');
+    const last = words.pop();
+    wrap.appendChild(h('p', { class: 'match-line' },
+      `Matched to ${words.length ? `${words.join(' ')} ` : ''}`,
+      h('span', { class: 'nowrap' }, `${last}${d.match.low ? ' (not sure)' : ''} · `,
+        h('button', { class: 'link-btn match-fix', type: 'button', 'aria-label': `Fix the match for ${d.movie.title}`, onClick: () => openFixMatch(d, ctx) }, 'Fix'))));
   }
   return wrap;
 }
