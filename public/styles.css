@@ -250,6 +250,8 @@ pre { background: var(--surface-2); padding: 12px; border-radius: var(--r-sm); o
 
 main { padding: var(--sp-4); padding-bottom: 104px; }
 .page { display: flex; flex-direction: column; gap: var(--sp-1); }
+/* One page's box inside main (app.js); it takes no part in the layout. */
+.view { display: contents; }
 
 /* ---- bottom nav (frosted) ---- */
 .bottom-nav {

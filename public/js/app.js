@@ -206,6 +206,8 @@ async function doRefresh() {
   }
 }
 
+let routeSeq = 0;
+
 async function route() {
   const { name, params } = parseHash();
   if (MOVED[name]) { location.replace(MOVED[name]); return; }
@@ -214,17 +216,22 @@ async function route() {
     if (location.hash !== '#/home') { location.hash = '#/home'; return; }
   }
   const view = routes[name] || notFound;
-  const main = document.querySelector('#main');
-  clear(main);
+  const seq = ++routeSeq;
+  // Each visit draws into a box of its own: a page still loading when the
+  // reader moves on finishes into a box that's gone, never under the new page.
+  const root = h('div', { class: 'view' });
+  document.querySelector('#main').replaceChildren(root);
   // Picks draws its own skeleton; everything else gets the spinner.
-  if (view !== routes.home) main.appendChild(spinner('Loading…'));
+  if (view !== routes.home) root.appendChild(spinner('Loading…'));
   updateNavActive(name);
   try {
-    await view(main, params, ctx);
+    await view(root, params, ctx);
   } catch (e) {
-    clear(main);
-    main.appendChild(errorState(e));
+    if (seq !== routeSeq) return;
+    clear(root);
+    root.appendChild(errorState(e));
   }
+  if (seq !== routeSeq) return;
   window.scrollTo(0, 0);
   // Anyone who hasn't seen the tour gets it once, on Picks (right after the
   // welcome setup for someone new).
