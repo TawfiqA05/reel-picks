@@ -967,6 +967,9 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 }
 .bs-value { font-family: var(--font-display); font-weight: var(--display-weight); font-size: var(--fs-xl); line-height: 1; color: var(--accent-text); font-variant-numeric: tabular-nums; }
 .bs-label { font-size: var(--fs-sm); margin-top: 6px; }
+/* 320: a label like "reservations used" takes one line or two depending on
+   whether the web font has arrived, so two lines are kept for it either way. */
+@media (max-width: 359px) { .bs-label { line-height: var(--lh-snug); min-height: calc(2em * var(--lh-snug)); } }
 .bs-sub { color: var(--muted); font-size: var(--fs-xs); margin-top: 2px; }
 .log-row .ti-actions { flex: 0 0 auto; }
 .tip-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3); }
