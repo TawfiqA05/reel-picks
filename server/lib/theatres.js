@@ -38,7 +38,7 @@ export function followedTheatres(settings = getSettings()) {
   const list = [];
   const primary = { id: String(settings.theatreId || ''), name: settings.theatreName || '', slug: settings.theatreSlug || '', isPrimary: true };
   list.push(primary);
-  for (const raw of settings.extraTheatres || []) {
+  for (const raw of Array.isArray(settings.extraTheatres) ? settings.extraTheatres : []) {
     if (!raw?.id) continue;
     const t = normalize(raw);
     if (list.some((x) => x.id === t.id)) continue;

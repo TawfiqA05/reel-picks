@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import { get, all, run, getSettings, updateSettings, getSetting, setSetting, dataDir, dbPath, USER_SETTING_KEYS } from './db.js';
+import { get, all, run, getSettings, updateSettings, getSetting, setSetting, dataDir, dbPath, USER_SETTING_KEYS, DEFAULT_SETTINGS } from './db.js';
 import { exportState, importState } from './lib/state.js';
 import { keyStatus } from './env.js';
 import {
@@ -260,13 +260,40 @@ router.get('/movies/:id', h(async (req, res) => {
 
 router.get('/settings', (req, res) => res.json(forCaller(getSettings())));
 
+// Theaters change only through /theatre and /theatres/*, which keep the caps;
+// the refresh bookkeeping is the server's own.
+const NOT_VIA_SETTINGS = new Set(['theatreId', 'theatreName', 'theatreSlug', 'extraTheatres', 'lastRefresh', 'lastRefreshLog']);
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+const shortStrings = (v, max) => Array.isArray(v) && v.length <= max && v.every((x) => typeof x === 'string' && x.length <= 40);
+// Every other key is checked for its kind, not coerced: a value of the wrong
+// shape (extraTheatres as {}) used to be stored and then broke every request
+// that read it, the owner's included.
+function shapeProblems(patch) {
+  const out = [];
+  for (const [k, v] of Object.entries(patch)) {
+    const def = DEFAULT_SETTINGS[k];
+    if (typeof def === 'boolean' && typeof v !== 'boolean' && v !== 0 && v !== 1) out.push({ key: k, message: 'Use true or false.' });
+    if ((k === 'excludedGenres' || k === 'excludedMpaa') && !shortStrings(v, 50)) out.push({ key: k, message: 'Use a list of names.' });
+    if (k === 'showtimeWindows') {
+      const ok = v && typeof v === 'object' && !Array.isArray(v) && Object.entries(v).every(([day, w]) => ['weekday', 'weekend'].includes(day)
+        && w && typeof w === 'object' && typeof w.enabled === 'boolean' && TIME.test(w.after) && TIME.test(w.before));
+      if (!ok) out.push({ key: k, message: 'Use weekday and weekend windows with times like 18:30.' });
+    }
+    if (k === 'home' && v && typeof v === 'object' && 'label' in v && (typeof v.label !== 'string' || v.label.length > 200)) out.push({ key: 'home.label', message: 'Use a place name of up to 200 characters.' });
+  }
+  return out;
+}
+
 router.put('/settings', (req, res) => {
   const patch = { ...(req.body || {}) };
   // Friends change only their own keys; the shared ones are the owner's.
   if (!isOwnerRequest()) for (const k of Object.keys(patch)) if (!USER_SETTING_KEYS.has(k)) delete patch[k];
+  const theaterKey = Object.keys(patch).find((k) => NOT_VIA_SETTINGS.has(k));
+  if (theaterKey) return res.status(400).json({ error: `${theaterKey}: theaters are changed in Settings, Theaters, not here.` });
+  for (const k of Object.keys(patch)) if (!(k in DEFAULT_SETTINGS)) delete patch[k];
   // Numbers out of range (or not numbers) are refused, never coerced: the
   // Settings page checks the same rules (public/js/settingsRules.js) first.
-  const problems = [...settingsProblems(patch), ...planProblems(patch), ...servicesProblems(patch)];
+  const problems = [...settingsProblems(patch), ...planProblems(patch), ...servicesProblems(patch), ...shapeProblems(patch)];
   if (problems.length) return res.status(400).json({ error: `${problems[0].key}: ${problems[0].message}`, problems });
   if (patch.weightPublic != null || patch.weightTaste != null) {
     const wp = Number(patch.weightPublic ?? getSetting('weightPublic')) || 0;
@@ -353,8 +380,17 @@ router.get('/theatres', h(async (req, res) => {
 
 // Make a theatre the primary. The old primary stays followed (demoted), so no
 // schedule or history is lost; rejected if that would exceed the cap.
+// An AMC theater as the Settings search returns it: a numeric id and short text.
+function theaterProblem({ id, name, slug } = {}) {
+  if (!/^\d{1,10}$/.test(String(id ?? ''))) return 'That isn\'t an AMC theater id.';
+  if ((name != null && (typeof name !== 'string' || name.length > 200)) || (slug != null && (typeof slug !== 'string' || slug.length > 200))) return 'That theater name is too long.';
+  return null;
+}
+
 router.post('/theatre', (req, res) => {
   const { id, name, slug } = req.body || {};
+  const bad = theaterProblem(req.body || {});
+  if (bad) return res.status(400).json({ error: bad });
   try {
     const wasShared = sharedTheatreIds().has(String(id));
     const settings = replacePrimary({ id, name, slug });
@@ -369,6 +405,8 @@ router.post('/theatre', (req, res) => {
 
 router.post('/theatres/follow', (req, res) => {
   const { id, name, slug } = req.body || {};
+  const bad = theaterProblem(req.body || {});
+  if (bad) return res.status(400).json({ error: bad });
   try {
     const wasShared = sharedTheatreIds().has(String(id));
     const settings = addFollowed({ id, name, slug });
