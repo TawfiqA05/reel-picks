@@ -2,23 +2,25 @@
 
 I have an AMC A-List membership and a recurring problem: four movies a week is a lot of
 decisions, and I kept either wasting a slot on something mediocre or finding out too late
-that the one I actually wanted to see had left the theatre on Wednesday. Reel Picks is my
+that the one I actually wanted to see had left the theater on Wednesday. Reel Picks is my
 answer. It pulls what's playing at my AMC, scores every film by blending public reviews
 with my own taste, and tells me the four to see this week, with the booking link for the
 showtime that fits my schedule.
 
-It's a single Node process with a SQLite file and no cloud dependency beyond the movie
-APIs. It runs on my machine or on one small server, and installs on my phone as a PWA.
-I'm the owner, and I can invite up to nine friends onto the same instance. Each of them
-gets their own ratings and their own four. If you want your own, you run your own copy
-with your own keys.
+It's a single Node process with one SQLite file. Movie data comes from TMDB, OMDb and AMC.
+A few other services see small, specific things: OpenStreetMap for drive times, Letterboxd
+if someone links an account, the browser's push service if someone turns notifications on,
+and S3-compatible storage if I set up the off-site backup. It runs on my machine or on one
+small server, and installs on my phone as a PWA. I'm the owner, and I can invite up to nine
+friends onto the same instance. Each of them gets their own ratings and their own four. If
+you want your own, you run your own copy with your own keys.
 
 ## What it does
 
-- Ranks the current lineup at my primary theatre and picks a weekly four, each with a
+- Ranks the current lineup at my primary theater and picks a weekly four, each with a
   one-line reason and its best-fitting showtime. The top pick fills a full-width hero
   with its backdrop, a Book button for that day's best showtime, and when to be in my
-  seat. The other three sit under it as cards.
+  seat. The other three sit under it as cards ("The rest of your four").
 - Lets me pick the day from a strip of date tiles, and every showtime on the page follows.
 - Tracks how long each movie has left. AMC only publishes about a week of showtimes, so
   the app works out where the schedule genuinely stops being published and only says
@@ -26,13 +28,17 @@ with your own keys.
 - Shows a Last chance row when a film I'd like is confirmed to be leaving soon. Real
   departures get a loud "Last day today" or "Leaving Fri" pill. Anything hedged stays
   quiet, and the row disappears when nothing qualifies.
+- Under the four: Also worth seeing (everything else above my good-match cutoff), Also
+  nearby (films playing only at one of my other theaters), and Everything playing, the
+  whole ranked lineup with a filter box. Everything playing remembers whether I left it
+  collapsed.
 - Learns my taste from star ratings (genre, director, and lead actors) and gets
   more opinionated the more I rate.
-- Follows up to four extra theatres, shows drive times from home, and flags when a film
-  leaving my theatre is still playing at one of them.
-- Tracks A-List usage: money saved versus ticket prices, and whether my picks landed.
-  Marking a film seen on its page turns the button into "Seen · Undo". Each person picks
-  their own movie plan in Settings: AMC A-List, Regal Unlimited, Cinemark Movie Club,
+- Follows up to four extra theaters, shows drive times from home, and flags when a film
+  leaving my theater is still playing at one of them.
+- Tracks my movie plan: money saved versus ticket prices, and whether my picks landed.
+  Mark seen on a movie page logs it, and the button turns into "Seen · Undo". Each person
+  picks their own plan in Settings: AMC A-List, Regal Unlimited, Cinemark Movie Club,
   another subscription, or none. A preset fills in the usual visits, fee and ticket price
   (all editable), and the allowance, savings and wording on Stats and movie pages follow
   it: Movie Club counts credits per month, Regal Unlimited has no limit, and with no plan
@@ -59,6 +65,38 @@ with your own keys.
   so a brand-new friend still gets well-known films that fit the mood.
 - Shares a read-only guest link so other people can see my picks without touching anything.
 
+## The tabs
+
+- **Picks** is everything above: the four, At home, What should I watch?, Last chance, and
+  the rest of the lineup.
+- **Schedule** holds Leaving soon and Coming soon as two segments, and it reopens the one
+  I used last. Old `#/coming` and `#/leaving` links still land on the right one.
+- **Rate** is where ratings come in: search and rate, the Letterboxd and IMDb importer,
+  and my full ratings list (more on that below).
+- **Watchlist** is every film I starred, as a poster grid. A starred film that's
+  confirmed to be leaving gets a line at the top. A long list gets a filter box.
+  Watchlisted films get a ranking boost on Picks.
+- **Together** is for planning a movie with one friend (see Watch together below).
+- **Stats** shows this period's plan usage and savings (or ticket spend with no plan),
+  films seen this year, my average rating, the pick hit-rate (how I rated the weekly picks
+  I actually went to), a tip when my picks keep rating below my average, and my top
+  genres, directors and actors.
+
+Search and Settings sit in the header. Search opens a sheet that searches TMDB and the
+films I already have around (playing, coming soon, rated, watchlisted, hidden) as I type.
+It forgives typos, ranks well-known films first, and badges what's playing, rated,
+watchlisted or hidden. With the box empty it shows my recents: the last 10 searches and
+the last 8 films I opened, kept per person on the server, with Clear all and an Undo.
+Pressing `/` anywhere outside a text field opens it.
+
+A movie page has the hero, a Trailer button, Mark seen, the public score broken down by
+source, the taste match broken down by the genres, director and actors I've rated, and
+every showtime at each theater I follow, with how long it has left there. For me there's
+also "Wrong movie? Fix it" when AMC's title was matched to the wrong TMDB film.
+
+It follows the device's light or dark setting: a light "Ticket stub" look by default and a
+dark "Projector" look in dark mode.
+
 A few smaller things make the lists easier to read:
 
 - **Not for me.** Any pick can be hidden with one tap. It drops out of the four, Also
@@ -76,7 +114,7 @@ A few smaller things make the lists easier to read:
   rated there, and under them the rest: "More from Phil Lord" lists every other feature
   they directed or acted in (no TV, no "Self" or uncredited parts, and for actors the
   little-seen films wait behind "Show smaller films"), and "Drama playing now" lists that
-  genre at my theatres and opening soon. I can rate or watchlist any of them in place,
+  genre at my theaters and opening soon. I can rate or watchlist any of them in place,
   and a rated film moves up into my list. Filmographies come from TMDB, cached for a
   week and shared between everyone on the instance.
 - **Trailers.** A movie page's Trailer button plays the trailer in a dialog inside the
@@ -91,35 +129,41 @@ A few smaller things make the lists easier to read:
   event: the film as the title, AMC's start time in the theater's own time zone, "be
   there by" and the end time in the notes, and the theater's name and address as the
   location. It opens straight in Calendar on an iPhone.
-- **Schedule.** Leaving soon and Coming soon share one tab as two segments, and it
-  reopens the one I used last. Old `#/coming` and `#/leaving` links still land on the
-  right one.
 - **Poster fallbacks.** When a poster is missing or fails to load, the film's title goes
   on a plain gradient tile instead of a broken image.
 - **Guided tour.** The first time anyone opens Picks they get a short tour: a spotlight
-  on the real thing on screen (the four, the stars, Watchlist, Not for me, Schedule,
-  Search, Together for friends, Stats, Settings) and a small card with Next, Back and
-  Skip tour. It works with arrow keys, Enter and Escape, never closes on a stray tap,
-  and holds still for reduced motion. Finishing or skipping is remembered per person;
-  Replay tour in Settings and the ? at the top bring it back.
+  on the real thing on screen (the four, the stars, Watchlist, Not for me, At home, What
+  should I watch?, Schedule, Search, Together for friends, Stats and Settings) and a small
+  card with Next, Back and Skip tour. It works with arrow keys, Enter and Escape, never
+  closes on a stray tap, and holds still for reduced motion. Finishing or skipping is
+  remembered per person; Replay tour in Settings and the ? at the top bring it back.
 
 ## Quick start
 
 ```bash
 npm install
 cp .env.example .env   # then add your keys (see below)
-npm run dev            # http://localhost:5170
+npm start              # http://localhost:5170
 ```
 
 Node 24 or newer. The app uses the built-in `node:sqlite`, so there's no native build
-step and no database server. Data lives in `data/reelpicks.db`. Open Settings to confirm
-the keys are connected, hit Refresh, and rate about twenty movies so the taste side of
-the scoring has something to work with.
+step and no database server. Data lives in `data/reelpicks.db` (or in `DATA_DIR` when
+it's set). The server starts without any keys; Settings then says which ones are missing.
+Keys are read once at startup, so after editing `.env`, restart the server. Then open
+Settings to confirm the keys are connected, set your theater and home base, hit Refresh,
+and rate about twenty movies so the taste side of the scoring has something to work with.
+
+Out of the box the primary theater, the home base and `OWNER_NAME` in `.env.example` are
+mine. Change the theater and home base in Settings and the name in `.env`.
+
+`npm run dev` does the same with auto-reload. Every reload is a fresh start, and every
+start runs the database migrations against `data/reelpicks.db`, so I don't point it at
+data I care about while I'm editing migrations.
 
 ## The three API keys
 
-Keys go in `.env` (git-ignored). A missing key just disables that source; the app
-degrades instead of breaking.
+Keys go in `.env` (git-ignored). A real environment variable wins over the same name in
+`.env`. A missing key just disables that source; the app degrades instead of breaking.
 
 - **TMDB** (`TMDB_API_KEY`), required. Posters, metadata, cast, trailers, and the
   fallback now-playing list. Free from themoviedb.org → Settings → API ("API Key (v3 auth)").
@@ -129,8 +173,10 @@ degrades instead of breaking.
   developers.amctheatres.com is gated. You apply, a human approves it, and keys are only
   provisioned in AMC's weekly deploy, which lands on Thursdays, so even an approved
   request can sit for days before the key works. Without one, Reel Picks falls back to
-  TMDB's current US releases: you still get rankings, just not your theatre's exact
+  TMDB's current US releases: you still get rankings, just not your theater's exact
   showtimes, IMAX flags, or booking links.
+
+In `.env` they look like `TMDB_API_KEY=your-tmdb-key`. Never commit the real file.
 
 ## How the scoring works
 
@@ -163,7 +209,7 @@ a mediocre film outrank a great one.
 
 That last distinction, committed versus hedged, runs through the whole app. AMC posts
 roughly a week ahead, and a handful of advance-sale titles post weeks out. Reel Picks
-finds where each theatre's schedule stops being densely published and treats everything
+finds where each theater's schedule stops being densely published and treats everything
 past that as unknown, so "Through Thursday" and "Through at least Thursday" mean
 different things everywhere they appear.
 
@@ -175,26 +221,30 @@ separate paths for desktop and phone, and explains the traps I hit myself: the e
 a ZIP and you want `ratings.csv` from inside it, and on Letterboxd marking a film
 watched is not rating it. Only star ratings export. Wrong files get a specific
 explanation instead of a generic error, and after an import you see exactly what was
-imported, skipped, and left unmatched. IMDb's 1–10 scores convert to half-star ratings.
-You can also just search and rate in the app; a quick-rate flow covers about twenty popular
-films in a minute or two. Under all that, my ratings list opens on the newest 60, with
-Show all for the rest and a forgiving filter box that searches every one of them.
-Every star rating works from the keyboard as well: Tab to the stars, arrow keys move
-half a star at a time, Enter or Space saves, Delete or Backspace clears, and a screen
-reader hears the value ("3.5 stars") as it changes.
+imported, skipped, and left unmatched. IMDb's 1–10 scores convert to half-star ratings. A file can hold up to 20,000 ratings; a bigger one gets split and imported in parts.
+The same importer takes back the file from Export backup CSV (Settings → Data), which
+restores ratings and watch history.
+
+You can also just search and rate in the app. The quick rate flow covers about twenty
+popular films in a minute or two, and Re-run quick rate in Settings → Data brings it back.
+Under all that, my ratings list opens on the newest 60, with Show all for the rest and a
+forgiving filter box that searches every one of them. Every star rating works from the
+keyboard as well: Tab to the stars, arrow keys move half a star at a time, Enter or Space
+saves, Delete or Backspace clears, and a screen reader hears the value ("3.5 stars") as
+it changes.
 
 Letterboxd can also stay in sync on its own. Anyone with an account (me or a friend, never
 the guest link) can put their Letterboxd username in Settings. Once a day, and whenever
 they press Sync now, the app reads their public diary feed (`letterboxd.com/<name>/rss/`,
-the newest 50 or so entries) and brings in new star ratings and films logged as watched,
-matched to TMDB by the id Letterboxd includes. Each diary entry comes in once, so a
-re-sync adds nothing and a rating or watch deleted here isn't brought back. A rating
-changed in Reel Picks after the Letterboxd entry was logged is never overwritten; one
-changed on Letterboxd later comes across. Films logged there count as seen but never
-toward the A-List week or savings, since they may not have been a ticket. Settings shows
-the last sync time and how many films it added, or a plain message for a username with
-no public profile. Imports start the credits backfill like any other import. For a whole
-history, the ratings.csv import is still the way.
+the newest 50 or so entries) and brings in new star ratings and films logged as watched.
+Films are matched to TMDB by the id Letterboxd includes, or by title and year when it
+doesn't. Each diary entry comes in once, so a re-sync adds nothing and a rating or watch
+deleted here isn't brought back. A rating changed in Reel Picks after the Letterboxd entry
+was logged is never overwritten; one changed on Letterboxd later comes across. Films
+logged there count as seen but never toward the A-List week or savings, since they may not
+have been a ticket. Settings shows the last sync time and how many films it added, or a
+plain message for a username with no public profile. Imports start the credits backfill
+like any other import. For a whole history, the ratings.csv import is still the way.
 
 ## Friends
 
@@ -212,19 +262,35 @@ app does. Anyone with fewer than five ratings gets it too, until they finish or 
 it; the guided tour follows. The Join page also tells iPhone users to open the link in
 Safari so they stay signed in.
 
-Each person has their own ratings, watchlist, hidden films, A-List log, theatres, home
-base, showtime windows, weights, and stats, and their own weekly four. Showtimes, public
-scores, and movie data are shared, and one refresh covers every theatre anyone follows,
-up to eight in total. A friend adding a theatre nobody follows queues an ordinary
+Each person has their own ratings, watchlist, hidden films, watch log, movie plan,
+streaming services, theaters, home base, showtime windows, weights, Letterboxd link,
+notification devices, search recents, and stats, and their own weekly four. Showtimes,
+public scores, and movie data are shared, and one refresh covers every theater anyone
+follows, up to eight in total. A friend adding a theater nobody follows queues an ordinary
 refresh. Friends can't force one.
 
 Some tools stay mine: API key status, AMC title matching, the friend list, the
-full-setup import, forced refreshes, and the shared tuning (the good-match cutoff,
-Last chance, and the fallback window). Friends can export their own data.
+full-setup import, forced refreshes, backups (Download latest backup and the off-site
+upload), Alerts, Schedule diagnostics, and the shared tuning (the Also worth seeing
+cutoff, Last chance, and the Now-playing fallback window). Friends can export their own
+data.
 
 Revoking a friend stops their cookie on the next request and keeps everything they
 rated. A new link brings them back, and cookies from before stay dead, so an old link or
-cookie can't come back to life.
+cookie can't come back to life. A revoked friend still holds one of the nine places.
+
+## Watch together
+
+The Together tab finds films two people could see together. It's always me and one
+friend, never two friends. A friend turns it on from the tab ("Let Tawfiq plan movies
+with me") or with the Watch together switch in their Settings, and can turn it off any
+time. I pick one of the friends who turned it on; a friend only ever sees me.
+
+A film shows up when it plays in the next 14 days at a theater we both follow, neither of
+us has rated it, logged it or hidden it, and it's on both watchlists, on one watchlist and
+a strong match for the other, or a strong match for both. Each film gets one short label
+("On both watchlists", "Strong match for both") and the next few showtimes, weekend
+evenings first. Neither person's ratings, scores or full watchlist are ever sent.
 
 ## Privacy
 
@@ -248,29 +314,30 @@ Tapping it opens Picks. Nothing else is in it, no scores or ratings.
 
 It's once per person per week even across restarts and deploys: the send is recorded in
 the database before it goes out. A device the push service reports as gone (404/410) is
-deleted. The owner can run the week's send by hand with `POST /api/push/weekly/send`,
+deleted. I can run the week's send by hand with `POST /api/push/weekly/send`,
 and it skips anyone who already got this week's.
 
 It's plain Web Push with VAPID keys, no extra dependency. Without `VAPID_PUBLIC_KEY` and
 `VAPID_PRIVATE_KEY` the feature is off and the switch never appears.
 
 The same devices get my owner alerts, which friends never do. If the daily AMC/TMDB
-refresh fails, the nightly backup fails, or AMC answers with no showtimes at all for my
-primary theater, my devices get one push with a one-line reason. It's at most one alert
-per problem per day, however many times it fails, and one "back to normal" when it works
-again. The last 10 alerts, and anything failing right now, are in an owner-only Alerts
-card in Settings, which also works with push turned off. `RP_AMC_BASE` points a test
-server at a stand-in AMC; never set it on a real deployment.
+refresh fails, the nightly backup or the off-site upload fails, or AMC answers with no
+showtimes at all for my primary theater, my devices get one push with a one-line reason.
+It's at most one alert per problem per day, however many times it fails, and one "back to
+normal" when it works again. The last 10 alerts, and anything failing right now, are in
+my Alerts card in Settings, which also works with push turned off.
 
 ## The guest link
 
-Anyone who reaches the app from outside without a cookie gets the read-only guest view,
-under one banner ("You're viewing Tawfiq's picks. Ask him for an invite to get your own.")
-instead of the setup and tour:
-my picks, the full list, Schedule (Leaving soon and Coming soon), and movie pages. At localhost it's always
-me. Rating, settings, imports, stats and
-everything else are hidden in the UI and rejected at the API. On a deployment,
-`GUEST_MODE=1` turns this on for every request that isn't addressed to localhost.
+With `GUEST_MODE` on, anyone who reaches a deployment from outside without a cookie gets
+the read-only guest view. The same goes for anyone coming through the `npm run share`
+tunnel. They see one banner ("You're viewing Tawfiq's picks. Ask him for an invite to
+get your own.") instead of the setup and tour, and they get my picks, the full list,
+Schedule (Leaving soon and Coming soon), and movie pages. Rating, settings, imports,
+search, stats and everything else are hidden in the UI and rejected at the API. At
+localhost it's always me. Without `GUEST_MODE` on a deployment, anyone who opens the site
+gets full owner access, so I always set it there.
+
 Visiting `/?owner=<OWNER_TOKEN>` once in a browser sets a signed cookie that unlocks full
 access for me there, and the token itself never stays in the URL.
 
@@ -278,72 +345,152 @@ access for me there, and the token itself never stays in the URL.
 and prints a temporary public URL that serves the same read-only view. The link dies when
 the process stops.
 
+## Installing it on a phone
+
+On an iPhone, open the site in Safari, tap Share, then Add to Home Screen. On Android and
+desktop Chrome, use the browser's Install option. It opens full screen like an app.
+
+A service worker keeps exactly one copy of the app for offline use. Offline, a page that
+needs the server says "You're offline" with a Retry button instead of breaking. A deploy
+reaches phones that already have the app open: the service worker checks for a new
+version when the app opens, when it comes back to the foreground, and every 30 minutes. A
+new version takes over as soon as it installs, and the page reloads onto it once, unless a
+sheet is open or a save is in flight. Then it shows "Update ready" with a Refresh button
+and reloads at the next quiet moment. Bump `CACHE` in `public/sw.js` with every frontend
+change, and add any new file under `public/js/` to its `CORE` list, so offline has it too.
+
+## Settings
+
+Every card, top to bottom. Cards marked "mine" are only on my Settings page.
+
+- **API keys** (mine): which keys are connected. On Railway it says to change them in
+  Railway's variables and redeploy; locally it points at `.env`.
+- **Theaters**: the primary plus up to four followed ones, with drive times; search AMC
+  theaters to follow one or make it primary.
+- **Friends** (mine): add a friend, copy their one-time link, revoke, or re-issue.
+- **AMC title matching** (mine): AMC titles that couldn't be matched to TMDB, matches that
+  look wrong (Keep, or search and re-point), and Ignore for one-offs.
+- **Watch together** (friends): the switch for the Together tab.
+- **Notifications**: the weekly picks switch, per device. Only there when the VAPID keys are set.
+- **Streaming services**: which services At home and What should I watch? use.
+- **Letterboxd**: the username to sync, Sync now, and how the last sync went.
+- **Home base**: where drive times are measured from. Look up a place or use my current
+  location, and Clear home base.
+- **Ranking balance**: public reviews versus my taste.
+- **Preferences**: Prefer IMAX, and genres and ratings (like NC-17) never to recommend.
+- **Hidden films**: everything marked Not for me, with Unhide.
+- **Now-playing fallback** (mine): how recent a film has to be when there's no AMC key.
+- **Preferred showtimes**: weekday and weekend windows; a showing inside one gets a boost.
+- **Movie plan & pricing**: the plan, its allowance, fee and ticket price, and the preview
+  length that sets "be there by" and the end time.
+- **Score boosts (advanced)**: the watchlist, IMAX, window-fit and urgency boosts.
+- **Also worth seeing** (mine): the minimum score for that section.
+- **Last chance** (mine): the minimum score, how far before the horizon counts as a real
+  departure, and how many to show.
+- **Schedule diagnostics** (mine): where each theater's schedule stops being published,
+  day by day.
+- **Help**: Replay tour.
+- **Alerts** (mine): the last 10 alerts and anything failing now.
+- **Data**: Export full setup (friends: Export my data), Import full setup (mine), Export
+  backup CSV, Download latest backup (mine), the off-site backup status with Upload now
+  (mine), Refresh now (mine), Re-run quick rate, and the last refresh's warnings.
+
 ## Deploying
 
 The repo ships a Dockerfile. It's one process serving both API and frontend with one
 SQLite file. I run it on Railway with a persistent volume mounted at `/data`, which is
-where the Dockerfile points `DATA_DIR`. Railway builds from `main` on every push.
+where the Dockerfile points `DATA_DIR`. Railway builds from `main` on every push and
+injects `PORT`. Variables go in the service's Variables tab, and changing one needs a
+redeploy.
 
-Every night at 3am (the server's `TZ`) it writes a consistent copy of the database to
-`/data/backups/reelpicks-YYYY-MM-DD.db` and keeps the last 14; it also takes one right
-before any schema migration. The owner can download the newest from Settings → Data,
-and `/api/status` shows its time and size under `backup`.
+Every night at 3am (the server's `TZ`), or at the first check after that if the server was
+down, it writes a consistent copy of the database to
+`/data/backups/reelpicks-YYYY-MM-DD.db` and keeps the last 14. It also takes one right
+before any schema migration, as `backups/reelpicks-pre-<change>-<time>.db`, and keeps the
+last 14 of those. Running a migration a second time changes nothing. I can
+download the newest copy with Download latest backup in Settings → Data, and
+`/api/status` shows its time and size under `backup`.
 
 Once a week, Sunday at 4am (the server's `TZ`), the newest nightly copy also goes off-site
 to S3-compatible storage, Cloudflare R2 in my case, as
 `reel-picks/weekly/reelpicks-YYYY-MM-DD.db`. The last 8 weekly copies are kept and older
 ones are deleted, and only objects under that prefix with exactly that name pattern are
-ever touched. The first copy goes up as soon as the variables are set, and a server that
-was down at 4am on Sunday sends it at its next check. Settings → Data shows the last
-upload's time and size and has an Upload now button. A failed upload is retried an hour
-later and sends an owner alert. Requests are signed (AWS Signature Version 4) with Node's
-own crypto, so there's no SDK. Without the variables the feature doesn't exist: nothing
-is scheduled and nothing shows.
-
-Variables to set:
-
-- `TMDB_API_KEY`, `OMDB_API_KEY`, `AMC_API_KEY`: the keys above.
-- `OWNER_TOKEN`: a long random string, for the owner unlock.
-- `GUEST_MODE=1`: without it, anyone who opens the site gets full owner access.
-- `TZ`: your local time zone, such as `America/New_York`. Showtime math happens in local
-  time and containers default to UTC.
-- `OWNER_NAME` is optional and sets the name on the guest link and the Join page.
-- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`: optional, turn on weekly picks notifications.
-  Make a pair with `node -e "const e=require('crypto').createECDH('prime256v1');e.generateKeys();console.log(e.getPublicKey('base64url'),e.getPrivateKey('base64url'))"`
-  (public first). Changing them later means everyone turns the switch on again.
-  `VAPID_SUBJECT` optionally overrides the contact URL sent to push services.
-- `BACKUP_S3_ENDPOINT`, `BACKUP_S3_BUCKET`, `BACKUP_S3_KEY_ID`, `BACKUP_S3_SECRET`:
-  optional, turn on the weekly off-site backup. For R2 the endpoint is
-  `https://<account id>.r2.cloudflarestorage.com`, and the key is an R2 API token's
-  access key id and secret, with Object Read & Write on that bucket. `BACKUP_S3_REGION`
-  defaults to `auto`, which is what R2 wants.
+ever touched. The first copy goes up as soon as the variables are set and a nightly copy
+exists, and a server that was down at 4am on Sunday sends it at its next check. Settings →
+Data shows the last upload's time and size and has an Upload now button. A failed upload
+is retried an hour later and sends an owner alert. Requests are signed (AWS Signature
+Version 4) with Node's own crypto, so there's no SDK. Without the variables the feature
+doesn't exist: nothing is scheduled and nothing shows.
 
 One thing to know: AMC rejected my key with "Unauthorized VendorKey" when the service
 ran in an EU region, even though the same key worked from home. Moving the service to a
 US region fixed it.
 
-`RP_DISABLE_REFRESH=1` turns every refresh into a no-op. It's for test servers that must
-never call AMC. Don't set it on a real deployment, or showtimes stop updating.
-
-A deploy reaches phones that already have the app open. The service worker checks for
-a new version when the app opens, when it comes back to the foreground, and every 30
-minutes. A new version takes over as soon as it installs, and the page reloads onto it
-once, unless a sheet is open or a save is in flight. Then it shows "Update ready" with a
-Refresh button and reloads at the next quiet moment. App code always comes from the
-server when online, and the offline copy holds exactly one version. Bump `CACHE` in
-`public/sw.js` with every frontend change, and add any new file under `public/js/` to
-its `CORE` list, so offline has it too.
-
-Migrations that reshape data write a copy of the database next to it first
-(`reelpicks.pre-<change>-<time>.db`), and running them a second time changes nothing.
-
 To make a fresh deployment an exact duplicate of a local instance, use **Settings →
 Export full setup** locally and **Import full setup** on the deployment: one JSON file
-carrying my settings, theatres, home base, ratings, watchlist, watch history, hidden
+carrying my settings, theaters, home base, ratings, watchlist, watch history, hidden
 films, and AMC match decisions. The import is additive and kicks off a refresh, so the new
 instance pulls its own showtimes. Caches and schedule history deliberately don't travel.
 Each instance builds its own. Friends don't travel either; I invite them on the instance
 they'll use.
+
+## Environment variables
+
+Every variable the code reads, by name. Values go in `.env` locally or in Railway's
+variables when deployed. None of them belong in the repo.
+
+The keys:
+
+- `TMDB_API_KEY`, `OMDB_API_KEY`, `AMC_API_KEY`: the three keys above.
+
+Running it:
+
+- `PORT`: the port to listen on. 5170 unless set; Railway sets it.
+- `DATA_DIR`: where `reelpicks.db` and `backups/` live. `./data` unless set; the
+  Dockerfile sets `/data`.
+- `TZ`: your local time zone, such as `America/New_York`. Showtime math, the 3am backup
+  and the Friday week all use local time, and containers default to UTC.
+- `NODE_ENV`: the Dockerfile sets `production`. It only changes the startup line to show
+  the port instead of a localhost link.
+
+Sharing and the owner:
+
+- `GUEST_MODE`: `1` (or `true`, `yes`, `on`) makes every request that isn't addressed to
+  localhost the read-only guest, unless it has a friend or owner cookie. Set it on every
+  deployment.
+- `OWNER_TOKEN`: a long random string for the owner unlock (`/?owner=<OWNER_TOKEN>`).
+  Leave it blank to turn the unlock off. `.env.example` shows a one-line way to make one.
+- `OWNER_NAME`: the name on the guest banner and the Join page. It defaults to mine.
+
+Notifications (optional):
+
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`: turn on weekly picks notifications and owner
+  alerts. Make a pair with
+  `node -e "const e=require('crypto').createECDH('prime256v1');e.generateKeys();console.log(e.getPublicKey('base64url'),e.getPrivateKey('base64url'))"`
+  (public first). Changing them later means everyone turns the switch on again.
+- `VAPID_SUBJECT`: optionally overrides the contact URL sent to push services.
+
+Off-site backup (optional, all four or nothing):
+
+- `BACKUP_S3_ENDPOINT`, `BACKUP_S3_BUCKET`, `BACKUP_S3_KEY_ID`, `BACKUP_S3_SECRET`: turn on
+  the weekly off-site backup. For R2 the endpoint is
+  `https://<account id>.r2.cloudflarestorage.com`, and the key is an R2 API token's
+  access key id and secret, with Object Read & Write on that bucket.
+- `BACKUP_S3_REGION`: defaults to `auto`, which is what R2 wants.
+
+Set by Railway, never by me:
+
+- `RAILWAY_ENVIRONMENT_NAME`, `RAILWAY_ENVIRONMENT`, `RAILWAY_PROJECT_ID`: when any of
+  them is present, the API keys card says the keys are Railway variables. Nothing else
+  reads them.
+
+For test servers only. Never set these on a real deployment:
+
+- `RP_DISABLE_REFRESH`: `1` turns every refresh into a no-op, so a test server never
+  calls AMC. On a real deployment showtimes would stop updating.
+- `RP_AMC_BASE`: points the AMC client at a stand-in AMC.
+- `RP_LETTERBOXD_ORIGIN`: points the Letterboxd sync at a local copy of the feed.
+- `RP_PUSH_TEST_ORIGIN`: lets push subscriptions point at a local fake push service.
 
 ## Project layout
 
@@ -352,8 +499,10 @@ server/
   index.js            Express app (API + static PWA), invite Join flow
   routes.js           all /api endpoints
   db.js               node:sqlite schema, migrations, settings
+  env.js              the .env loader
   lib/                scoring, taste, ranking, runway, geocoding, accounts,
-                      AMC/TMDB/OMDb clients, refresh pipeline
+                      AMC/TMDB/OMDb clients, refresh pipeline, backups,
+                      push, Letterboxd, At home, Together, search
 public/               buildless frontend (vanilla ESM + CSS, PWA)
 scripts/              share tunnel, icon generation
 data/                 SQLite db + backups (git-ignored)
@@ -361,9 +510,9 @@ data/                 SQLite db + backups (git-ignored)
 
 ## Scripts
 
-- `npm run dev`: start with auto-reload
 - `npm start`: start without watch
-- `npm run share`: start plus a temporary public read-only tunnel
+- `npm run dev`: start with auto-reload
+- `npm run share`: start plus a temporary public read-only tunnel (needs `cloudflared`)
 - `npm run gen-icons`: regenerate the PWA icons
 
 Deleting `data/` resets everything: ratings, friends, watch history, caches. Keys in
