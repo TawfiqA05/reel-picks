@@ -730,8 +730,10 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 .st-row.past, .st-row.past .st-time { color: var(--muted); }
 .st-row.past .st-time { font-weight: 500; }
 .st-row.past .st-book { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
+/* 320: the same cells on two fixed lines, time, format and Book over ends,
+   fits and the calendar, every column at the same x in every row. */
 @media (max-width: 359px) {
-  .st-row { grid-template-columns: auto auto minmax(0, 1fr) auto; grid-template-areas: "time fmt . book" "end fit . cal"; row-gap: 2px; padding: 4px 0; }
+  .st-row { grid-template-columns: 56px 46px minmax(0, 1fr) auto; grid-template-areas: "time fmt . book" "end end fit cal"; row-gap: 2px; padding: 4px 0; }
   .st-fit { justify-self: start; }
 }
 /* Nothing on the chosen day: the next showing, and Book. */
