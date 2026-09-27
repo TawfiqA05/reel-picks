@@ -45,9 +45,15 @@ export function restoreWatched({ tmdb_id, title, watched_at, in_weekly4 = false,
   ).changes > 0;
 }
 
+// Months are local calendar months (the server's TZ, America/Indianapolis
+// deployed), read from watched_date, the local day each film was logged on.
+// watched_at is UTC, so a film logged on the evening of the 31st used to
+// count toward the next month.
+const localMonth = () => localYMD().slice(0, 7);
+
 export function savings(settings = getSettings()) {
-  const month = new Date().toISOString().slice(0, 7); // YYYY-MM (UTC-ish, fine here)
-  const rows = all(`SELECT ticket_price FROM watched WHERE user_id = ? AND substr(watched_at, 1, 7) = ? AND ${ALIST}`, currentUserId(), month);
+  const month = localMonth();
+  const rows = all(`SELECT ticket_price FROM watched WHERE user_id = ? AND substr(watched_date, 1, 7) = ? AND ${ALIST}`, currentUserId(), month);
   const ticketValue = rows.reduce((s, r) => s + (Number(r.ticket_price) || Number(settings.avgTicketPrice) || 0), 0);
   // No subscription, no fee: "saved" is then just what the tickets cost.
   const fee = planOf(settings).subscription ? Number(settings.alistMonthlyFee) || 0 : 0;
@@ -66,11 +72,11 @@ export function getWeek() {
   const settings = getSettings();
   const plan = planOf(settings);
   const week = weekStartFriday();
-  const month = new Date().toISOString().slice(0, 7); // the same month savings() counts
+  const month = localMonth(); // the same month savings() counts
   const byMonth = plan.subscription && plan.period === 'month';
   const rows = all(
     `SELECT w.*, m.poster FROM watched w LEFT JOIN movies m ON m.tmdb_id = w.tmdb_id
-      WHERE w.user_id = ? AND ${byMonth ? 'substr(w.watched_at, 1, 7) = ?' : 'w.week_start = ?'} AND w.${ALIST} ORDER BY w.watched_at DESC`,
+      WHERE w.user_id = ? AND ${byMonth ? 'substr(w.watched_date, 1, 7) = ?' : 'w.week_start = ?'} AND w.${ALIST} ORDER BY w.watched_at DESC`,
     currentUserId(), byMonth ? month : week,
   );
   const limit = plan.limit;

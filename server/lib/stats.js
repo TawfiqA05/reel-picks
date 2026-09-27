@@ -12,8 +12,9 @@ export function getStats() {
   const uid = currentUserId();
   const year = new Date().getFullYear();
 
+  // By local day (watched_date), like the plan month: watched_at is UTC.
   const seenThisYear = get(
-    'SELECT COUNT(DISTINCT tmdb_id) AS n FROM watched WHERE user_id = ? AND substr(watched_at, 1, 4) = ?',
+    'SELECT COUNT(DISTINCT tmdb_id) AS n FROM watched WHERE user_id = ? AND substr(watched_date, 1, 4) = ?',
     uid, String(year),
   ).n;
   const seenAll = get('SELECT COUNT(*) AS n FROM watched WHERE user_id = ?', uid).n;
