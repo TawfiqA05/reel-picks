@@ -120,16 +120,17 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(networkFirst(request, () => caches.match(request, { cacheName: CACHE, ignoreSearch: true })));
 });
 
-// The network's answer, or the cached copy when there is none. A reply that
-// isn't a success counts as none: while a phone's network wakes up, or while
-// the server restarts for a deploy, requests can come back as a 408 or a 5xx,
-// and a script that arrives as an error stops the whole app from starting
-// (update checks included) until it's closed and opened again.
+// The network's answer, or the cached copy when there is none. A 408 or a
+// 5xx counts as none: while a phone's network wakes up, or while the server
+// restarts for a deploy, requests can come back that way, and a script that
+// arrives as an error stops the whole app from starting (update checks
+// included) until it's closed and opened again. Any other answer, a 404 or
+// the expired-invite page included, is the real one and goes through.
 async function networkFirst(request, cached) {
   let res = null;
   try {
     res = await fetch(request);
-    if (res.ok || res.type === 'opaqueredirect') return res;
+    if (res.status !== 408 && res.status < 500) return res;
   } catch { /* no answer at all */ }
   return (await cached()) || res || Response.error();
 }
