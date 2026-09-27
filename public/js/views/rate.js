@@ -258,7 +258,7 @@ export async function render(root, params, ctx) {
     h('div', { class: 'import-box' },
       h('h3', {}, 'Rate right here'),
       h('div', { class: 'muted small' }, 'Nothing to download. Search above, or run a quick tap-through of 20 popular films.'),
-      h('div', {}, h('a', { class: 'btn ghost', href: '#/onboarding' }, icon('zap', { size: 16 }), 'Quick rate 20')),
+      h('div', {}, h('a', { class: 'btn soft', href: '#/onboarding' }, icon('zap', { size: 16 }), 'Quick rate 20')),
     ),
     h('div', { class: 'import-box' },
       h('h3', { class: 'import-head' }, icon('upload', { size: 18 }), 'Import from Letterboxd or IMDb'),
@@ -282,7 +282,7 @@ export async function render(root, params, ctx) {
   let showAll = false;
   let rows = [];
   const filter = filterBox({ label: 'Filter your ratings', placeholder: 'Filter your ratings', onChange: ({ query }) => paintRows(query) });
-  const moreBtn = h('button', { class: 'btn ghost small show-all', type: 'button', 'aria-controls': 'rating-list' });
+  const moreBtn = h('button', { class: 'btn soft small show-all', type: 'button', 'aria-controls': 'rating-list' });
   moreBtn.addEventListener('click', () => {
     showAll = !showAll;
     paintRows(filter.active);
@@ -307,7 +307,7 @@ export async function render(root, params, ctx) {
       ),
       makeStars({ value: r.rating, interactive: true, size: 18, allowClear: true, onChange: (v) => rateMovie(r, v), label: `Your rating of ${title}` }),
       h('button', {
-        class: 'icon-btn round ri-remove', type: 'button', title: 'Remove rating', 'aria-label': `Remove your rating of ${title}`,
+        class: 'icon-btn danger ri-remove', type: 'button', title: 'Remove rating', 'aria-label': `Remove your rating of ${title}`,
         onClick: async () => {
           try {
             await api.unrate(r.tmdb_id);

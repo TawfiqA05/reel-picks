@@ -61,7 +61,7 @@ export async function render(root, params, ctx) {
       h('div', { class: 'ob-stars' }, ...[1, 2, 3, 4, 5].map((n) =>
         h('button', { class: 'ob-star', type: 'button', title: `${n}★`, 'aria-label': `${n} star${n === 1 ? '' : 's'}`, onClick: () => rate(m, n) }, Array.from({ length: n }, star)))),
       h('div', { class: 'ob-buttons' },
-        h('button', { class: 'btn ghost', onClick: advance }, 'Haven\'t seen'),
+        h('button', { class: 'btn soft', onClick: advance }, 'Haven\'t seen'),
       ),
     ));
   }

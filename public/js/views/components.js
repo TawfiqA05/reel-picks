@@ -191,7 +191,7 @@ export function watchlistButton(entry, ctx, { compact = false, onToggle } = {}) 
   let on = Boolean(entry.watchlisted || entry.flags?.watchlisted);
   // Compact: a round icon button. The filled bookmark is the "on" state, and
   // aria-pressed says the same thing to a screen reader.
-  const btn = h('button', { class: compact ? 'icon-btn round wl-btn' : 'chip-btn wl-btn', type: 'button' },
+  const btn = h('button', { class: compact ? 'icon-btn soft wl-btn' : 'btn soft wl-btn', type: 'button' },
     icon('bookmark', { size: compact ? 20 : 16 }), compact ? null : h('span', {}, 'Watchlist'));
   const paint = () => {
     btn.classList.toggle('active', on);
@@ -393,7 +393,7 @@ export function heroMedia(m, { cls = 'hero-media' } = {}) {
 // is the element to fade out. `label` gives the hero its worded version.
 export function notForMeButton(entry, onHide, { label = false } = {}) {
   const btn = h('button', {
-    class: label ? 'btn ghost not-for-me' : 'icon-btn round not-for-me', type: 'button',
+    class: label ? 'btn danger not-for-me' : 'icon-btn danger not-for-me', type: 'button',
     'aria-label': `Not for me, hide ${entry.title}`, title: 'Not for me. Hide it from your picks',
   }, icon('eyeOff', { size: label ? 18 : 20 }), label ? h('span', {}, 'Not for me') : null);
   btn.addEventListener('click', (e) => {
@@ -442,7 +442,7 @@ export function heroPick(entry, ctx, { day = null, multi = 0, onHide = null, mov
       handoffLine(entry),
       h('div', { class: 'hero-actions' },
         bookButton(best, day),
-        h('a', { class: 'btn ghost', href: `#/movie/${entry.tmdb_id}` }, 'Details'),
+        h('a', { class: 'btn soft', href: `#/movie/${entry.tmdb_id}` }, 'Details'),
         guest ? null : watchlistButton(entry, ctx, { compact: true }),
         onHide && !guest ? notForMeButton(entry, onHide, { label: true }) : null,
       ),
@@ -564,7 +564,7 @@ export function movieRow(entry, ctx, { day = null, compact = false, multi = 0, n
   let built = false;
 
   const label = (n) => `All times (${n})`;
-  const toggle = h('button', { class: 'chip-btn row-more', type: 'button' }, label(total));
+  const toggle = h('button', { class: 'btn soft row-more', type: 'button' }, label(total));
   toggle.addEventListener('click', () => {
     if (!built) {
       built = true;
@@ -693,7 +693,7 @@ export async function openHiddenList(unhide) {
         h('span', { class: 'hidden-name' }, icon('eyeOff', { size: 16, cls: 'hidden-icon' }),
           h('a', { class: 'hidden-title', href: `#/movie/${m.tmdb_id}`, onClick: () => modal.close() }, m.title || `Movie ${m.tmdb_id}`)),
         h('button', {
-          class: 'btn ghost small', type: 'button', 'aria-label': `Unhide ${m.title}`,
+          class: 'btn soft small', type: 'button', 'aria-label': `Unhide ${m.title}`,
           onClick: async (e) => {
             e.currentTarget.disabled = true;
             await unhide({ tmdb_id: m.tmdb_id, title: m.title });

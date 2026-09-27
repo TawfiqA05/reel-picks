@@ -77,7 +77,7 @@ async function showPair(page, partner, ctx) {
   if (data.state === 'no-shared-theatre') {
     body.appendChild(emptyState('pin', `You and ${name} don't follow any of the same theaters`,
       `Together only lists showtimes at a theater you both follow. Add one of ${name}'s theaters in Settings, or ask ${name} to add one of yours.`,
-      h('a', { class: 'btn ghost', href: '#/settings' }, 'Open Settings')));
+      h('a', { class: 'btn soft', href: '#/settings' }, 'Open Settings')));
     return;
   }
 
@@ -87,7 +87,7 @@ async function showPair(page, partner, ctx) {
   if (data.state === 'nothing') {
     body.appendChild(emptyState('search', `Nothing you and ${name} would both love right now`,
       'A film shows up here when it is on both watchlists, on one watchlist and a great match for the other person, or a strong match for you both. Star films you want to see, then check back when the lineup changes.',
-      h('a', { class: 'btn ghost', href: '#/home' }, 'Browse Picks')));
+      h('a', { class: 'btn soft', href: '#/home' }, 'Browse Picks')));
     return;
   }
 

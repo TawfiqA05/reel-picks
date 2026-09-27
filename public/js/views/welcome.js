@@ -67,7 +67,7 @@ export async function render(root, params, ctx) {
   };
 
   const foot = (...kids) => h('div', { class: 'wc-foot' }, ...kids);
-  const back = () => h('button', { class: 'btn ghost', type: 'button', onClick: () => go(step - 1) }, 'Back');
+  const back = () => h('button', { class: 'btn soft', type: 'button', onClick: () => go(step - 1) }, 'Back');
 
   // ---- 1. theater
   function theaterStep() {
@@ -97,7 +97,7 @@ export async function render(root, params, ctx) {
         if (!theatres.length) { results.appendChild(h('p', { class: 'muted small' }, `No AMC theaters match "${q}".`)); return; }
         for (const t of theatres.slice(0, 8)) {
           const chosen = String(ctx.getStatus()?.theatre?.id) === String(t.id);
-          const choose = h('button', { class: chosen ? 'btn ghost small' : 'btn small', type: 'button', disabled: chosen, 'aria-label': `Choose ${t.name}` }, chosen ? 'Chosen' : 'Choose');
+          const choose = h('button', { class: chosen ? 'btn soft small' : 'btn small', type: 'button', disabled: chosen, 'aria-label': `Choose ${t.name}` }, chosen ? 'Chosen' : 'Choose');
           choose.addEventListener('click', async () => {
             choose.disabled = true;
             try {
@@ -202,7 +202,7 @@ export async function render(root, params, ctx) {
     // Import from Letterboxd or IMDb.
     const importNote = h('p', { class: 'wc-import-note', role: 'status' });
     const file = h('input', { type: 'file', accept: '.csv,text/csv', hidden: true, 'aria-label': 'Ratings file' });
-    const upload = h('button', { class: 'btn ghost', type: 'button', onClick: () => file.click() }, icon('upload', { size: 16 }), 'Upload ratings.csv');
+    const upload = h('button', { class: 'btn soft', type: 'button', onClick: () => file.click() }, icon('upload', { size: 16 }), 'Upload ratings.csv');
     file.addEventListener('change', async () => {
       const f = file.files[0];
       file.value = '';

@@ -134,10 +134,10 @@ export function openSearch(ctx = null) {
   // ---- results
   function badges(m) {
     const out = [];
-    if (m.playing) out.push(h('span', { class: 'badge sr-badge playing' }, 'Playing now'));
-    if (m.rating != null) out.push(h('span', { class: 'badge sr-badge rated', 'aria-label': `You rated it ${m.rating} stars` }, star(), ` ${m.rating}`));
-    if (m.watchlisted) out.push(h('span', { class: 'badge sr-badge' }, 'Watchlist'));
-    if (m.hidden) out.push(h('span', { class: 'badge sr-badge muted' }, 'Hidden'));
+    if (m.playing) out.push(h('span', { class: 'tag sr-badge playing' }, 'Playing now'));
+    if (m.rating != null) out.push(h('span', { class: 'tag sr-badge rated', 'aria-label': `You rated it ${m.rating} stars` }, star(), ` ${m.rating}`));
+    if (m.watchlisted) out.push(h('span', { class: 'tag sr-badge' }, 'Watchlist'));
+    if (m.hidden) out.push(h('span', { class: 'tag sr-badge muted' }, 'Hidden'));
     return out;
   }
 

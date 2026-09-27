@@ -185,8 +185,8 @@ export async function render(root, params, ctx) {
       h('p', {}, `Stop following ${t.name}?`),
       h('p', { class: 'muted small' }, 'Its showtimes are removed from Picks and "Also nearby". Its schedule history (for "Last chance" and the departure log) is kept and comes back if you follow it again.'),
       h('div', { class: 'row-gap' },
-        h('button', { class: 'btn', onClick: async () => { modal.close(); await act(() => api.unfollowTheatre(t.id), `Stopped following ${t.short}`); } }, 'Stop following'),
-        h('button', { class: 'btn ghost', onClick: () => modal.close() }, 'Cancel'),
+        h('button', { class: 'btn danger', onClick: async () => { modal.close(); await act(() => api.unfollowTheatre(t.id), `Stopped following ${t.short}`); } }, 'Stop following'),
+        h('button', { class: 'btn soft', onClick: () => modal.close() }, 'Cancel'),
       ),
     ), { title: 'Unfollow theater' });
   };
@@ -202,9 +202,9 @@ export async function render(root, params, ctx) {
             : 'Drive time appears after the next refresh'),
         ),
         t.isPrimary ? null : h('div', { class: 'ti-actions' },
-          h('button', { class: 'btn ghost small', title: 'Rank by this theater instead', onClick: () =>
+          h('button', { class: 'btn soft small', title: 'Rank by this theater instead', onClick: () =>
             act(() => api.setPrimaryTheatre(t.id), `${t.short} is now your primary theater`) }, 'Make primary'),
-          h('button', { class: 'btn ghost small', title: 'Stop following', 'aria-label': `Stop following ${t.name}`, onClick: () => confirmUnfollow(t) }, icon('x', { size: 16 })),
+          h('button', { class: 'icon-btn danger', title: 'Stop following', 'aria-label': `Stop following ${t.name}`, onClick: () => confirmUnfollow(t) }, icon('x', { size: 18 })),
         ),
       ));
     }
@@ -233,7 +233,7 @@ export async function render(root, params, ctx) {
           h('div', { class: 'ti-actions' },
             followed
               ? h('span', { class: 'muted small' }, followed.isPrimary ? 'Primary' : 'Following')
-              : h('button', { class: 'btn ghost small', disabled: full, title: full ? `Already following ${maxTheatres}` : 'Pull this theater\'s showtimes too', onClick: () =>
+              : h('button', { class: 'btn soft small', disabled: full, title: full ? `Already following ${maxTheatres}` : 'Pull this theater\'s showtimes too', onClick: () =>
                 act(() => api.followTheatre({ id: t.id, name: t.name, slug: t.slug }), `Following ${t.name}. Refreshing showtimes.`) }, 'Follow'),
             followed?.isPrimary ? null : h('button', { class: 'btn small', title: 'Rank by this theater; your current primary stays followed', onClick: () =>
               act(() => (followed ? api.setPrimaryTheatre(t.id) : api.setTheatre({ id: t.id, name: t.name, slug: t.slug })),
@@ -293,7 +293,7 @@ export async function render(root, params, ctx) {
       h('div', { class: 'row-gap' },
         input,
         h('button', { class: 'btn small', onClick: search }, 'Search'),
-        h('button', { class: 'btn ghost small', title: 'Leave it unmatched and stop flagging it (e.g. a mystery screening)', onClick: async () => {
+        h('button', { class: 'btn soft small', title: 'Leave it unmatched and stop flagging it (e.g. a mystery screening)', onClick: async () => {
           try { await api.ignoreMatch(u.amc_movie_id, u.amc_title); toast(`Ignoring "${u.amc_title}"`); afterChange(); } catch (e) { toast(e.message, 'error'); }
         } }, 'Ignore'),
       ),
@@ -337,7 +337,7 @@ export async function render(root, params, ctx) {
       h('div', { class: 'row-gap' },
         input,
         h('button', { class: 'btn small', onClick: search }, 'Search'),
-        h('button', { class: 'btn ghost small', title: 'The match is right. Stop flagging it.', onClick: async () => {
+        h('button', { class: 'btn soft small', title: 'The match is right. Stop flagging it.', onClick: async () => {
           try { await api.keepMatch(u.amc_movie_id); toast(`Kept "${u.amc_title}" as ${u.matched.title}`); afterChange(); } catch (e) { toast(e.message, 'error'); }
         } }, 'Keep'),
       ),
@@ -362,7 +362,7 @@ export async function render(root, params, ctx) {
           ...ignored.map((u) => h('div', { class: 'unmatched-row ignored' },
             h('div', { class: 'um-title' }, u.amc_title),
             whereWhen(u),
-            h('button', { class: 'btn ghost small', title: 'Retry matching on the next refresh', onClick: async () => {
+            h('button', { class: 'btn soft small', title: 'Retry matching on the next refresh', onClick: async () => {
               try { await api.unignoreMatch(u.amc_movie_id); toast('Will retry matching on the next refresh'); afterChange(); } catch (e) { toast(e.message, 'error'); }
             } }, 'Restore'),
           )),
@@ -441,7 +441,7 @@ export async function render(root, params, ctx) {
 
   // Browser geolocation. The precise fix never leaves this page: it is rounded
   // to ~1 km before the reverse-geocode call and before it lands in the fields.
-  const locBtn = h('button', { class: 'btn ghost' }, icon('pin', { size: 16 }), 'Use my location');
+  const locBtn = h('button', { class: 'btn soft' }, icon('pin', { size: 16 }), 'Use my location');
   locBtn.addEventListener('click', () => {
     if (!('geolocation' in navigator)) { setGeoStatus('This browser can\'t share a location. Type a place above instead.'); return; }
     if (!window.isSecureContext) { setGeoStatus('Location needs HTTPS or localhost. Type a place above instead.'); return; }
@@ -482,7 +482,7 @@ export async function render(root, params, ctx) {
     }, { timeout: 10000, maximumAge: 600000 });
   });
 
-  const clearHomeBtn = h('button', { class: 'btn ghost small', onClick: async () => {
+  const clearHomeBtn = h('button', { class: 'btn danger small', onClick: async () => {
     const seq = ++geoSeq; // invalidate any in-flight look-up or locate
     try {
       const r = await api.clearHome();
@@ -613,7 +613,7 @@ export async function render(root, params, ctx) {
 
   // ---- Hidden films: everything marked "Not for me", each with Unhide.
   const hiddenCount = h('p', { class: 'muted small' }, 'Checking…');
-  const showHidden = h('button', { class: 'btn ghost', type: 'button' }, 'Show hidden films');
+  const showHidden = h('button', { class: 'btn soft', type: 'button' }, 'Show hidden films');
   const paintHidden = async () => {
     try {
       const n = (await api.hidden()).movies.length;
@@ -843,7 +843,7 @@ export async function render(root, params, ctx) {
   const offsiteSlot = h('div', { class: 'offsite', hidden: true });
   if (isOwner) {
     const offLine = h('p', { class: 'muted small', role: 'status', 'aria-live': 'polite' });
-    const offBtn = h('button', { class: 'btn ghost', type: 'button' }, icon('upload', { size: 16 }), 'Upload now');
+    const offBtn = h('button', { class: 'btn soft', type: 'button' }, icon('upload', { size: 16 }), 'Upload now');
     const paintOff = (o) => {
       if (!o?.enabled) { offsiteSlot.hidden = true; return; }
       offsiteSlot.hidden = false;
@@ -874,13 +874,13 @@ export async function render(root, params, ctx) {
 
   page.appendChild(card('Data',
     h('div', { class: 'row-gap wrap' },
-      h('a', { class: 'btn ghost', href: api.stateUrl() }, icon('download', { size: 16 }), isOwner ? 'Export full setup' : 'Export my data'),
-      isOwner ? h('button', { class: 'btn ghost', onClick: () => stateFile.click() }, icon('upload', { size: 16 }), 'Import full setup') : null,
+      h('a', { class: 'btn soft', href: api.stateUrl() }, icon('download', { size: 16 }), isOwner ? 'Export full setup' : 'Export my data'),
+      isOwner ? h('button', { class: 'btn soft', onClick: () => stateFile.click() }, icon('upload', { size: 16 }), 'Import full setup') : null,
       isOwner ? stateFile : null,
-      h('a', { class: 'btn ghost', href: api.exportUrl() }, icon('download', { size: 16 }), 'Export backup CSV'),
-      isOwner && bk?.last ? h('a', { class: 'btn ghost', href: api.backupUrl() }, icon('download', { size: 16 }), 'Download latest backup') : null,
-      isOwner ? h('button', { class: 'btn ghost', onClick: () => ctx.triggerRefresh() }, icon('refresh', { size: 16 }), 'Refresh now') : null,
-      h('a', { class: 'btn ghost', href: '#/onboarding' }, icon('zap', { size: 16 }), 'Re-run quick rate'),
+      h('a', { class: 'btn soft', href: api.exportUrl() }, icon('download', { size: 16 }), 'Export backup CSV'),
+      isOwner && bk?.last ? h('a', { class: 'btn soft', href: api.backupUrl() }, icon('download', { size: 16 }), 'Download latest backup') : null,
+      isOwner ? h('button', { class: 'btn soft', onClick: () => ctx.triggerRefresh() }, icon('refresh', { size: 16 }), 'Refresh now') : null,
+      h('a', { class: 'btn soft', href: '#/onboarding' }, icon('zap', { size: 16 }), 'Re-run quick rate'),
     ),
     h('p', { class: 'muted small' }, isOwner
       ? 'Full setup carries settings, theaters, home base, ratings, watchlist, watch history, AMC match decisions, and hidden films. Everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'
@@ -1049,7 +1049,7 @@ function letterboxdCard(ctx, words) {
     autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false',
   });
   const saveBtn = h('button', { class: 'btn', type: 'button' }, 'Save');
-  const syncBtn = h('button', { class: 'btn ghost', type: 'button' }, icon('refresh', { size: 16 }), 'Sync now');
+  const syncBtn = h('button', { class: 'btn soft', type: 'button' }, icon('refresh', { size: 16 }), 'Sync now');
   const line = h('p', { class: 'muted small lb-status', role: 'status', 'aria-live': 'polite' });
   const syncRow = h('div', {}, syncBtn);
   let st = null;
@@ -1147,20 +1147,20 @@ function friendsCard() {
           ),
           h('div', { class: 'ti-actions' },
             f.revoked_at ? null : h('button', {
-              class: 'btn ghost small', type: 'button', 'aria-label': `Revoke ${f.name}`,
+              class: 'btn danger small', type: 'button', 'aria-label': `Revoke ${f.name}`,
               onClick: () => {
                 const modal = openModal(h('div', { class: 'confirm' },
                   h('p', {}, `Revoke ${f.name}'s access?`),
                   h('p', { class: 'muted small' }, 'Their link stops working right away. Their ratings and lists are kept, and a new link brings them back.'),
                   h('div', { class: 'row-gap' },
-                    h('button', { class: 'btn', onClick: () => { modal.close(); act(() => api.revokeFriend(f.id), `Revoked ${f.name}`); } }, 'Revoke'),
-                    h('button', { class: 'btn ghost', onClick: () => modal.close() }, 'Cancel'),
+                    h('button', { class: 'btn danger', onClick: () => { modal.close(); act(() => api.revokeFriend(f.id), `Revoked ${f.name}`); } }, 'Revoke'),
+                    h('button', { class: 'btn soft', onClick: () => modal.close() }, 'Cancel'),
                   ),
                 ), { title: 'Revoke friend' });
               },
             }, 'Revoke'),
             h('button', {
-              class: 'btn ghost small', type: 'button', 'aria-label': `New link for ${f.name}`,
+              class: 'btn soft small', type: 'button', 'aria-label': `New link for ${f.name}`,
               onClick: () => act(() => api.reissueFriend(f.id), `New link for ${f.name}`),
             }, 'New link'),
           ),

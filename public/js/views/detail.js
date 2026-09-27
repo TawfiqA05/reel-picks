@@ -41,7 +41,7 @@ export async function render(root, params, ctx) {
       h('div', { class: 'hero-actions' },
         guest ? null : watchlistButton({ tmdb_id: m.tmdb_id, title: m.title, watchlisted: d.watchlisted }, ctx),
         m.trailer_key ? h('button', {
-          class: 'chip-btn', type: 'button', 'aria-haspopup': 'dialog',
+          class: 'btn soft', type: 'button', 'aria-haspopup': 'dialog',
           onClick: () => openTrailer(m),
         }, icon('play', { size: 16 }), 'Trailer') : null,
       ),
@@ -97,7 +97,7 @@ function ratingRow(d, m, ctx, week) {
       if (focus) undo.focus();
       return;
     }
-    const seenBtn = h('button', { class: 'btn ghost', type: 'button' }, icon('ticket', { size: 16 }), planWords(week?.plan || planOf({})).markSeen);
+    const seenBtn = h('button', { class: 'btn soft', type: 'button' }, icon('ticket', { size: 16 }), planWords(week?.plan || planOf({})).markSeen);
     seenBtn.addEventListener('click', async () => {
       seenBtn.disabled = true;
       try {

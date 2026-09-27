@@ -114,7 +114,7 @@ function watchLog(movies, ctx, words) {
       ),
       h('div', { class: 'ti-actions' },
         h('button', {
-          class: 'btn ghost small', type: 'button', title: 'Remove from your watch log',
+          class: 'icon-btn danger', type: 'button', title: 'Remove from your watch log',
           'aria-label': `Remove ${m.title || 'this movie'} from your watch log`,
           onClick: () => confirmRemove(m, ctx, words),
         }, icon('x', { size: 16 })),
@@ -129,7 +129,7 @@ function confirmRemove(m, ctx, words) {
     h('p', {}, `Remove ${m.title || 'this movie'} from your watch log?`),
     h('p', { class: 'muted small' }, words.removeNote),
     h('div', { class: 'row-gap' },
-      h('button', { class: 'btn', onClick: async () => {
+      h('button', { class: 'btn danger', onClick: async () => {
         modal.close();
         try {
           await api.undoWatched(m.id);
@@ -138,7 +138,7 @@ function confirmRemove(m, ctx, words) {
           ctx?.rerender?.();
         } catch (e) { toast(e.message, 'error'); }
       } }, 'Remove'),
-      h('button', { class: 'btn ghost', onClick: () => modal.close() }, 'Cancel'),
+      h('button', { class: 'btn soft', onClick: () => modal.close() }, 'Cancel'),
     ),
   ), { title: 'Remove watch entry' });
 }
@@ -332,7 +332,7 @@ function openGroup(kind, it, ctx) {
       smallerList = moreList(m.smaller, `${heading}: smaller films`);
       smallerList.id = `sheet-smaller-${kind}`;
       smallerList.hidden = true;
-      smallerBtn = h('button', { class: 'btn ghost small show-all', type: 'button', 'aria-controls': smallerList.id });
+      smallerBtn = h('button', { class: 'btn soft small show-all', type: 'button', 'aria-controls': smallerList.id });
       smallerBtn.addEventListener('click', () => { smallerList.hidden = !smallerList.hidden; paintSmaller(); });
       more.append(smallerBtn, smallerList);
       paintSmaller();
@@ -360,7 +360,7 @@ function topList(title, sub, items, key, ctx) {
   const wrap = h('section', { class: 'stat-list' }, sectionTitle(title, sub), list);
   if (!extra.length) return wrap;
   let open = expanded.has(key);
-  const btn = h('button', { class: 'btn ghost small show-all', type: 'button', 'aria-controls': id });
+  const btn = h('button', { class: 'btn soft small show-all', type: 'button', 'aria-controls': id });
   // With every row showing, a filter box sits between the heading and the list.
   const filter = filterBox({ label: `Filter ${title.toLowerCase()}`, placeholder: `Filter ${items.length} ${title.replace(/^Top /, '')}` });
   const rows = [...list.children].map((li, i) => ({ el: li, fields: [items[i].name] }));

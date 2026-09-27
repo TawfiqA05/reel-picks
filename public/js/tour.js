@@ -116,7 +116,7 @@ export function startTour(ctx) {
   const count = h('p', { class: 'tour-count' });
   const title = h('h2', { class: 'tour-title', id: 'tour-title' });
   const text = h('p', { class: 'tour-text', id: 'tour-text' });
-  const back = h('button', { class: 'btn ghost tour-back', type: 'button' }, 'Back');
+  const back = h('button', { class: 'btn soft tour-back', type: 'button' }, 'Back');
   const next = h('button', { class: 'btn tour-next', type: 'button' }, 'Next');
   const skip = h('button', { class: 'link-btn tour-skip', type: 'button' }, 'Skip tour');
   // Focus stays on Next from step to step, which says nothing new, so the

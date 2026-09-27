@@ -146,7 +146,7 @@ export function homeSection(ctx) {
     startedAt = 0;
     clear(body);
     if (r.status === 'error') {
-      const retry = h('button', { class: 'btn ghost small', type: 'button' }, 'Try again');
+      const retry = h('button', { class: 'btn soft small', type: 'button' }, 'Try again');
       retry.addEventListener('click', load);
       body.append(h('p', { class: 'muted small' }, r.message), retry);
       return;

@@ -135,7 +135,7 @@ function buildPage(data, status, ctx, state, actions) {
   // the hero, which on phones runs up to the header.
   if (!guest) {
     page.appendChild(h('div', { class: 'wsw-bar' },
-      h('button', { id: 'wsw-btn', class: 'btn ghost wsw-btn', type: 'button', 'aria-haspopup': 'dialog', onClick: () => openWhatToWatch(ctx) },
+      h('button', { id: 'wsw-btn', class: 'btn soft wsw-btn', type: 'button', 'aria-haspopup': 'dialog', onClick: () => openWhatToWatch(ctx) },
         icon('sparkle', { size: 18 }), 'What should I watch?')));
   }
   if (data.weekly4.length > 1) {
@@ -204,7 +204,7 @@ function buildPage(data, status, ctx, state, actions) {
   // the choice is remembered server-side (guests just toggle locally).
   const listWrap = h('div', { class: 'list playing-list' });
   const listFilter = filterBox({ label: 'Filter everything playing', placeholder: `Filter ${data.list.length} movies` });
-  const collapseBtn = h('button', { class: 'chip-btn section-toggle', type: 'button' });
+  const collapseBtn = h('button', { class: 'btn soft section-toggle', type: 'button' });
   const paintCollapse = () => {
     listWrap.hidden = state.collapsed;
     listFilter.el.hidden = state.collapsed;
@@ -303,7 +303,7 @@ function setupCard(ctx) {
       'Add a TMDB key to start ranking what\'s playing. OMDb and AMC keys are optional.',
       h('div', { class: 'row-gap' },
         h('a', { class: 'btn', href: '#/settings' }, 'Open Settings'),
-        h('button', { class: 'btn ghost', onClick: () => ctx.triggerRefresh() }, 'Try refresh'),
+        h('button', { class: 'btn soft', onClick: () => ctx.triggerRefresh() }, 'Try refresh'),
       )),
     h('div', { class: 'help-card' },
       h('h3', {}, 'Where keys go'),

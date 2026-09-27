@@ -85,8 +85,9 @@ export function scorePill(value, { label, big = false, unscored = false } = {}) 
   );
 }
 
+// A tag: a small soft-filled label. `variant` picks its tint (styles.css, tags).
 export function badge(text, variant = '') {
-  return h('span', { class: `badge ${variant}` }, text);
+  return h('span', { class: `tag${variant ? ` ${variant}` : ''}` }, text);
 }
 
 export function chip(text, { active = false, onClick, removable = false } = {}) {

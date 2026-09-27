@@ -64,7 +64,7 @@ export function openWhatToWatch(ctx) {
       r = await api.suggest({ ...answers, exclude: [...shown] });
     } catch (e) {
       clear(body);
-      body.append(h('p', { class: 'muted' }, e.message), h('button', { class: 'btn ghost', type: 'button', onClick: fetchSome }, 'Try again'));
+      body.append(h('p', { class: 'muted' }, e.message), h('button', { class: 'btn soft', type: 'button', onClick: fetchSome }, 'Try again'));
       return;
     }
     if (!body.isConnected) return;
@@ -120,7 +120,7 @@ export function openWhatToWatch(ctx) {
         whereLine(f),
         h('p', { class: 'pick-reason' }, withStars(f.reason)))),
     tools, rateSlot);
-    const seen = h('button', { class: 'chip-btn wsw-seen', type: 'button', 'aria-expanded': 'false' }, icon('check', { size: 16 }), h('span', {}, 'Seen it'));
+    const seen = h('button', { class: 'btn soft wsw-seen', type: 'button', 'aria-expanded': 'false' }, icon('check', { size: 16 }), h('span', {}, 'Seen it'));
     seen.addEventListener('click', () => {
       if (!rateSlot.childElementCount) {
         rateSlot.append(h('span', { class: 'muted small' }, 'How was it?'), starRater(f, ctx, {
@@ -132,7 +132,7 @@ export function openWhatToWatch(ctx) {
       seen.setAttribute('aria-expanded', String(!rateSlot.hidden));
       if (!rateSlot.hidden) rateSlot.querySelector('.stars.interactive')?.focus();
     });
-    const hide = h('button', { class: 'chip-btn wsw-hide', type: 'button', 'aria-label': `Not for me, hide ${f.title}` }, icon('eyeOff', { size: 16 }), h('span', {}, 'Not for me'));
+    const hide = h('button', { class: 'btn soft wsw-hide', type: 'button', 'aria-label': `Not for me, hide ${f.title}` }, icon('eyeOff', { size: 16 }), h('span', {}, 'Not for me'));
     hide.addEventListener('click', async () => {
       changed = true;
       hide.disabled = true;

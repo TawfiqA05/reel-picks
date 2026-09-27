@@ -204,18 +204,18 @@ button, input, select, textarea { font-family: inherit; }
 }
 /* Controls set their own line height (a browser's "normal" is the font's own,
    so the same chip stood taller in one theme than the other). */
-button, .chip, .chip-btn, .link-btn { line-height: 1.2; }
+button, .chip, .link-btn { line-height: 1.2; }
 
 /* One focus ring everywhere, keyboard only. */
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 :focus:not(:focus-visible) { outline: none; }
 
 /* Press feedback: a small, quick give under the finger. */
-button, .btn, .chip, .chip-btn, .icon-btn, .showtime-chip, .day-btn, .nav-item, .seg-item, a.tile, a.lc-card {
+button, .btn, .chip, .icon-btn, .day-btn, .nav-item, .seg-item, .segment, a.tile, a.lc-card {
   transition: transform 100ms var(--ease-out), background-color 150ms, border-color 150ms, color 150ms, opacity 200ms;
 }
-button:active, .btn:active, .chip:active, .chip-btn:active, .icon-btn:active, a.showtime-chip:active,
-.day-btn:active, .nav-item:active, .seg-item:active, a.tile:active, a.lc-card:active { transform: scale(.97); }
+button:active, .btn:active, .chip:active, .icon-btn:active,
+.day-btn:active, .nav-item:active, .seg-item:active, .segment:active, a.tile:active, a.lc-card:active { transform: scale(.97); }
 
 /* Reduced motion: no movement, only cross-fades. */
 @media (prefers-reduced-motion: reduce) {
@@ -224,8 +224,8 @@ button:active, .btn:active, .chip:active, .chip-btn:active, .icon-btn:active, a.
     transition-property: opacity, background-color, border-color, color !important;
     scroll-behavior: auto !important;
   }
-  button:active, .btn:active, .chip:active, .chip-btn:active, .icon-btn:active, a.showtime-chip:active,
-  .day-btn:active, .nav-item:active, .seg-item:active, a.tile:active, a.lc-card:active { transform: none; }
+  button:active, .btn:active, .chip:active, .icon-btn:active,
+  .day-btn:active, .nav-item:active, .seg-item:active, .segment:active, a.tile:active, a.lc-card:active { transform: none; }
   .toast, .toast.show { transform: translateX(0); }
 }
 /* In the body face, not a system monospace: the only code on screen is a file name. */
@@ -427,32 +427,60 @@ body.has-save main { padding-bottom: calc(var(--chrome-bottom) + var(--savebar-h
 .score-pill.low { color: var(--score-lo); border-color: var(--line); }
 .score-pill.na { color: var(--muted); }
 
-/* ---- badges / chips ---- */
-.badge { display: inline-block; white-space: nowrap; font-size: var(--fs-xs); font-weight: 700; padding: 3px 7px; border-radius: 6px; background: var(--surface-2); color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
-.badge.imax { background: transparent; color: var(--text-2); box-shadow: inset 0 0 0 1px var(--muted); }
-.badge.watch { background: var(--surface-3); color: var(--text); }
-.badge.settling { background: var(--surface-3); color: var(--text-2); }
-.badge.seen { background: var(--surface-3); color: var(--text); }
-.badge.diverge, .badge.advance { background: var(--surface-3); color: var(--text); }
-.badge-row { display: flex; flex-wrap: wrap; gap: 6px; }
+/* ---- tags: small soft-filled labels, never outlined ----
+   Format tints say which format (IMAX blue, Dolby purple, RealD 3D teal,
+   anything else amber); status tints say what's going on (back in theaters
+   teal, last chance red, new this week amber); positive ones (Primary, Moved
+   up) take the soft accent; plain facts sit on the chip colour. */
+.tag { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: var(--fs-xs); font-weight: 600; line-height: var(--lh-tight); padding: 3px 9px; border-radius: 999px; background: var(--chip); color: var(--text); }
+.tag:is(.accent, .watch, .moved) { background: var(--accent-soft); color: var(--accent-text); }
+.tag:is(.blue, .imax) { background: var(--blue-soft); color: var(--blue); }
+.tag:is(.purple, .dolby) { background: var(--purple-soft); color: var(--purple); }
+.tag:is(.teal, .reald, .back) { background: var(--teal-soft); color: var(--teal); }
+.tag:is(.amber, .fmt, .new, .opens) { background: var(--amber-soft); color: var(--amber); }
+.tag:is(.bad, .hidden, .last) { background: var(--bad-soft); color: var(--bad); }
+.tag-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 
-.chips { display: flex; flex-wrap: wrap; gap: 7px; }
-.chip { font-size: var(--fs-xs); padding: 5px 11px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); cursor: pointer; }
-.chip.active { background: var(--selected-bg); color: var(--on-selected); border-color: var(--selected-bg); font-weight: 700; }
-.chip.static { cursor: default; }
-.chip-x { display: inline-flex; margin-left: 4px; vertical-align: -1px; }
+/* ---- choices: plain until picked, then filled accent ---- */
+.chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.chip {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 14px;
+  border: none; border-radius: var(--r-btn); background: var(--chip); color: var(--text);
+  font-size: var(--fs-sm); font-weight: 500; cursor: pointer;
+}
+.chip:hover { background: color-mix(in srgb, var(--chip) 85%, var(--text)); }
+.chip.active { background: var(--accent); color: var(--on-accent); font-weight: 600; }
 
-/* ---- buttons ---- */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 16px; border-radius: var(--r-sm); background: var(--accent); color: var(--on-accent); font-weight: 700; border: 1px solid transparent; cursor: pointer; font-size: var(--fs-base); line-height: 20px; }
-.btn:hover { filter: brightness(1.05); }
-.btn.ghost { background: var(--surface); color: var(--text); border: 1px solid var(--line); }
-.btn.small { padding: 6px 12px; font-size: var(--fs-sm); line-height: 18px; }
-.btn.wide { width: 100%; padding: 13px; }
-.link-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: var(--fs-sm); text-decoration: underline; padding: 4px; }
-.link-btn:hover { color: var(--text); }
-.chip-btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 12px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--line); color: var(--text); cursor: pointer; font-size: var(--fs-sm); font-weight: 600; }
-.chip-btn.active .icon { fill: currentColor; }
-.chip-btn.active { color: var(--text); border-color: var(--text-2); }
+/* ---- buttons: one shape, coloured by job ----
+   Filled accent: the main action. Soft accent: secondary actions and
+   choices. Soft red: remove, revoke, Not for me. Every one is the same
+   rounded rectangle; icon buttons are 44px squares of it. */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px;
+  border: none; border-radius: var(--r-btn); background: var(--accent); color: var(--on-accent);
+  font-size: var(--fs-base); font-weight: 600; line-height: var(--lh-tight); text-align: center; cursor: pointer;
+}
+.btn:hover { background: color-mix(in srgb, var(--accent) 88%, var(--text)); }
+.btn.soft, .icon-btn.soft { background: var(--accent-soft); color: var(--accent-text); }
+.btn.soft:hover, .icon-btn.soft:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+.btn.danger, .icon-btn.danger { background: var(--bad-soft); color: var(--bad); }
+.btn.danger:hover, .icon-btn.danger:hover { background: color-mix(in srgb, var(--bad) 22%, transparent); }
+.btn.small { padding: 0 12px; font-size: var(--fs-sm); }
+.btn.wide { width: 100%; }
+/* Disabled looks disabled: no colour, a dashed edge, not just fainter text. */
+:is(.btn, .icon-btn, .chip):is(:disabled, [aria-disabled="true"]) {
+  background: transparent; color: var(--muted); outline: 1px dashed var(--field-edge); outline-offset: -1px; cursor: not-allowed;
+}
+/* Saved to the watchlist: the bookmark fills in gold, and so does its word
+   (aria-pressed and the button's name say the same). */
+:is(.btn, .icon-btn).wl-btn.active { background: color-mix(in srgb, var(--gold) 16%, transparent); color: var(--gold); }
+.wl-btn.active .icon { fill: currentColor; }
+/* Text buttons: accent words, no box (Undo, Skip, Fix, Clear). */
+.link-btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 4px;
+  background: none; border: none; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
+}
+.link-btn:hover { text-decoration: underline; text-underline-offset: 3px; }
 .row-gap { display: flex; gap: 10px; align-items: center; }
 .row-gap.wrap { flex-wrap: wrap; }
 /* A field with buttons beside it: the buttons take the field's height and
@@ -465,7 +493,6 @@ body.has-save main { padding-bottom: calc(var(--chrome-bottom) + var(--savebar-h
   .row-gap:has(> .input) { flex-wrap: wrap; }
   .row-gap:has(> .input) > .input { flex-basis: 100%; }
 }
-.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 10px 0; }
 
 /* ---- stars ---- */
 .stars { position: relative; display: inline-block; line-height: 1; white-space: nowrap; }
@@ -536,8 +563,8 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
 .wsw-poster .poster-card { width: 72px; height: 108px; flex-basis: 72px; }
 .wsw-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
 .wsw-tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); padding-top: var(--sp-2); border-top: 1px solid var(--line); }
-.wsw-tools > .chip-btn { justify-content: center; padding-inline: 6px; gap: 5px; min-width: 0; white-space: nowrap; }
-@media (max-width: 400px) { .wsw-tools > .chip-btn { font-size: var(--fs-xs); } .wsw-tools > .chip-btn svg { width: 14px; height: 14px; } }
+.wsw-tools > .btn { padding-inline: 6px; gap: 5px; min-width: 0; white-space: nowrap; }
+@media (max-width: 400px) { .wsw-tools > .btn { font-size: var(--fs-xs); } .wsw-tools > .btn svg { width: 14px; height: 14px; } }
 .wsw-rate { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); }
 .wsw-hidden-note { margin: 0; font-size: var(--fs-sm); color: var(--text-2); }
 .wsw-foot { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); }
@@ -1134,7 +1161,6 @@ body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h)
 .note .note-link { color: var(--text); font-weight: 700; white-space: nowrap; }
 
 /* ---- no-score movies: the number rests on a default, say so ---- */
-.badge.noscore { background: color-mix(in srgb, var(--muted) 10%, transparent); color: var(--muted); border: 1px dashed color-mix(in srgb, var(--muted) 50%, transparent); }
 .score-pill.unscored { border-style: dashed; }
 .diag-table td.warn { color: var(--danger); font-weight: 700; }
 /* Phones: each theatre becomes a small card of labelled values. */
@@ -1220,16 +1246,12 @@ body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h)
 }
 
 /* ---- not for me ---- */
-.not-for-me.icon-btn { color: var(--muted); }
-.not-for-me.icon-btn:hover { color: var(--text); }
 .row-head .not-for-me { margin: -6px -4px -6px 0; }
 .owner-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2); width: 100%; min-width: 0; }
 .owner-tools .rate-inline { display: flex; align-items: center; gap: var(--sp-2); flex: 1 1 auto; min-width: 0; flex-wrap: wrap; }
 .owner-buttons { display: flex; align-items: center; gap: var(--sp-2); margin-left: auto; flex: 0 0 auto; }
 .pick-card .owner-tools { padding-top: var(--sp-2); border-top: 1px solid var(--line); }
 .is-leaving { opacity: 0; transform: scale(.98); transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out); pointer-events: none; }
-.badge.moved { background: var(--surface-3); color: var(--text); }
-.badge.new { background: var(--accent); color: var(--on-accent); }
 .list-row.is-hidden { opacity: .8; }
 .list-row.is-hidden:hover, .list-row.is-hidden:focus-within { opacity: .9; }
 .hidden-line { color: var(--muted); font-size: var(--fs-sm); margin: var(--sp-2) 2px 0; }
@@ -1242,8 +1264,6 @@ body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h)
 .hidden-title:hover { text-decoration: underline; }
 
 /* ---- revivals / tile captions ---- */
-.badge.back { background: transparent; color: var(--text-2); border: 1px solid var(--line-strong); }
-.badge.opens { background: var(--surface-3); color: var(--text); }
 .tile-tags { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 .tile-tags .score-pill { min-width: 0; padding: 3px 8px; }
 .tile-tags .score-num { font-size: var(--fs-sm); }
@@ -1273,15 +1293,9 @@ body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h)
 @media (max-width: 359px) { .bs-value { font-size: var(--fs-lg); } }
 
 /* ---- tap targets ---- */
-.chip-btn, .btn { min-height: 40px; }
 @media (pointer: coarse) {
-  .chip, .chip-btn, .btn, .link-btn, .rater-clear, .row-more, .section-toggle, .bar-row, .ob-star, .showtime-chip, .toast-action, .switch-row, .cal-btn { min-height: 44px; }
-  .cal-btn { width: 44px; }
-  /* A tablet gets the wide header: its tabs and theater name are taps too. */
-  .seg-item { min-height: 44px; }
-  .chip, .btn.small, .rater-clear, .link-btn { min-width: 44px; justify-content: center; }
-  .chip { display: inline-flex; align-items: center; }
-  .link-btn, .rater-clear { display: inline-flex; align-items: center; }
+  .rater-clear, .row-more, .section-toggle, .bar-row, .ob-star, .toast-action, .switch-row { min-height: 44px; }
+  .rater-clear { display: inline-flex; align-items: center; min-width: 44px; justify-content: center; }
   input[type="range"] { height: 44px; }
   .log summary { padding: 11px 0; }
   .stars.interactive { font-size: calc(var(--fs-lg) + 4px) !important; padding: 9px 0; }
@@ -1335,8 +1349,7 @@ body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h)
 .tg-main { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; flex: 1; }
 .tg-title { font-weight: 700; font-size: var(--fs-base); color: var(--text); overflow-wrap: anywhere; }
 .tg-year { color: var(--muted); font-weight: 500; }
-.badge.tg-label { text-transform: none; letter-spacing: 0; font-size: var(--fs-xs); background: var(--surface-3); color: var(--text-2); }
-.badge.tg-label.strong { background: var(--surface-3); color: var(--text); }
+.tag.tg-label.strong { background: var(--accent-soft); color: var(--accent-text); }
 .tg-times { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .tg-time { display: inline-flex; flex-direction: column; gap: 1px; padding: 6px 10px; border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--line); color: var(--text); font-size: var(--fs-sm); line-height: var(--lh-tight); }
 a.tg-time:hover { border-color: var(--text-2); }
@@ -1388,9 +1401,7 @@ a.tg-time:hover { border-color: var(--text-2); }
 .sr-year { color: var(--muted); font-weight: 400; }
 .sr-badges { display: flex; flex-wrap: wrap; gap: 5px; }
 .sr-badges:empty { display: none; }
-.badge.sr-badge { text-transform: none; letter-spacing: 0; font-weight: 600; }
-.badge.sr-badge.playing { background: var(--surface-3); color: var(--text); }
-.badge.sr-badge.rated { background: var(--surface-3); color: var(--text-2); }
+.tag.sr-badge.playing { background: var(--accent-soft); color: var(--accent-text); }
 .recents-head { display: flex; align-items: center; justify-content: space-between; margin: 2px 2px 0; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
 .recents-clear { min-height: 44px; padding: 4px 8px; }
 .recents-label { margin: 8px 2px 2px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
@@ -1461,7 +1472,7 @@ a.tg-time:hover { border-color: var(--text-2); }
   .factor-row { grid-template-columns: minmax(0, 1fr) auto; }
   .factor-row > .stars { grid-column: 1 / -1; grid-row: 2; }
   /* Labels that hold one line elsewhere may take two here. */
-  .badge, .runway-text, .st-seat, .st-end, .key-status, .factor-name, .btn, .row-gap:has(> .input) > .btn { white-space: normal; }
+  .tag, .runway-text, .st-end, .key-status, .factor-name, .btn, .row-gap:has(> .input) > .btn { white-space: normal; }
   .segment { overflow-wrap: anywhere; }
   .rr-left, .key-row { flex-wrap: wrap; }
   html .stars.interactive { font-size: var(--fs-lg) !important; }
