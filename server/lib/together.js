@@ -151,6 +151,7 @@ export function filmsFor(me, partner) {
     const label = labelFor(a, b);
     if (!label) continue;
     const m = get('SELECT tmdb_id, title, year, poster FROM movies WHERE tmdb_id = ?', id);
+    if (!m) continue; // a showtime whose film row is gone: skip it, don't 500 the page
     films.push({
       tmdb_id: id,
       title: m.title || `Movie ${id}`,

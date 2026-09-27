@@ -19,7 +19,8 @@ export async function render(root, params, ctx) {
     const owner = info.ownerName;
     page.appendChild(sectionTitle('Together', `You and ${owner}`, { level: 1 }));
     if (!info.optedIn) {
-      const turnOn = h('button', { class: 'btn', type: 'button' }, `Let ${owner} plan movies with me`);
+      // Short enough for one line at 320; the Settings switch keeps the full wording.
+      const turnOn = h('button', { class: 'btn', type: 'button' }, `Plan movies with ${owner}`);
       turnOn.addEventListener('click', async () => {
         turnOn.disabled = true;
         try {
