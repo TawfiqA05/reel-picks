@@ -105,9 +105,12 @@ function buildPage(data, status, ctx, state, actions) {
     // Guests can't refresh (read-only), so no setup copy and no button.
     page.appendChild(guest
       ? emptyState('film', 'Nothing loaded yet', 'Check back after the next refresh.')
-      : emptyState('film', 'No movies loaded yet',
-        status?.keys?.amc ? 'Tap refresh to pull showtimes from your theatre.' : 'Add your keys, then refresh to load what\'s playing.',
-        h('button', { class: 'btn', onClick: () => ctx.triggerRefresh() }, icon('refresh', { size: 16 }), 'Refresh now')));
+      : !ctx.isOwner()
+        // Only the owner can refresh; a friend's showtimes come with the next daily one.
+        ? emptyState('film', 'No movies loaded yet', 'Showtimes for your theater come in with the next daily refresh. Check back later today.')
+        : emptyState('film', 'No movies loaded yet',
+          status?.keys?.amc ? 'Tap refresh to pull showtimes from your theater.' : 'Add your keys, then refresh to load what\'s playing.',
+          h('button', { class: 'btn', onClick: () => ctx.triggerRefresh() }, icon('refresh', { size: 16 }), 'Refresh now')));
     return page;
   }
 
