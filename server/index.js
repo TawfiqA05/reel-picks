@@ -24,6 +24,7 @@ import { activeUserIds } from './lib/theatres.js';
 import { initLockWeek } from './lib/lock.js';
 import { afterNightlyBackup } from './lib/housekeeping.js';
 import { sendIndex } from './lib/version.js';
+import { backfillPosterColors } from './lib/posterColor.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 const RETRY_CHECK_MS = 60 * 1000;
@@ -208,6 +209,8 @@ app.listen(config.port, () => {
   if (shouldAutoRefresh()) autoRefresh('startup');
   // Pick up any credits backfill a restart interrupted (a no-op when nothing is missing).
   startCreditsBackfill('startup');
+  // Poster colours for the dark-mode glow, for any playing film still without one.
+  backfillPosterColors().catch((e) => console.error('[poster colours]', e.message));
   // Nightly database backup at 3am local time (lib/backup.js); a failure
   // alerts the owner, and the next good one says it's back to normal. Only
   // after a good one, expired cache rows are cleared (lib/housekeeping.js).

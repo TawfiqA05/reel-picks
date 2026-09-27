@@ -1,7 +1,7 @@
 // Final score composition, showtime-window fit, end-time calc, and the
 // one-line "why you should see it" reason string.
 import { clamp } from './util.js';
-import { topSourcePhrase } from './scoring.js';
+import { topSourcePhrase, topSource } from './scoring.js';
 
 // weights: { public, taste } (need not sum to 1; normalized here).
 // conf: 0-1 taste confidence. When confidence is low we shift weight toward
@@ -111,6 +111,20 @@ export function bestShowtime(showtimes, { windows, preferImax } = {}) {
     (a, b) => Number(b.fits) - Number(a.fits) || Number(b.imax) - Number(a.imax) || a.epoch - b.epoch,
   );
   return scored[0];
+}
+
+// The same facts buildReason puts into words, as data, for the short reason
+// line the page draws ("RT 94% · You love action"). Nothing here feeds a
+// score; it's what the sentence already says.
+export function reasonFacts({ pub, topTaste, conf, flags = {} }) {
+  return {
+    review: topSource(pub),
+    noScores: !pub || pub.combined == null,
+    taste: topTaste ? { kind: topTaste.kind, label: topTaste.label, avg: Math.round(topTaste.avg * 10) / 10 } : null,
+    leaning: !topTaste && conf < 1,
+    divergence: pub?.divergence ? pub.divergence.direction : null,
+    goneAfter: flags.goneAfter || null,
+  };
 }
 
 // Compose the one-line reason shown on cards. `owner` is null for the owner

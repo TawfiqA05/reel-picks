@@ -13,7 +13,7 @@ import { getMatch } from './match.js';
 import { buildProfile, confidence, tasteMatch, topTasteFactor } from './taste.js';
 import { publicScoreForMovie, isSettling, isReleased, usReleaseDate } from './scoring.js';
 import {
-  finalScore, buildReason, bestShowtime, showtimeFits, endTimeLabel, beThereByLabel, urgencyBoost,
+  finalScore, buildReason, reasonFacts, bestShowtime, showtimeFits, endTimeLabel, beThereByLabel, urgencyBoost,
 } from './ranking.js';
 import { getLastChance, dailyBreadth, computeHorizon, lineupExodus } from './leaving.js';
 import { followedTheatres, homeBase, readDistance, sharedTheatreIds } from './theatres.js';
@@ -21,6 +21,7 @@ import { computeRunway, runwayDates, handoffLine, goneAfterPhrase } from './runw
 import { localYMD, addDays, timeLabel, weekStartFriday } from './util.js';
 import { ownerName } from './guest.js';
 import { currentUserId } from './user.js';
+import { glowColor, ensurePosterColor } from './posterColor.js';
 import { SWAP_MARGIN, weekOpen, prevWeek, readLock, createLock, saveLock } from './lock.js';
 
 // Everything below is for the user in context (lib/user.js): their settings,
@@ -152,6 +153,7 @@ function cardShape(m) {
     tmdb_rating: m.tmdb_rating ?? null,
     release_date: m.release_date || null,
     us_release_date: m.us_release_date || null,
+    glow: glowColor(m),
   };
 }
 
@@ -293,17 +295,12 @@ function evaluate(movie, ctx, tid = ctx.primaryId) {
     ? finalScore({ publicCombined: pub.combined, tasteScore: tm.score, conf: ctx.conf, weights: ctx.weights, boosts: boosts - urgency })
     : final;
 
-  const reason = buildReason({
-    pub,
-    topTaste,
-    conf: ctx.conf,
-    flags: {
-      watchlist: watchlisted,
-      imax: imaxAvailable && ctx.settings.preferImax,
-      goneAfter: urgency > 0 ? goneAfterPhrase(runway, ctx.today) : null,
-    },
-    owner: ctx.owner,
-  });
+  const reasonFlags = {
+    watchlist: watchlisted,
+    imax: imaxAvailable && ctx.settings.preferImax,
+    goneAfter: urgency > 0 ? goneAfterPhrase(runway, ctx.today) : null,
+  };
+  const reason = buildReason({ pub, topTaste, conf: ctx.conf, flags: reasonFlags, owner: ctx.owner });
 
   const handoff = finalBeforeUrgency >= ctx.handoffMinScore
     ? handoffLine({
@@ -319,6 +316,7 @@ function evaluate(movie, ctx, tid = ctx.primaryId) {
     final,
     finalBeforeUrgency,
     reason,
+    why: reasonFacts({ pub, topTaste, conf: ctx.conf, flags: reasonFlags }),
     myRating: ctx.ratings.get(movie.tmdb_id) ?? null,
     public: {
       combined: pub.combined, critic: pub.critic, audience: pub.audience, sources: pub.sources, divergence: pub.divergence, display: pub.display,
@@ -668,6 +666,7 @@ export function getComingSoon({ guest = false } = {}) {
       public: { combined: pub.combined, sources: pub.sources },
       advance: advanceIds.has(m.tmdb_id),
       reason: buildReason({ pub, topTaste, conf: ctx.conf, flags: {}, owner: ctx.owner }),
+      why: reasonFacts({ pub, topTaste, conf: ctx.conf }),
     };
   });
   scored.sort((a, b) => Number(b.advance) - Number(a.advance) || b.predicted - a.predicted);
@@ -707,6 +706,7 @@ export function matchScores(tmdbIds) {
 export function getMovieDetail(tmdbId, { guest = false } = {}) {
   const m = getMovie(tmdbId);
   if (!m) return null;
+  ensurePosterColor(tmdbId);
   const ctx = buildCtx({ guest });
   const ev = evaluate(m, ctx, scoredAt(ctx, tmdbId));
 
@@ -735,6 +735,7 @@ export function getMovieDetail(tmdbId, { guest = false } = {}) {
     },
     final: ev.final,
     reason: ev.reason,
+    why: ev.why,
     public: ev.public,
     taste: { ...ev.taste, ...tasteBreakdown(m, ctx.profile) },
     flags: ev.flags,

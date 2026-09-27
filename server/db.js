@@ -702,6 +702,17 @@ if (!hasColumn('watched', 'source')) {
   console.log('[db] added watched.source');
 }
 
+// movies.poster_color: the poster's main colour for the dark-mode glow on
+// Picks and the movie page (lib/posterColor.js), and poster_color_src, the
+// poster it was worked out from. Filled in by the refresh and on start-up;
+// NULL until then. A copy of the database is written first.
+if (!hasColumn('movies', 'poster_color') || !hasColumn('movies', 'poster_color_src')) {
+  preMigrationBackup(db, dataDir, 'poster-color');
+  if (!hasColumn('movies', 'poster_color')) db.exec('ALTER TABLE movies ADD COLUMN poster_color TEXT');
+  if (!hasColumn('movies', 'poster_color_src')) db.exec('ALTER TABLE movies ADD COLUMN poster_color_src TEXT');
+  console.log('[db] added movies.poster_color');
+}
+
 // ---- low-level helpers -------------------------------------------------
 
 // node:sqlite only accepts null | number | bigint | string | Uint8Array as

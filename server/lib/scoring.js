@@ -110,16 +110,21 @@ export function isSettling(movie, now = new Date()) {
   return age != null && age >= -1 && age <= 14;
 }
 
-// A best single-source phrase for the reason line, e.g. "RT 91%".
-export function topSourcePhrase(pub) {
+// The best single public score, e.g. { source: 'RT', value: 91, text: 'RT 91%' }.
+export function topSource(pub) {
   if (!pub) return null;
   const d = pub.display || {};
   const opts = [];
-  if (d.rt != null) opts.push({ v: d.rt, s: `RT ${d.rt}%` });
-  if (d.metacritic != null) opts.push({ v: d.metacritic, s: `Metacritic ${d.metacritic}` });
-  if (d.imdb != null) opts.push({ v: d.imdb * 10, s: `IMDb ${d.imdb}` });
-  if (d.tmdb != null) opts.push({ v: d.tmdb * 10, s: `TMDB ${d.tmdb.toFixed(1)}` });
+  if (d.rt != null) opts.push({ v: d.rt, source: 'RT', value: d.rt, s: `RT ${d.rt}%` });
+  if (d.metacritic != null) opts.push({ v: d.metacritic, source: 'Metacritic', value: d.metacritic, s: `Metacritic ${d.metacritic}` });
+  if (d.imdb != null) opts.push({ v: d.imdb * 10, source: 'IMDb', value: d.imdb, s: `IMDb ${d.imdb}` });
+  if (d.tmdb != null) opts.push({ v: d.tmdb * 10, source: 'TMDB', value: d.tmdb, s: `TMDB ${d.tmdb.toFixed(1)}` });
   if (!opts.length) return null;
   opts.sort((a, b) => b.v - a.v);
-  return opts[0].s;
+  return { source: opts[0].source, value: opts[0].value, text: opts[0].s };
+}
+
+// A best single-source phrase for the reason line, e.g. "RT 91%".
+export function topSourcePhrase(pub) {
+  return topSource(pub)?.text || null;
 }

@@ -13,6 +13,7 @@
 import { run, all, get, getSettings, getSharedSettings, setSetting, getSetting } from '../db.js';
 import { runSystem, OWNER_ID } from './user.js';
 import { startCreditsBackfill } from './backfill.js';
+import { backfillPosterColors } from './posterColor.js';
 import { sendWeeklyIfDue } from './push.js';
 import { raiseLater, resolveLater } from './alerts.js';
 import * as amc from './amc.js';
@@ -589,6 +590,7 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
     setSetting('lastRefreshLog', log);
     state.lastLog = log;
     startCreditsBackfill('refresh');
+    backfillPosterColors().catch(() => {});
     reportHealth(log);
     afterRun(start, log, null);
     return log;
