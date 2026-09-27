@@ -21,6 +21,7 @@ you want your own, you run your own copy with your own keys.
   one-line reason and its best-fitting showtime. The top pick fills a full-width hero
   with its backdrop, a Book button for that day's best showtime, and when to be in my
   seat. The other three sit under it as cards ("The rest of your four").
+- Locks the four for the week. See "The weekly four" below.
 - Lets me pick the day from a strip of date tiles, and every showtime on the page follows.
 - Tracks how long each movie has left. AMC only publishes about a week of showtimes, so
   the app works out where the schedule genuinely stops being published and only says
@@ -64,6 +65,30 @@ you want your own, you run your own copy with your own keys.
   Watchlist and Not for me work right there. With no ratings yet it leans on popularity,
   so a brand-new friend still gets well-known films that fit the mood.
 - Shares a read-only guest link so other people can see my picks without touching anything.
+
+## The weekly four
+
+The four locks once a week, at the first good refresh of the A-List week (normally just
+after midnight on Friday), separately for me and for each friend. The guest link shows
+mine. Until the new four locks, last week's stays up. The four that locks is exactly what
+the ranking would pick at that moment; after that, the scores keep moving but the four
+doesn't.
+
+During the week a film leaves my four only when I rate it, mark it seen, tap Not for me,
+or it has no showtimes left this week at any of my theaters. The next best film by its
+current score takes the free place, and the others keep theirs. There's one exception, at
+most once a week: a film that had no public score when the four locked (too few reviews
+yet) and has since earned one can take #4's place if it now beats #4 by 5 points or more.
+That film gets a small "New this week" tag. There's no push for it.
+
+I picked 5 points from the real scores: neighbouring films in a top eight sit 0 to 3
+points apart, and #1 to #4 spans 5 to 9, so 5 is past the day-to-day drift and puts the
+film at or near the top of the four.
+
+Everything else on Picks (Also worth seeing, Last chance, Everything playing) keeps
+updating as before. The Friday push waits for the lock and names the locked #1, and the
+hit-rate's record of what I was offered is written when the four locks, plus any film
+that joins it during the week.
 
 ## The tabs
 
@@ -275,6 +300,11 @@ upload), Alerts, Schedule diagnostics, and the shared tuning (the Also worth see
 cutoff, Last chance, and the Now-playing fallback window). Friends can export their own
 data.
 
+Friends and the guest link have hourly limits on the lookups that spend the shared keys:
+about 200 films the app hasn't stored yet, 300 rating searches and 30 home-base lookups an
+hour for a friend, less for the guest link. Over a limit the app says "Slow down a bit, try
+again in a few minutes." A busy evening doesn't come close. I have no limits.
+
 Revoking a friend stops their cookie on the next request and keeps everything they
 rated. A new link brings them back, and cookies from before stay dead, so an old link or
 cookie can't come back to life. A revoked friend still holds one of the nine places.
@@ -320,11 +350,16 @@ and it skips anyone who already got this week's.
 It's plain Web Push with VAPID keys, no extra dependency. Without `VAPID_PUBLIC_KEY` and
 `VAPID_PRIVATE_KEY` the feature is off and the switch never appears.
 
-The same devices get my owner alerts, which friends never do. If the daily AMC/TMDB
-refresh fails, the nightly backup or the off-site upload fails, or AMC answers with no
-showtimes at all for my primary theater, my devices get one push with a one-line reason.
-It's at most one alert per problem per day, however many times it fails, and one "back to
-normal" when it works again. The last 10 alerts, and anything failing right now, are in
+The same devices get my owner alerts, which friends never do. If the nightly backup or the
+off-site upload fails, or AMC answers with no showtimes at all for my primary theater, my
+devices get one push with a one-line reason. It's at most one alert per problem per day,
+however many times it fails, and one "back to normal" when it works again.
+
+A failed daily refresh (AMC doesn't answer for my primary theater, TMDB's lists fail, or
+the run breaks) is tried again every hour, up to six times, and stops as soon as one
+works. Only one refresh ever runs at a time, and the retries carry on across a restart. I
+only get the alert if all six retries fail too. If that happens on a Friday before the
+week's four has locked, the four locks from the lineup it already had. The last 10 alerts, and anything failing right now, are in
 my Alerts card in Settings, which also works with push turned off.
 
 ## The guest link
@@ -335,8 +370,17 @@ tunnel. They see one banner ("You're viewing Tawfiq's picks. Ask him for an invi
 get your own.") instead of the setup and tour, and they get my picks, the full list,
 Schedule (Leaving soon and Coming soon), and movie pages. Rating, settings, imports,
 search, stats and everything else are hidden in the UI and rejected at the API. At
-localhost it's always me. Without `GUEST_MODE` on a deployment, anyone who opens the site
-gets full owner access, so I always set it there.
+localhost it's always me.
+
+On Railway the app fails closed: if `GUEST_MODE` is missing or not 1 there, it treats every
+visitor as a guest anyway, and sends me an owner alert each time it starts until I set it.
+My owner link and friends' logins keep working. Railway is detected from the variables
+Railway sets itself, so a copy on my Mac behaves as it always has.
+
+When it isn't on Railway, the server only answers requests addressed to `localhost`,
+`127.0.0.1` or `[::1]`, so a web page can't point its own address at my machine and reach
+it as me. `RP_ALLOW_LAN` opens it to other devices on my network. The share tunnel below
+still works without it.
 
 Visiting `/?owner=<OWNER_TOKEN>` once in a browser sets a signed cookie that unlocks full
 access for me there, and the token itself never stays in the URL.
@@ -407,7 +451,10 @@ Every night at 3am (the server's `TZ`), or at the first check after that if the 
 down, it writes a consistent copy of the database to
 `/data/backups/reelpicks-YYYY-MM-DD.db` and keeps the last 14. It also takes one right
 before any schema migration, as `backups/reelpicks-pre-<change>-<time>.db`, and keeps the
-last 14 of those. Running a migration a second time changes nothing. I can
+last 14 of those. Running a migration a second time changes nothing. Right after a
+nightly copy succeeds, and only then, cached API answers more than three times past their
+lifetime are deleted; nothing but the cache is touched. The first time that happened, a
+one-time VACUUM gave the space back, and it never runs on its own again. I can
 download the newest copy with Download latest backup in Settings → Data, and
 `/api/status` shows its time and size under `backup`.
 
@@ -457,10 +504,13 @@ Sharing and the owner:
 
 - `GUEST_MODE`: `1` (or `true`, `yes`, `on`) makes every request that isn't addressed to
   localhost the read-only guest, unless it has a friend or owner cookie. Set it on every
-  deployment.
+  deployment. On Railway, leaving it off doesn't open the site: everyone gets the guest
+  view and I get an alert.
 - `OWNER_TOKEN`: a long random string for the owner unlock (`/?owner=<OWNER_TOKEN>`).
   Leave it blank to turn the unlock off. `.env.example` shows a one-line way to make one.
 - `OWNER_NAME`: the name on the guest banner and the Join page. It defaults to mine.
+- `RP_ALLOW_LAN`: when the app runs off Railway, it only answers at localhost. Turning
+  this on lets other devices on my network reach it. Railway never needs it.
 
 Notifications (optional):
 
@@ -480,9 +530,11 @@ Off-site backup (optional, all four or nothing):
 
 Set by Railway, never by me:
 
-- `RAILWAY_ENVIRONMENT_NAME`, `RAILWAY_ENVIRONMENT`, `RAILWAY_PROJECT_ID`: when any of
-  them is present, the API keys card says the keys are Railway variables. Nothing else
-  reads them.
+- `RAILWAY_ENVIRONMENT_NAME`, `RAILWAY_ENVIRONMENT`, `RAILWAY_PROJECT_ID`,
+  `RAILWAY_SERVICE_ID`: when any of them is present, the app knows it's on Railway. The
+  API keys card then says the keys are Railway variables, every visitor without a cookie
+  is the guest even if `GUEST_MODE` is off, and any Host is answered. Only their presence
+  is read, never their values.
 
 For test servers only. Never set these on a real deployment:
 
