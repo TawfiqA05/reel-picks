@@ -535,7 +535,8 @@ router.delete('/ratings/:id', (req, res) => {
 
 router.post('/ratings/import', (req, res) => {
   const csv = req.body?.csv;
-  if (!csv || typeof csv !== 'string') return res.status(400).json({ error: 'Missing CSV text.' });
+  if (typeof csv !== 'string') return res.status(400).json({ error: 'Missing CSV text.' });
+  if (!csv.trim()) return res.status(400).json({ error: 'That file is empty.' });
   // The export ZIP itself, read as text, starts with the ZIP magic "PK\x03\x04" —
   // the single most common wrong upload. Name the fix, don't say "could not detect".
   if (csv.startsWith('PK\u0003\u0004')) {
