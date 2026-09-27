@@ -11,7 +11,7 @@ import {
 import { FRIEND_COOKIE, FRIEND_TTL_MS, findInvite, redeemInvite, signFriendCookie, touchLastSeen } from './lib/accounts.js';
 import { joinPage, expiredPage } from './lib/invitePage.js';
 import { getSetting, db, dataDir } from './db.js';
-import { refreshAll, shouldAutoRefresh, state as refreshState } from './lib/refresh.js';
+import { refreshAll, shouldAutoRefresh, retryIfDue, state as refreshState } from './lib/refresh.js';
 import { runAs } from './lib/user.js';
 import { startCreditsBackfill } from './lib/backfill.js';
 import { startNightlyBackups } from './lib/backup.js';
@@ -24,6 +24,7 @@ import { activeUserIds } from './lib/theatres.js';
 import { initLockWeek } from './lib/lock.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
+const RETRY_CHECK_MS = 60 * 1000;
 
 const app = express();
 app.disable('x-powered-by');
@@ -210,4 +211,10 @@ app.listen(config.port, () => {
     if (shouldAutoRefresh()) autoRefresh('new day');
     else sendWeeklyIfDue().catch((e) => console.error('[push]', e.message));
   }, AUTO_REFRESH_CHECK_MS).unref();
+
+  // A failed refresh is retried hourly, up to six times (lib/refresh.js).
+  setInterval(() => {
+    const r = retryIfDue();
+    if (r) r.catch((e) => console.error('  ✗ Refresh retry failed:', e.message));
+  }, RETRY_CHECK_MS).unref();
 });

@@ -28,7 +28,7 @@ import { upsertRating } from './ratings.js';
 import { localYMD, addDays, weekStartFriday } from './util.js';
 import { isSettling, MIN_TMDB_VOTES } from './scoring.js';
 import { getRecommendations } from './recommend.js';
-import { lockEveryone } from './lock.js';
+import { lockEveryone, weekOpen } from './lock.js';
 import { computeHorizon, snapshotLineup } from './leaving.js';
 import {
   followedTheatres, homeBase, theatreDistance, readDistance, shortName, sharedTheatres, activeUserIds,
@@ -590,12 +590,10 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
     state.lastLog = log;
     startCreditsBackfill('refresh');
     reportHealth(log);
-    // The week's first good refresh locks everyone's four (lib/lock.js);
-    // later ones leave the locks as they are.
-    if (!refreshProblems(log).refresh) lockEveryone(weekStartFriday(start), 'refresh', getRecommendations);
+    afterRun(start, log, null);
     return log;
   } catch (e) {
-    raiseLater('refresh', `The refresh stopped with an error: ${e.message}`);
+    afterRun(start, null, e);
     throw e;
   } finally {
     state.running = false;
@@ -638,8 +636,63 @@ export function refreshProblems(log) {
 
 function reportHealth(log) {
   const p = refreshProblems(log);
-  if (p.refresh) raiseLater('refresh', p.refresh); else resolveLater('refresh');
   if (p.showtimes) raiseLater('showtimes', p.showtimes); else if (p.showtimes === null) resolveLater('showtimes');
+}
+
+// A failed refresh (AMC didn't answer for the primary theater, TMDB's lists
+// failed, or the run threw) is retried every hour, up to RETRY_MAX times,
+// until one works. The chain lives in the refreshRetry setting, so a restart
+// picks it up where it was. The owner alert goes out only when the last retry
+// fails too. A good refresh ends the chain and, the first time in a week,
+// locks everyone's four (lib/lock.js); if the week's four still hasn't locked
+// after the last retry, it locks from the lineup that was kept.
+const RETRY_EVERY_MS = 3600 * 1000;
+export const RETRY_MAX = 6;
+
+function afterRun(start, log, err) {
+  try {
+    const problem = err ? `The refresh stopped with an error: ${err.message}` : refreshProblems(log).refresh;
+    const week = weekStartFriday(start);
+    if (!problem) {
+      if (getSetting('refreshRetry')) setSetting('refreshRetry', null);
+      resolveLater('refresh');
+      lockEveryone(week, 'refresh', getRecommendations);
+      return;
+    }
+    const day = localYMD(start);
+    let chain = getSetting('refreshRetry');
+    if (!chain || chain.day !== day) chain = { day, attempts: 0, since: new Date().toISOString() };
+    chain.lastError = problem;
+    if (chain.done) { setSetting('refreshRetry', chain); return; }
+    if (chain.attempts >= RETRY_MAX) {
+      chain.done = true;
+      chain.nextAt = null;
+      setSetting('refreshRetry', chain);
+      raiseLater('refresh', `${problem} ${RETRY_MAX} hourly retries failed too.`);
+      if (!weekOpen(week)) lockEveryone(week, 'fallback', getRecommendations);
+      return;
+    }
+    chain.nextAt = new Date(Date.now() + RETRY_EVERY_MS).toISOString();
+    setSetting('refreshRetry', chain);
+    console.log(`  ↻ Refresh failed; trying again at ${new Date(chain.nextAt).toLocaleTimeString()} (${chain.attempts} of ${RETRY_MAX} retries used).`);
+  } catch (e) {
+    console.error('[refresh retry]', e.message);
+  }
+}
+
+// Called every minute (index.js). Starts the next retry when it's due and no
+// refresh is running. The attempt is counted and the next slot set before it
+// runs, so a crash mid-run still waits its hour.
+export function retryIfDue(now = new Date()) {
+  if (state.running || process.env.RP_DISABLE_REFRESH === '1') return null;
+  const chain = getSetting('refreshRetry');
+  if (!chain || chain.done || !chain.nextAt || chain.day !== localYMD(now) || chain.attempts >= RETRY_MAX) return null;
+  if (Date.parse(chain.nextAt) > now.getTime()) return null;
+  chain.attempts += 1;
+  chain.nextAt = new Date(now.getTime() + RETRY_EVERY_MS).toISOString();
+  setSetting('refreshRetry', chain);
+  console.log(`  ↻ Retrying the refresh (${chain.attempts} of ${RETRY_MAX})…`);
+  return refreshAll({ force: false, reason: `retry ${chain.attempts}` });
 }
 
 // Fetch details + scores for a single movie on demand (rating a movie, fixing a
@@ -692,8 +745,10 @@ export async function drainUnmatched({ max = 800 } = {}) {
 }
 
 // Auto-refresh at most once/day; a new calendar day (incl. every Friday when new
-// releases land) triggers the next refresh.
+// releases land) triggers the next refresh. A day with a retry chain leaves
+// the retries to it.
 export function shouldAutoRefresh(now = new Date()) {
+  if (getSetting('refreshRetry')?.day === localYMD(now)) return false;
   const last = getSetting('lastRefresh');
   if (!last) return true;
   return localYMD(new Date(last)) !== localYMD(now);
