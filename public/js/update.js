@@ -27,8 +27,8 @@ import { writesInFlight, onWritesSettled } from './api.js';
 const MINE = document.querySelector('meta[name="rp-version"]')?.content || null;
 const EVERY_MS = 5 * 60 * 1000;
 // Waits between tries of one check: the network after a resume can take a
-// few seconds, occasionally more.
-const RETRIES_MS = [0, 1500, 4000, 10000, 20000];
+// few seconds, occasionally more. Seven tries over about half a minute.
+const RETRIES_MS = [0, 1500, 3000, 5000, 8000, 12000, 20000];
 const RELOADED_KEY = 'rp-sw-reloaded-for';
 
 let pending = null;   // { version, auto }: waiting for a safe moment (auto) or a tap
@@ -110,10 +110,21 @@ async function onNewController(hadController) {
   behind(version);
 }
 
+// A request made while the network is still waking can hang instead of
+// failing. One that takes longer than this counts as a failed try, so the
+// next retry still happens.
+const ASK_MS = 8000;
+
 async function deployedVersion() {
-  const res = await fetch('/api/version', { cache: 'no-store' });
-  if (!res.ok) throw new Error(`version ${res.status}`);
-  return (await res.json())?.version || null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ASK_MS);
+  try {
+    const res = await fetch('/api/version', { cache: 'no-store', signal: ctrl.signal });
+    if (!res.ok) throw new Error(`version ${res.status}`);
+    return (await res.json())?.version || null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // One check, retried while the network isn't answering. Also nudges the
