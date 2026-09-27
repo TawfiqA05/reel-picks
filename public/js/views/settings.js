@@ -1029,13 +1029,14 @@ function letterboxdCard(ctx, words) {
   const saveBtn = h('button', { class: 'btn', type: 'button' }, 'Save');
   const syncBtn = h('button', { class: 'btn ghost', type: 'button' }, icon('refresh', { size: 16 }), 'Sync now');
   const line = h('p', { class: 'muted small lb-status', role: 'status', 'aria-live': 'polite' });
+  const syncRow = h('div', {}, syncBtn);
   let st = null;
 
   const when = (iso) => new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
   const paint = () => {
     line.classList.toggle('lb-error', Boolean(st?.error));
-    syncBtn.hidden = !st?.username;
+    syncRow.hidden = !st?.username;
     if (!st?.username) { line.textContent = 'Not linked.'; return; }
     if (st.syncing) { line.textContent = 'Syncing…'; return; }
     if (st.error) { line.textContent = st.error; return; }
@@ -1074,7 +1075,7 @@ function letterboxdCard(ctx, words) {
   return card('Letterboxd',
     h('div', { class: 'row-gap' }, nameIn, saveBtn),
     line,
-    h('div', {}, syncBtn),
+    syncRow,
     h('p', { class: 'muted small' },
       'Once a day Reel Picks reads your public Letterboxd diary and brings in new star ratings and the films you logged as watched. '
       + `Each entry comes in once, and a rating you change here is never overwritten. Films logged on Letterboxd count as seen, ${words.notCounted}. `

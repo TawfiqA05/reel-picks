@@ -842,6 +842,9 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
    paragraphs carry no margins of their own, and a run of help text is 8px apart. */
 .settings-card p { margin: 0; }
 .settings-card > .muted.small + .muted.small { margin-top: -4px; }
+/* A status line with nothing to say yet takes no room (it stays in place so
+   what it says later is announced). */
+.settings-card > [role="status"]:empty { margin-top: calc(-1 * 12px); }
 /* Save sits just above the tab bar (on desktop, the window's bottom edge) on a
    solid strip that fades out upward, so scrolled content passes behind it
    instead of showing through around the button. It stays in the flow, so at the
