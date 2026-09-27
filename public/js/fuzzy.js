@@ -27,9 +27,13 @@ export function prepare(fields) {
   const list = (Array.isArray(fields) ? fields : [fields]).flat().filter((f) => f != null && f !== '');
   const normed = list.map(norm);
   const t = normed[0] || '';
+  // The title without a leading article: "batman" is the whole of "The Batman".
+  const ta = t.replace(/^(the|a|an) (?=\S)/, '');
   return {
     t,
     tc: compactOf(t),
+    ta,
+    tac: compactOf(ta),
     words: [...new Set(normed.flatMap((n) => n.split(' ')).filter(Boolean))],
     compacts: normed.map(compactOf),
   };
@@ -88,8 +92,9 @@ export const STARTS = 900;
 // every query word has to fit somewhere, and a typo-only fit scores lowest.
 export function score(q, item) {
   if (!q.n) return 0;
-  if (q.n === item.t || (q.c && q.c === item.tc)) return EXACT;
+  if (q.n === item.t || (q.c && q.c === item.tc) || (item.ta && item.ta !== item.t && (q.n === item.ta || (q.c && q.c === item.tac)))) return EXACT;
   if (item.t.startsWith(q.n) || (q.c.length >= 3 && item.tc.startsWith(q.c))) return STARTS;
+  if (item.ta && item.ta !== item.t && (item.ta.startsWith(q.n) || (q.c.length >= 3 && item.tac.startsWith(q.c)))) return STARTS;
   let sum = 0;
   let typos = 0;
   for (const tok of q.tokens) {
