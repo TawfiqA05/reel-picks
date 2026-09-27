@@ -49,6 +49,7 @@ import {
 import { recentAlerts, failingNow } from './lib/alerts.js';
 import { offsiteStatus, offsiteEnabled, uploadNow as offsiteUpload } from './lib/offsite.js';
 import { syncStatus as letterboxdStatus, setUsername as setLetterboxdUser, syncUser as syncLetterboxd } from './lib/letterboxd.js';
+import { take as takeLimit, LIMIT_MESSAGE } from './lib/limits.js';
 
 const router = Router();
 const h = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -65,6 +66,20 @@ function afterTheatreChange(wasShared, tag) {
   if (isOwnerRequest()) refreshAll({ force: true }).catch((e) => console.error(`[${tag} refresh]`, e.message));
   else if (!wasShared) refreshAll({ force: false, reason: 'friend followed a new theatre' }).catch((e) => console.error(`[${tag} refresh]`, e.message));
 }
+// Per-person hourly limits on what spends the shared keys (lib/limits.js):
+// friends by account, the guest link by address, the owner not at all.
+// Answers 429 and returns true when `n` more would go over.
+function limited(req, res, kind, n = 1) {
+  const u = currentUser();
+  if (!u || u.isOwner || n <= 0) return false;
+  const who = u.guest
+    ? `ip:${req.get('cf-connecting-ip') || String(req.get('x-forwarded-for') || '').split(',')[0].trim() || req.socket?.remoteAddress || '?'}`
+    : `user:${u.userId}`;
+  if (takeLimit(kind, who, u.guest ? 'guest' : 'friend', Date.now(), n)) return false;
+  res.status(429).json({ error: LIMIT_MESSAGE });
+  return true;
+}
+
 const ownerOnly = (req, res, next) => (isOwnerRequest()
   ? next()
   : res.status(403).json({ error: 'Only the owner can do that.' }));
@@ -238,6 +253,7 @@ router.get('/movies/:id', h(async (req, res) => {
   const guest = isGuest(req);
   if (!guest) {
     const have = getMovie(id);
+    if (!have && limited(req, res, 'newFilm')) return;
     if (!have || !have.details_at) {
       const log = await ingestOne(id); // cached: TMDB details 7d, OMDb per its own TTL
       if (!getMovie(id)) {
@@ -342,6 +358,7 @@ router.put('/settings', (req, res) => {
 router.get('/geocode', h(async (req, res) => {
   const q = String(req.query.q || '').trim();
   if (!q) return res.status(400).json({ error: 'Type a place to look up.' });
+  if (limited(req, res, 'place')) return;
   try {
     res.json({ results: await geocode(q) });
   } catch (e) {
@@ -354,6 +371,7 @@ router.get('/geocode', h(async (req, res) => {
 // browser already rounds to ~1 km before calling this, and reverseGeocode
 // rounds again before anything goes to Nominatim.
 router.get('/geocode/reverse', h(async (req, res) => {
+  if (limited(req, res, 'place')) return;
   try {
     res.json({ result: await reverseGeocode(req.query.lat, req.query.lng) });
   } catch (e) {
@@ -509,6 +527,7 @@ router.post('/ratings', (req, res) => {
   const r = ratingInput(req.body || {});
   if (!r) return res.status(400).json({ error: 'tmdb_id and a rating between 0.5 and 5, in half stars, are required.' });
   const { tmdb_id, rating, title, year } = r;
+  if (!getMovie(tmdb_id) && limited(req, res, 'newFilm')) return;
   const source = req.body.source || 'manual';
   // The film's own record comes from TMDB (ingestOne, below), never from what
   // a client says about it: the movies table is shared by everyone.
@@ -648,6 +667,7 @@ router.get('/ratings/search', h(async (req, res) => {
   if (!tmdb.tmdbConfigured()) return res.status(400).json({ error: 'TMDB_API_KEY is not set.' });
   const q = String((Array.isArray(req.query.q) ? req.query.q[0] : req.query.q) ?? '').trim();
   if (!q || typeof q !== 'string') return res.json({ results: [] });
+  if (limited(req, res, 'search')) return;
   const results = await tmdb.liveSearch(q.slice(0, 200));
   const mine = new Map(all('SELECT tmdb_id, rating FROM ratings WHERE user_id = ?', currentUserId()).map((r) => [r.tmdb_id, r.rating]));
   res.json({ results: results.map((r) => ({ ...r, myRating: mine.get(r.tmdb_id) ?? null })) });
@@ -734,10 +754,12 @@ router.get('/onboarding/movies', h(async (req, res) => {
 }));
 
 router.post('/onboarding/rate', (req, res) => {
-  const items = Array.isArray(req.body?.ratings) ? req.body.ratings.slice(0, 50) : [];
+  const items = (Array.isArray(req.body?.ratings) ? req.body.ratings.slice(0, 50) : [])
+    .map((raw) => (raw && typeof raw === 'object' ? ratingInput(raw) : null));
+  const unstored = new Set(items.filter((it) => it && !getMovie(it.tmdb_id)).map((it) => it.tmdb_id));
+  if (limited(req, res, 'newFilm', unstored.size)) return;
   let count = 0;
-  for (const raw of items) {
-    const it = raw && typeof raw === 'object' ? ratingInput(raw) : null;
+  for (const it of items) {
     if (!it) continue;
     upsertRating({ tmdb_id: it.tmdb_id, title: it.title, year: it.year, rating: it.rating, source: 'onboarding' });
     ingestOne(it.tmdb_id).catch(() => {});
@@ -774,6 +796,7 @@ router.post('/watchlist/toggle', h(async (req, res) => {
   // A film the app hasn't stored yet (from a Stats "More from" list, say) is
   // fetched first, so the Watchlist page, which lists stored films, shows it.
   if (!getMovie(tmdb_id)) {
+    if (limited(req, res, 'newFilm')) return;
     await ingestOne(tmdb_id, { detailsOnly: true, gate: tmdbThrottle }).catch(() => {});
     ingestOne(tmdb_id).catch(() => {});
   }
