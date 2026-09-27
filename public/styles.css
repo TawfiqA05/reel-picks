@@ -714,8 +714,9 @@ input[type="checkbox"] { accent-color: var(--accent); width: 20px; height: 20px;
   /* Measured on IBM Plex: the widest time ("12:08 PM" bold, 58.2px), the
      widest format chip ("70mm", 43.8px), "ends 12:08 PM" (81.7px), the Fits
      mark, Book (46.6px) and the calendar button: 318px in all, inside the
-     319px of a card at 375. */
-  grid-template-columns: 59px 44px minmax(82px, 1fr) 38px auto 28px;
+     319px of a card at 375. Book's column is fixed too, so a row that says
+     "Started" instead keeps every other column where it is. */
+  grid-template-columns: 59px 44px minmax(82px, 1fr) 38px 47px 28px;
   grid-template-areas: "time fmt end fit book cal";
   font-size: var(--fs-xs); color: var(--text);
 }
@@ -738,7 +739,7 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 /* 320: the same cells on two fixed lines, time, format and Book over ends,
    fits and the calendar, every column at the same x in every row. */
 @media (max-width: 359px) {
-  .st-row { grid-template-columns: 59px 44px minmax(0, 1fr) auto; grid-template-areas: "time fmt . book" "end end fit cal"; row-gap: 2px; padding: 4px 0; }
+  .st-row { grid-template-columns: 59px 44px minmax(0, 1fr) 47px; grid-template-areas: "time fmt . book" "end end fit cal"; row-gap: 2px; padding: 4px 0; }
   .st-fit { justify-self: start; }
 }
 /* Nothing on the chosen day: the next showing, and Book. */
