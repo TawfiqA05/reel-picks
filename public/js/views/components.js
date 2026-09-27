@@ -1,6 +1,6 @@
 // Reusable movie cards shared across Home / Coming Soon / Watchlist.
 import { api } from '../api.js';
-import { h, clear, poster, scorePill, badge, makeStars, toast, icon, scoreColor, spinner, openModal } from '../ui.js';
+import { h, clear, poster, scorePill, badge, makeStars, toast, icon, scoreColor, spinner, openModal, withStars } from '../ui.js';
 
 export function fmtRuntime(min) {
   if (!min) return null;
@@ -58,20 +58,20 @@ export function showtimeChip(st, { showDay = true } = {}) {
   const label = showDay ? `${dayLabel(st.date)} ${st.time}` : st.time;
   // Three different times can appear here, so each is named rather than left to
   // be inferred from position: the listed time is when previews roll, "be there
-  // by" is when the feature itself starts, "→" is when it lets out.
+  // by" is when the feature itself starts, "ends" is when it lets out.
   const kids = [
     formatBadge(st),
     h('span', { class: 'st-time' }, label),
     st.be_there_by ? h('span', { class: 'st-seat' }, `be there by ${st.be_there_by}`) : null,
-    st.end ? h('span', { class: 'st-end' }, `→ ends ${st.end}`) : null,
-    st.fits_window ? h('span', { class: 'st-fit' }, '✓ fits') : null,
+    st.end ? h('span', { class: 'st-end' }, `ends ${st.end}`) : null,
+    st.fits_window ? h('span', { class: 'st-fit' }, icon('check', { size: 12 }), 'fits') : null,
   ];
   const attrs = { class: 'showtime-chip', title: showtimeTitle(st) };
   if (st.past) {
     return h('div', { ...attrs, class: 'showtime-chip past' }, ...kids, h('span', { class: 'st-past' }, 'started'));
   }
   const chip = h('a', { ...attrs, href: st.purchase_url || '#', target: '_blank', rel: 'noopener' },
-    ...kids, h('span', { class: 'st-book' }, 'Book ↗'));
+    ...kids, h('span', { class: 'st-book' }, 'Book', icon('external', { size: 12 })));
   // A link can't hold another link, so the calendar button sits beside it.
   return st.id ? h('span', { class: 'st-pair' }, chip, calendarButton(st)) : chip;
 }
@@ -179,7 +179,7 @@ export function flagBadges(entry) {
   const out = [];
   if (f.noScores) out.push(badge('No scores yet', 'noscore'));
   if (f.imax) out.push(badge('IMAX', 'imax'));
-  if (entry.watchlisted || f.watchlisted) out.push(badge('★ Watchlist', 'watch'));
+  if (entry.watchlisted || f.watchlisted) out.push(badge(withStars('★ Watchlist'), 'watch'));
   if (f.settling) out.push(badge('Scores settling', 'settling'));
   if (f.seen) out.push(badge('Seen', 'seen'));
   const div = entry.public?.divergence;
@@ -234,7 +234,7 @@ export function starRater(entry, ctx, { value = 0, onRated, size = 20, awaitDeta
     try {
       if (v) {
         await api.rate({ tmdb_id: entry.tmdb_id, rating: v, title: entry.title, year: entry.year, poster: entry.poster, genres: entry.genres, awaitDetails: awaitDetails || undefined });
-        toast(`Rated ${v}★`, 'success');
+        toast(withStars(`Rated ${v}★`), 'success');
       } else {
         await api.unrate(entry.tmdb_id);
         toast('Rating cleared');
@@ -315,7 +315,7 @@ export function weeklyCard(entry, ctx, rank, { day = null, multi = 0, onHide = n
         entry.flags?.noScores ? badge('No scores yet', 'noscore') : null,
         movedUp ? movedTag() : null,
       ),
-      entry.reason ? h('p', { class: 'pick-reason' }, entry.reason) : null,
+      entry.reason ? h('p', { class: 'pick-reason' }, withStars(entry.reason)) : null,
       runwayLine(entry.runway, { compact: true }),
       h('div', { class: 'row-sub' }, theatreChips(entry, { multi })),
       handoffLine(entry),
@@ -431,7 +431,7 @@ export function heroPick(entry, ctx, { day = null, multi = 0, onHide = null, mov
         backBadge(entry),
         ...heroFlags(entry),
       ),
-      entry.reason ? h('p', { class: 'hero-reason' }, entry.reason) : null,
+      entry.reason ? h('p', { class: 'hero-reason' }, withStars(entry.reason)) : null,
       runwayLine(entry.runway),
       h('div', { class: 'row-sub' }, theatreChips(entry, { multi })),
       handoffLine(entry),
@@ -604,7 +604,7 @@ export function movieRow(entry, ctx, { day = null, compact = false, multi = 0, n
       runwayLine(entry.runway, { theatre: nearby ? entry.theatre : null, compact: true }),
       // Single-line with ellipsis; the full reason (urgency clause included) is
       // on the tooltip and always in full on the card / detail page.
-      compact ? null : h('div', { class: 'row-reason', title: entry.reason }, entry.reason),
+      compact ? null : h('div', { class: 'row-reason', title: entry.reason }, withStars(entry.reason)),
       // The no-scores flag shows even on compact rows: a dashed pill alone is
       // too easy to miss for a number that is partly made up.
       compact && (entry.flags?.noScores || isOldRelease(entry) || entry.prerelease) ? h('div', { class: 'row-tags' },

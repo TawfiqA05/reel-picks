@@ -1,6 +1,6 @@
 // Stats: movie-plan usage and savings (or ticket spend), ratings, recommendation hit-rate + tuning tip.
 import { api } from '../api.js';
-import { h, clear, spinner, money, pct, makeStars, toast, sectionTitle, openModal, icon } from '../ui.js';
+import { h, clear, spinner, money, pct, makeStars, toast, sectionTitle, openModal, icon, withStars } from '../ui.js';
 import { starRater, watchlistButton, opensBadge } from './components.js';
 import { filterBox } from '../filter.js';
 import { streamLine, CREDIT } from '../stream.js';
@@ -54,7 +54,7 @@ export async function render(root, params, ctx, { quiet = false } = {}) {
     // Only films logged as seen (Mark seen), not imported ratings.
     bigStat(s.seenThisYear, 'seen in theaters', 'logged this year'),
     bigStat(s.totalRatings, 'ratings', 'in your profile'),
-    bigStat(s.avgRating != null ? `${s.avgRating}★` : '–', 'average rating', ''),
+    bigStat(s.avgRating != null ? withStars(`${s.avgRating}★`) : '–', 'average rating', ''),
     bigStat(s.hitRate != null ? pct(s.hitRate) : '–', 'pick hit-rate', s.ratedPicks ? `of ${s.ratedPicks} picks watched` : 'rate your picks'),
   ));
 
@@ -145,7 +145,7 @@ function bigStat(value, label, sub) {
   );
 }
 
-const filmsLabel = (n, avg) => `${n} film${n === 1 ? '' : 's'} · ${avg.toFixed(1)}★`;
+const filmsLabel = (n, avg) => withStars(`${n} film${n === 1 ? '' : 's'} · ${avg.toFixed(1)}★`);
 
 // One numbered row per entry: "2 films · 4.5★" (the user's own average).
 // Each row is a button that opens the films behind it.
@@ -212,7 +212,7 @@ function openGroup(kind, it, ctx) {
   };
   const paintRated = (g) => {
     ratedIds = new Set(g.films.map((f) => f.tmdb_id));
-    sub.textContent = filmsLabel(g.n, g.avg);
+    sub.replaceChildren(...filmsLabel(g.n, g.avg));
     clear(rated);
     rated.appendChild(h('h4', { class: 'sheet-head' }, 'You rated'));
     if (!g.films.length) { rated.appendChild(h('p', { class: 'muted' }, 'No films here any more.')); return; }
@@ -225,7 +225,7 @@ function openGroup(kind, it, ctx) {
           thumbOf(f),
           h('span', { class: 'sheet-title' }, f.title, f.year ? h('span', { class: 'sheet-year' }, ` ${f.year}`) : null),
           h('span', { class: 'sheet-rating', 'aria-label': `your rating ${f.rating} stars` },
-            makeStars({ value: f.rating, size: 13 }), h('span', { 'aria-hidden': 'true' }, `${f.rating}★`)),
+            makeStars({ value: f.rating, size: 13 }), h('span', { 'aria-hidden': 'true' }, withStars(`${f.rating}★`))),
         )));
       ratedRows.push({ el: li, fields: [f.title, f.director, ...(f.cast || [])] });
     }

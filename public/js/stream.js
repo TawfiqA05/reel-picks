@@ -5,7 +5,7 @@
 // they scroll into view, in small batches, and each film is asked about once
 // per page load.
 import { api } from './api.js';
-import { h } from './ui.js';
+import { h, icon } from './ui.js';
 
 export const CREDIT = 'Streaming data from JustWatch';
 
@@ -110,7 +110,7 @@ export function streamSection(id) {
       row('Stream', p.stream), row('Rent', p.rent), row('Buy', p.buy),
       h('p', { class: 'stream-credit' },
         CREDIT,
-        p.link ? h('a', { class: 'stream-more', href: p.link, target: '_blank', rel: 'noopener' }, 'All options on TMDB ↗') : null),
+        p.link ? h('a', { class: 'stream-more', href: p.link, target: '_blank', rel: 'noopener' }, 'All options on TMDB', icon('external', { size: 12 })) : null),
     );
     section.hidden = false;
   });

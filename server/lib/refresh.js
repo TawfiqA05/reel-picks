@@ -221,7 +221,7 @@ async function ensureMatch(amcId, info, log) {
       if (gap > REVIEW_YEAR_GAP && !rerelease) {
         const reason = `AMC lists it as a ${m.amc_year} release; it matched ${mv.title} (${mv.year}), ${gap} years older`;
         setReview(amcId, reason);
-        log.errors.push(`Match needs review: "${info.title}" → ${mv.title} (${mv.year}): ${reason}. Keep or fix it in Settings, AMC title matching.`);
+        log.errors.push(`Match needs review: "${info.title}" matched to ${mv.title} (${mv.year}): ${reason}. Keep or fix it in Settings, AMC title matching.`);
       }
     }
   }
@@ -399,7 +399,7 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
       const um = unmatchedTitles(localYMD(start));
       src.unmatched = um.unmatched.map((u) => u.amc_title);
       src.ignored = um.ignored.map((u) => u.amc_title);
-      src.review = reviewTitles(localYMD(start)).map((r) => `${r.amc_title} → ${r.matched.title} (${r.matched.year})`);
+      src.review = reviewTitles(localYMD(start)).map((r) => `${r.amc_title} matched to ${r.matched.title} (${r.matched.year})`);
       if (src.unmatched.length) {
         log.errors.push(
           `${src.unmatched.length} AMC title(s) couldn't be matched to TMDB and aren't ranked: ${src.unmatched.join('; ')}. Match them in Settings, Unmatched AMC titles.`,

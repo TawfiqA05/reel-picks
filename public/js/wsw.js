@@ -7,7 +7,7 @@
 // Seen it (a rating), Watchlist and Not for me all work right on the card and
 // teach the model the usual way.
 import { api } from './api.js';
-import { h, clear, toast, icon, openModal, spinner, poster, scorePill } from './ui.js';
+import { h, clear, toast, icon, openModal, spinner, poster, scorePill, withStars } from './ui.js';
 import { starRater, watchlistButton, dayLabel } from './views/components.js';
 import { serviceTag, openServicesSheet } from './views/athome.js';
 
@@ -112,14 +112,14 @@ export function openWhatToWatch(ctx) {
           scorePill(f.final)),
         h('div', { class: 'pick-meta' }, h('span', {}, [f.year, (f.genres || []).slice(0, 2).join(' · '), f.runtime ? `${Math.floor(f.runtime / 60)}h ${String(f.runtime % 60).padStart(2, '0')}m` : null].filter(Boolean).join(' · '))),
         whereLine(f),
-        h('p', { class: 'pick-reason' }, f.reason))),
+        h('p', { class: 'pick-reason' }, withStars(f.reason)))),
     tools, rateSlot);
     const seen = h('button', { class: 'chip-btn wsw-seen', type: 'button', 'aria-expanded': 'false' }, icon('check', { size: 16 }), h('span', {}, 'Seen it'));
     seen.addEventListener('click', () => {
       if (!rateSlot.childElementCount) {
         rateSlot.append(h('span', { class: 'muted small' }, 'How was it?'), starRater(f, ctx, {
           value: 0,
-          onRated: (v) => { toast(v ? `Thanks. Rated ${f.title} ${v}★` : 'Rating cleared'); },
+          onRated: (v) => { toast(v ? withStars(`Thanks. Rated ${f.title} ${v}★`) : 'Rating cleared'); },
         }));
       }
       rateSlot.hidden = !rateSlot.hidden;

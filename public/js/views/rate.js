@@ -1,7 +1,7 @@
 // Rate: TMDB search + inline rating, the guided ratings-import flow, and your
 // ratings list.
 import { api } from '../api.js';
-import { h, clear, makeStars, toast, sectionTitle, chip, icon } from '../ui.js';
+import { h, clear, makeStars, toast, sectionTitle, chip, icon, withStars } from '../ui.js';
 import { filterBox } from '../filter.js';
 
 // Where a rating came from, as the list names it.
@@ -48,7 +48,7 @@ export async function render(root, params, ctx) {
     try {
       if (v) {
         await api.rate({ tmdb_id: r.tmdb_id, rating: v, title: r.title, year: r.year, poster: r.poster, genres: r.genres });
-        toast(`Rated ${r.title} ${v}★`, 'success');
+        toast(withStars(`Rated ${r.title} ${v}★`), 'success');
       } else {
         await api.unrate(r.tmdb_id);
         toast(`Cleared rating for ${r.title}`);
@@ -155,8 +155,8 @@ export async function render(root, params, ctx) {
       ? `${matched} rating${matched === 1 ? '' : 's'} imported${r.pendingBefore ? ' (including some queued earlier)' : ''}`
       : `${r.received} rating${r.received === 1 ? '' : 's'} queued`;
     showResult('ok',
-      h('strong', {}, `✓ ${importedLine}`),
-      ratingsNow != null ? h('div', {}, `Your ratings: ${r.ratingsBefore} → ${ratingsNow}.`) : null,
+      h('strong', { class: 'import-done' }, icon('check', { size: 16 }), importedLine),
+      ratingsNow != null ? h('div', {}, `Your ratings went from ${r.ratingsBefore} to ${ratingsNow}.`) : null,
       r.skipped ? h('div', {},
         `${r.skipped} row${r.skipped > 1 ? 's' : ''} skipped: ${r.skippedWhy}`,
         r.skippedSamples?.length ? ` (e.g. ${r.skippedSamples.join(', ')})` : '', '.') : null,
@@ -172,7 +172,7 @@ export async function render(root, params, ctx) {
     letterboxd: {
       computer: {
         steps: [
-          ['On ', h('strong', {}, 'letterboxd.com'), ' (signed in), open your account menu → ', h('strong', {}, 'Settings'), ' → the ', h('strong', {}, 'Data'), ' tab.'],
+          ['On ', h('strong', {}, 'letterboxd.com'), ' (signed in), open your account menu › ', h('strong', {}, 'Settings'), ' › the ', h('strong', {}, 'Data'), ' tab.'],
           ['Click ', h('strong', {}, 'Export your data'), '. You get a ', h('strong', {}, 'ZIP file containing several CSVs'), '. The export is free, no Pro needed.'],
           ['Unzip it. The file you want is ', h('strong', {}, 'ratings.csv'), '. Not watched.csv, and not the ZIP itself.'],
           ['Upload ratings.csv here.'],
@@ -191,8 +191,8 @@ export async function render(root, params, ctx) {
     imdb: {
       computer: {
         steps: [
-          ['On ', h('strong', {}, 'imdb.com'), ' (signed in), open your profile menu → ', h('strong', {}, 'Your Ratings'), '.'],
-          ['Click the ', h('strong', {}, '⋮ menu'), ' (top right) → ', h('strong', {}, 'Export ratings'), '. IMDb queues the export instead of downloading right away.'],
+          ['On ', h('strong', {}, 'imdb.com'), ' (signed in), open your profile menu › ', h('strong', {}, 'Your Ratings'), '.'],
+          ['Click the ', h('strong', {}, 'three-dot menu'), ' (top right) › ', h('strong', {}, 'Export ratings'), '. IMDb queues the export instead of downloading right away.'],
           ['Go to ', h('strong', {}, 'imdb.com/exports'), ' ("Your exports") and wait for the status to turn ', h('strong', {}, 'Ready'), '. It can take a few minutes and IMDb won\'t email you.'],
           ['Download it (a single CSV, no unzipping) and upload it here. Don\'t sit on it: ready exports expire after a while.'],
         ],

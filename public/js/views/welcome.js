@@ -241,7 +241,7 @@ export async function render(root, params, ctx) {
       h('div', { class: 'wc-import' },
         h('div', {},
           h('h3', {}, 'Rated movies on Letterboxd or IMDb?'),
-          h('p', { class: 'muted small' }, 'Letterboxd: Settings, then Data, then Export your data; unzip it and upload ratings.csv. IMDb: Your Ratings, then the ⋮ menu, then Export.')),
+          h('p', { class: 'muted small' }, 'Letterboxd: Settings, then Data, then Export your data; unzip it and upload ratings.csv. IMDb: Your Ratings, then the three-dot menu, then Export.')),
         upload, file, importNote),
       h('h3', { class: 'wc-sub' }, 'Movies most people have seen'),
       popular,

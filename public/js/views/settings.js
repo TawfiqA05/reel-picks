@@ -1,6 +1,6 @@
 // Settings: keys status, theatre, weights, filters, showtime windows, pricing, data.
 import { api } from '../api.js';
-import { h, clear, spinner, toast, chip, labeled, sectionTitle, badge, openModal, icon } from '../ui.js';
+import { h, clear, spinner, toast, chip, labeled, sectionTitle, badge, openModal, icon, withStars } from '../ui.js';
 import { NUMBER_RULES, HOME_RULES, numberProblem } from '../settingsRules.js';
 import { openHiddenList } from './components.js';
 import { PLANS, PLAN_IDS, planOf, planWords } from '../plans.js';
@@ -277,7 +277,7 @@ export async function render(root, params, ctx) {
           h('button', { class: 'btn small', onClick: async () => {
             try {
               await api.setMatch({ amc_movie_id: u.amc_movie_id, amc_title: u.amc_title, tmdb_id: r.tmdb_id });
-              toast(`Matched "${u.amc_title}" → ${r.title}`, 'success');
+              toast(`Matched "${u.amc_title}" to ${r.title}`, 'success');
               afterChange();
             } catch (e) { toast(e.message, 'error'); }
           } }, 'Match'),
@@ -319,7 +319,7 @@ export async function render(root, params, ctx) {
           h('button', { class: 'btn small', onClick: async () => {
             try {
               await api.setMatch({ amc_movie_id: u.amc_movie_id, amc_title: u.amc_title, tmdb_id: r.tmdb_id });
-              toast(`Re-pointed "${u.amc_title}" → ${r.title}`, 'success');
+              toast(`Re-pointed "${u.amc_title}" to ${r.title}`, 'success');
               afterChange();
             } catch (e) { toast(e.message, 'error'); }
           } }, 'Use this'),
@@ -329,14 +329,14 @@ export async function render(root, params, ctx) {
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
     return h('div', { class: 'unmatched-row review' },
       h('div', { class: 'um-title' }, `AMC "${u.amc_title}"`, u.amc_year ? h('span', { class: 'muted' }, ` ${u.amc_year}`) : null,
-        h('span', { class: 'muted' }, ' → '), `${u.matched.title}${u.matched.year ? ` (${u.matched.year})` : ''}`),
+        h('span', { class: 'muted um-arrow' }, icon('arrowRight', { size: 14, label: 'matched to' })), `${u.matched.title}${u.matched.year ? ` (${u.matched.year})` : ''}`),
       h('div', { class: 'review-why' }, icon('alert', { size: 14 }), ` ${u.review}`),
       whereWhen(u),
       h('div', { class: 'row-gap' },
         input,
         h('button', { class: 'btn small', onClick: search }, 'Search'),
         h('button', { class: 'btn ghost small', title: 'The match is right. Stop flagging it.', onClick: async () => {
-          try { await api.keepMatch(u.amc_movie_id); toast(`Kept "${u.amc_title}" → ${u.matched.title}`); afterChange(); } catch (e) { toast(e.message, 'error'); }
+          try { await api.keepMatch(u.amc_movie_id); toast(`Kept "${u.amc_title}" as ${u.matched.title}`); afterChange(); } catch (e) { toast(e.message, 'error'); }
         } }, 'Keep'),
       ),
       results,
@@ -573,9 +573,9 @@ export async function render(root, params, ctx) {
   const paintU = () => {
     const n = Number(uRange.value) || 0;
     const m = Math.max(1, Number(uMult.value) || 1);
-    uLabel.textContent = n
-      ? `Urgency up to +${n}  ·  ★ watchlisted up to +${Math.round(n * m * 10) / 10}`
-      : 'Urgency off. A confirmed end date adds nothing.';
+    uLabel.replaceChildren(...(n
+      ? withStars(`Urgency up to +${n}  ·  ★ watchlisted up to +${Math.round(n * m * 10) / 10}`)
+      : ['Urgency off. A confirmed end date adds nothing.']));
   };
   uRange.addEventListener('input', paintU); uMult.addEventListener('input', paintU); paintU();
 
@@ -879,11 +879,11 @@ export async function render(root, params, ctx) {
 
   page.appendChild(card('Data',
     h('div', { class: 'row-gap wrap' },
-      h('a', { class: 'btn ghost', href: api.stateUrl() }, isOwner ? '⬇ Export full setup' : '⬇ Export my data'),
-      isOwner ? h('button', { class: 'btn ghost', onClick: () => stateFile.click() }, '⬆ Import full setup') : null,
+      h('a', { class: 'btn ghost', href: api.stateUrl() }, icon('download', { size: 16 }), isOwner ? 'Export full setup' : 'Export my data'),
+      isOwner ? h('button', { class: 'btn ghost', onClick: () => stateFile.click() }, icon('upload', { size: 16 }), 'Import full setup') : null,
       isOwner ? stateFile : null,
-      h('a', { class: 'btn ghost', href: api.exportUrl() }, '⬇ Export backup CSV'),
-      isOwner && bk?.last ? h('a', { class: 'btn ghost', href: api.backupUrl() }, '⬇ Download latest backup') : null,
+      h('a', { class: 'btn ghost', href: api.exportUrl() }, icon('download', { size: 16 }), 'Export backup CSV'),
+      isOwner && bk?.last ? h('a', { class: 'btn ghost', href: api.backupUrl() }, icon('download', { size: 16 }), 'Download latest backup') : null,
       isOwner ? h('button', { class: 'btn ghost', onClick: () => ctx.triggerRefresh() }, icon('refresh', { size: 16 }), 'Refresh now') : null,
       h('a', { class: 'btn ghost', href: '#/onboarding' }, icon('zap', { size: 16 }), 'Re-run quick rate'),
     ),

@@ -87,7 +87,7 @@ export function chip(text, { active = false, onClick, removable = false } = {}) 
     class: `chip${active ? ' active' : ''}`,
     type: 'button',
     onClick,
-  }, text, removable ? h('span', { class: 'chip-x' }, ' ✕') : null);
+  }, text, removable ? h('span', { class: 'chip-x' }, icon('x', { size: 12 })) : null);
 }
 
 // Half-star capable rating control.
@@ -101,10 +101,30 @@ export function chip(text, { active = false, onClick, removable = false } = {}) 
 // Delete or Backspace clears when `allowClear`. Escape or leaving the control
 // puts an unsaved value back. A click saves at once, as always, and clicking
 // the saved value clears it.
+// Built once and cloned: a list of hundreds of ratings draws two rows each.
+let starTemplate = null;
+const starRow = () => {
+  starTemplate ||= icon('star', { size: '1em', cls: 'star-glyph' });
+  return Array.from({ length: 5 }, () => starTemplate.cloneNode(true));
+};
+
+// A small drawn star for running text ("4.5★", "★ Watchlist"). Text that
+// arrives with ★ in it (a pick's reason from the server) goes through
+// withStars, which swaps each one for the drawn star.
+let inlineStar = null;
+export const star = () => (inlineStar ||= icon('star', { size: '0.9em', cls: 'star-glyph inline-star' })).cloneNode(true);
+export function withStars(text) {
+  const parts = String(text ?? '').split('★');
+  return parts.flatMap((p, i) => (i ? [star(), p] : [p])).filter((x) => x !== '');
+}
+
 export function makeStars({ value = 0, interactive = false, onChange, size = 22, allowClear = false, label = 'Your rating' } = {}) {
   const wrap = h('div', { class: `stars${interactive ? ' interactive' : ''}`, style: { fontSize: `${size}px` } });
-  const base = h('div', { class: 'stars-base', 'aria-hidden': interactive ? 'true' : null }, '★★★★★');
-  const fill = h('div', { class: 'stars-fill', 'aria-hidden': interactive ? 'true' : null }, '★★★★★');
+  // Drawn, not typed: none of the app's fonts has a star, so a ★ character
+  // came from whatever system font had one. A read-only row is one image
+  // named by its value; the control names itself through aria-valuetext.
+  const base = h('div', { class: 'stars-base', 'aria-hidden': 'true' }, starRow());
+  const fill = h('div', { class: 'stars-fill', 'aria-hidden': 'true' }, starRow());
   let current = value; // saved
   let shown = value; // on screen: the saved value, or one picked with the keys and not saved yet
   const words = (v) => (v ? `${v} star${v === 1 ? '' : 's'}` : 'Not rated');
@@ -115,7 +135,10 @@ export function makeStars({ value = 0, interactive = false, onChange, size = 22,
     wrap.setAttribute('aria-valuenow', String(v));
     wrap.setAttribute('aria-valuetext', v === current ? words(v) : `${words(v)}, press Enter to save`);
   };
-  const set = (v) => { current = v; paint(v); };
+  const set = (v) => {
+    current = v; paint(v);
+    if (!interactive) { wrap.setAttribute('role', 'img'); wrap.setAttribute('aria-label', words(v)); }
+  };
   wrap.append(base, fill);
   if (interactive) {
     Object.entries({

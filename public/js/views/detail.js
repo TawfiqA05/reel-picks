@@ -1,6 +1,6 @@
 // Movie detail: hero, rating, score breakdown, showtimes, trailer.
 import { api } from '../api.js';
-import { h, clear, spinner, scorePill, badge, makeStars, toast, openModal, scoreColor, icon, money } from '../ui.js';
+import { h, clear, spinner, scorePill, badge, makeStars, toast, openModal, scoreColor, icon, money, withStars } from '../ui.js';
 import { planOf, planWords, loggedLine } from '../plans.js';
 import { streamSection } from '../stream.js';
 import { fmtRuntime, dayLabel, showtimeChip, watchlistButton, starRater, runwayBadge, handoffLine, backBadge, heroMedia, opensBadge } from './components.js';
@@ -37,7 +37,7 @@ export async function render(root, params, ctx) {
       (m.genres || []).length || m.director
         ? h('div', { class: 'hero-facts muted' }, [(m.genres || []).join(', '), m.director ? `Directed by ${m.director}` : null].filter(Boolean).join(' · '))
         : null,
-      d.reason ? h('p', { class: 'hero-reason' }, d.reason) : null,
+      d.reason ? h('p', { class: 'hero-reason' }, withStars(d.reason)) : null,
       h('div', { class: 'hero-actions' },
         guest ? null : watchlistButton({ tmdb_id: m.tmdb_id, title: m.title, watchlisted: d.watchlisted }, ctx),
         m.trailer_key ? h('button', {

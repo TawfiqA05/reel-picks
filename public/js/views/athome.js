@@ -2,7 +2,7 @@
 // streaming services they have (server/lib/home.js), and the service chooser
 // shared with Settings. Owner and friends only; the guest link never draws it.
 import { api } from '../api.js';
-import { h, clear, poster, scorePill, toast, icon, openModal } from '../ui.js';
+import { h, clear, poster, scorePill, toast, icon, openModal, withStars } from '../ui.js';
 import { ownerTools } from './components.js';
 import { SERVICES, cleanServices, servicesPhrase } from '../services.js';
 
@@ -72,7 +72,7 @@ function homeCard(e, ctx, onHide) {
       ),
       h('div', { class: 'pick-meta' }, h('span', {}, meta(e))),
       serviceTag(e.service),
-      e.reason ? h('p', { class: 'pick-reason' }, e.reason) : null,
+      e.reason ? h('p', { class: 'pick-reason' }, withStars(e.reason)) : null,
       ownerTools(e, ctx, { onHide }),
     ),
   );
