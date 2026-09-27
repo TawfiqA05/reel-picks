@@ -42,7 +42,6 @@ export function clear(node) {
 
 export const money = (n) => (n == null ? '–' : `${n < 0 ? '-' : ''}$${Math.abs(n).toFixed(2)}`);
 export const pct = (n) => (n == null ? '–' : `${Math.round(n * 100)}%`);
-export const scoreColor = (v) => (v == null ? 'na' : v >= 75 ? 'good' : v >= 55 ? 'ok' : 'low');
 
 // ---- components --------------------------------------------------------
 
@@ -55,7 +54,7 @@ function posterFallback(movie) {
 
 // TMDB serves posters at fixed widths; ask for about what the box needs at a
 // phone's 3x (a 54px row poster was loading the 500px file).
-const TMDB_WIDTH = { sm: 'w185', card: 'w342', grid: 'w342', md: 'w342', lg: 'w342', xl: 'w500' };
+const TMDB_WIDTH = { sm: 'w185', card: 'w342', grid: 'w342', xl: 'w500' };
 export const tmdbSized = (url, w) => (typeof url === 'string' && url.startsWith('https://image.tmdb.org/') ? url.replace(/\/w\d+\//, `/${w}/`) : url);
 
 // `file` picks the TMDB width outright where the box is smaller than its size class.
@@ -93,12 +92,12 @@ export function badge(text, variant = '') {
   return h('span', { class: `tag${variant ? ` ${variant}` : ''}` }, text);
 }
 
-export function chip(text, { active = false, onClick, removable = false } = {}) {
+export function chip(text, { active = false, onClick } = {}) {
   return h('button', {
     class: `chip${active ? ' active' : ''}`,
     type: 'button',
     onClick,
-  }, text, removable ? h('span', { class: 'chip-x' }, icon('x', { size: 12 })) : null);
+  }, text);
 }
 
 // Half-star capable rating control.

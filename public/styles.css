@@ -399,9 +399,8 @@ body.has-save main { padding-bottom: calc(var(--chrome-bottom) + var(--savebar-h
 .poster-fallback-title { font-family: var(--font-display); font-weight: var(--display-weight); font-size: clamp(var(--fs-xs), 16cqi, var(--fs-xl)); line-height: 1; letter-spacing: -0.02em; color: var(--text); overflow-wrap: anywhere; }
 .poster-fallback-year { font-size: var(--fs-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
 .poster-sm { width: 54px; flex: 0 0 54px; border-radius: 7px; box-shadow: none; }
-.poster-lg { width: 120px; flex: 0 0 120px; }
-.poster-xl { width: min(60vw, 240px); }
 .poster-grid { width: 100%; }
+.poster-xl { width: min(60vw, 240px); }
 
 /* ---- tags: small soft-filled labels, never outlined ----
    Format tints say which format (IMAX blue, Dolby purple, RealD 3D teal,
@@ -500,7 +499,6 @@ input[type="checkbox"] { accent-color: var(--accent); width: 20px; height: 20px;
 /* A value Settings won't save: the field turns red and its message sits under the row. */
 .input[aria-invalid="true"] { border-color: var(--bad); }
 .form-error { margin: 0; color: var(--bad); font-size: var(--fs-sm); }
-.lb-status.lb-error { color: var(--bad); }
 .alert-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
 .alert-item { display: flex; gap: 10px; align-items: flex-start; }
 .alert-item > svg { flex: 0 0 auto; margin-top: 2px; }
@@ -822,7 +820,7 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
    group, rows inside it, notes under it. Only the rows' group has a fill;
    nothing is outlined. */
 .group { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
-.group + .group, .group-gap { margin-top: var(--sp-4); }
+.group + .group { margin-top: var(--sp-4); }
 .group-title { margin: 0 2px; font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: var(--display-tracking); font-size: var(--fs-lg); line-height: var(--lh-display); }
 .group-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
 .group-body { display: flex; flex-direction: column; min-width: 0; padding: 0 var(--sp-4); border-radius: 14px; background: var(--raised); }
@@ -1125,15 +1123,6 @@ body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h)
 /* The guest link has Picks and Schedule only. */
 .shell.guest :is(.nav-item, .seg-item):is([data-name="rate"], [data-name="watchlist"], [data-name="you"]) { display: none; }
 
-/* ---- responsive ---- */
-@media (min-width: 720px) {
-  /* minmax(0, …) not plain 1fr: a 1fr track keeps min-width:auto, so content
-     that can't wrap (a wide showtime chip) would widen its own column at the
-     other's expense. Same guard as .pick-grid. */
-  .cards-2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .poster-lg { width: 140px; flex-basis: 140px; }
-}
-
 /* ---- followed theaters (movie page, Settings) ---- */
 .theatre-block { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-2) 0; }
 .theatre-block + .theatre-block { margin-top: var(--sp-3); }
@@ -1373,13 +1362,13 @@ a.tg-time:hover { border-color: var(--text); }
   .stat-grid { grid-template-columns: minmax(0, 1fr); }
   .hero-title, .detail-hero .hero-title { font-size: var(--fs-xl); overflow-wrap: anywhere; }
   .segment { white-space: normal; text-align: center; line-height: var(--lh-tight); }
-  .row-head, .stat-head { flex-wrap: wrap; }
+  .row-head { flex-wrap: wrap; }
   .factor-row { grid-template-columns: minmax(0, 1fr) auto; }
   .factor-row > .stars { grid-column: 1 / -1; grid-row: 2; }
   /* Labels that hold one line elsewhere may take two here. */
   .tag, .runway-text, .st-end, .key-status, .factor-name, .btn, .row-gap:has(> .input) > .btn { white-space: normal; }
   .segment { overflow-wrap: anywhere; }
-  .rr-left, .key-row { flex-wrap: wrap; }
+  .key-row { flex-wrap: wrap; }
   html .stars.interactive { font-size: var(--fs-lg) !important; }
   .rating-item > .stars { grid-column: 1 / -1; grid-row: 3; }
   .tg-film { flex-direction: column; }
