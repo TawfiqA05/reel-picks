@@ -6,7 +6,7 @@
 // movie is playing at, with per-theatre showtimes and runway, (b) the "Also
 // nearby" section for movies the primary doesn't have, and (c) the hand-off
 // line when a movie is leaving the primary but still on elsewhere.
-import { all, get, run, getSettings } from '../db.js';
+import { all, get, getSettings } from '../db.js';
 import { getMovie, hydrate } from './movies.js';
 import { profileRows, ratedIds, getRating, statsRows } from './ratings.js';
 import { getMatch } from './match.js';
@@ -453,26 +453,13 @@ export function theatreList(ctx) {
   }));
 }
 
-// Pin down this week's four as they are offered: each pick is written to
-// weekly4_log the first time it shows up in the week's four. The live four
-// drifts during the week — a refresh re-ranks the lineup, and rating a pick
-// removes it (flags.seen) — so any question about what the picks WERE has to
-// read this log, not a recomputation. Guest views never write.
-function recordWeekly4(weekly4) {
-  const week = weekStartFriday();
-  const uid = currentUserId();
-  weekly4.forEach((e, i) => {
-    run(
-      `INSERT INTO weekly4_log(user_id, week_start, tmdb_id, rank, first_seen_at)
-        VALUES(?,?,?,?,?) ON CONFLICT(user_id, week_start, tmdb_id) DO NOTHING`,
-      uid, week, e.tmdb_id, i + 1, new Date().toISOString(),
-    );
-  });
-}
-
 // Was this movie among the weekly 4 at any point in the given A-List week?
+// weekly4_log is written when a week's four locks and when a film joins it
+// (lib/lock.js), never for a week that hasn't locked. Until this week's four
+// locks, last week's is the one on screen, so it is asked about too.
 export function wasWeekly4Pick(tmdbId, week = weekStartFriday()) {
-  return Boolean(get('SELECT 1 AS x FROM weekly4_log WHERE user_id = ? AND week_start = ? AND tmdb_id = ?', currentUserId(), week, tmdbId));
+  const logged = (w) => Boolean(get('SELECT 1 AS x FROM weekly4_log WHERE user_id = ? AND week_start = ? AND tmdb_id = ?', currentUserId(), w, tmdbId));
+  return logged(week) || (!weekOpen(week) && logged(prevWeek(week)));
 }
 
 // Split the lineup: in the primary's schedule this week → ranked as always;
@@ -592,7 +579,6 @@ export function getRecommendations({ guest = false, lockHow = null } = {}) {
   const eligible = list.filter((e) => !e.flags.seen && !e.flags.excluded && !e.flags.hidden);
   const nearbyEval = nearby.map(({ m, t }) => evaluate(m, ctx, t.id));
   const { four: weekly4, meta: lock } = weeklyFour(ctx, { list, eligible, nearbyEval, guest, lockHow });
-  if (!guest) recordWeekly4(weekly4);
   // Everything else that still clears the "good match" bar, so the picks page
   // isn't capped at four. Already-in-weekly4 movies are excluded, not repeated;
   // so are movies with no public score — their `final` rests on a default 50.

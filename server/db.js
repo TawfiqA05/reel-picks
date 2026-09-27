@@ -174,11 +174,10 @@ CREATE TABLE IF NOT EXISTS watched (
 );
 
 -- The weekly 4 as it was actually offered: one row per pick per A-List week,
--- written the first time a movie appears in that week's four. The live four
--- drifts during the week (refreshes re-rank; rating a pick removes it), so
--- "was this one of my picks this week" must read this log, never the
--- instantaneous ranking. Mark-seen's in_weekly4 stamp — and therefore the
--- Stats hit-rate — depends on it.
+-- written when that week's four locks and when a film joins it midweek
+-- (lib/lock.js), never before the week's four has locked. "Was this one of my
+-- picks this week" must read this log, never a recomputed ranking. Mark-seen's
+-- in_weekly4 stamp, and therefore the Stats hit-rate, depends on it.
 CREATE TABLE IF NOT EXISTS weekly4_log (
   user_id       INTEGER NOT NULL DEFAULT 1,
   week_start    TEXT,      -- Friday that begins the A-List week (YYYY-MM-DD)
