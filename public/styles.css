@@ -787,7 +787,7 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
 /* ---- settings ---- */
 .settings { gap: 14px; }
 .settings-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 4px; }
-.settings-card h3 { font-size: var(--fs-md); }
+.settings-card .card-title { font-size: var(--fs-md); }
 .sub-label { font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; margin-top: 4px; }
 .key-list { display: flex; flex-direction: column; gap: 8px; }
 .key-row { display: flex; align-items: center; gap: 10px; }
@@ -813,7 +813,7 @@ input[type="checkbox"] { accent-color: var(--control); width: 18px; height: 18px
 .import-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 640px) { .import-split { grid-template-columns: 1fr; } }
 .import-box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px; display: flex; flex-direction: column; gap: 8px; }
-.import-box h4 { font-size: var(--fs-base); }
+.import-box h3 { font-size: var(--fs-base); }
 .import-guide { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px; display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .import-guide-body { display: flex; flex-direction: column; gap: 10px; }
 .import-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); }
@@ -1262,7 +1262,12 @@ body:has(.save-bar) .toast-host { bottom: calc(146px + env(safe-area-inset-botto
   left: min(0px, calc(50% - 22px)); right: min(0px, calc(50% - 22px));
 }
 
+/* Read by screen readers, never drawn. */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
 /* ---- dialog focus ---- */
+/* The dialog's Tab turn-around point (ui.js): focusable, never seen. */
+.focus-wrap { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .modal-card:focus { outline: none; }
 .modal-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
@@ -1410,9 +1415,39 @@ a.tg-time:hover { border-color: var(--text-2); }
 }
 .tour-card:focus { outline: none; }
 .tour-layer.moving .tour-card, .tour-layer.moving .tour-spot { opacity: .35; }
+.tour-words { display: flex; flex-direction: column; gap: 8px; }
 .tour-count { margin: 0; color: var(--muted); font-size: var(--fs-xs); font-weight: 600; letter-spacing: .02em; }
 .tour-title { font-size: var(--fs-md); }
 .tour-text { margin: 0; color: var(--text-2); }
 .tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
 .tour-moves { display: flex; gap: 8px; margin-left: auto; }
 .tour-skip { padding-left: 0; }
+
+/* Zoomed far in (200% on a phone is about 195px): the header's buttons wrap
+   under the name, the tab bar scrolls sideways instead of the page, and rows
+   stack. Last in the file, so it wins over the rules it narrows. */
+@media (max-width: 299px) {
+  .app-header { flex-wrap: wrap; position: static; }
+  .header-actions { flex-wrap: wrap; justify-content: flex-end; }
+  .bottom-nav { justify-content: flex-start; overflow-x: auto; scrollbar-width: none; left: 0; transform: none; width: 100vw; }
+  .nav-item { flex: 0 0 auto; }
+  .wc-head { flex-wrap: wrap; }
+  .stat-grid { grid-template-columns: minmax(0, 1fr); }
+  .hero-title, .detail-hero .hero-title { font-size: var(--fs-xl); overflow-wrap: anywhere; }
+  .sched-item { white-space: normal; text-align: center; line-height: var(--lh-tight); }
+  .row-head, .stat-head { flex-wrap: wrap; }
+  .factor-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .factor-row > .stars { grid-column: 1 / -1; grid-row: 2; }
+  /* Labels that hold one line elsewhere may take two here. */
+  .badge, .runway-text, .st-seat, .st-end, .key-status, .factor-name, .btn, .row-gap:has(> .input) > .btn { white-space: normal; }
+  .sched-item { min-width: 0; overflow-wrap: anywhere; }
+  .rr-left, .key-row { flex-wrap: wrap; }
+  html .stars.interactive { font-size: var(--fs-lg) !important; }
+  .rating-item > .stars { grid-column: 1 / -1; grid-row: 3; }
+  .tg-film { flex-direction: column; }
+  .source-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .source-row .src-bar { grid-column: 1 / -1; grid-row: 2; }
+  .pick-card, .list-row, .theatre-item { flex-direction: column; align-items: stretch; }
+  .row-gap:has(> .input) > .btn { flex-shrink: 1; min-width: 0; }
+  .ti-actions { flex-wrap: wrap; }
+}

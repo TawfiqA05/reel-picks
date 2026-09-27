@@ -422,7 +422,7 @@ export function heroPick(entry, ctx, { day = null, multi = 0, onHide = null, mov
           `${entry.final ?? '-'} match`),
         movedUp ? movedTag() : null,
       ),
-      h('h2', { class: 'hero-title', id: `hero-${entry.tmdb_id}` },
+      h('h1', { class: 'hero-title', id: `hero-${entry.tmdb_id}` },
         h('a', { href: `#/movie/${entry.tmdb_id}` }, entry.title)),
       h('div', { class: 'hero-facts' },
         meta.length ? h('span', {}, meta.join(' · ')) : null,

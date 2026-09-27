@@ -122,9 +122,11 @@ export function startTour(ctx) {
   const back = h('button', { class: 'btn ghost tour-back', type: 'button' }, 'Back');
   const next = h('button', { class: 'btn tour-next', type: 'button' }, 'Next');
   const skip = h('button', { class: 'link-btn tour-skip', type: 'button' }, 'Skip tour');
+  // Focus stays on Next from step to step, which says nothing new, so the
+  // step's words are a live region: each new step is read out.
   const card = h('section', {
     class: 'tour-card', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'tour-title', 'aria-describedby': 'tour-text', tabindex: '-1',
-  }, count, title, text, h('div', { class: 'tour-actions' }, skip, h('div', { class: 'tour-moves' }, back, next)));
+  }, h('div', { class: 'tour-words', 'aria-live': 'polite', 'aria-atomic': 'true' }, count, title, text), h('div', { class: 'tour-actions' }, skip, h('div', { class: 'tour-moves' }, back, next)));
   const spot = h('div', { class: 'tour-spot', 'aria-hidden': 'true' });
   // The layer takes every tap outside the card, and does nothing with it.
   const layer = h('div', { class: 'tour-layer' }, spot, card);

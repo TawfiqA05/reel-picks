@@ -70,9 +70,11 @@ export async function render(root, params, ctx) {
         return;
       }
       const next = before.has(entry.tmdb_id) && entrants[0] ? ` ${entrants[0].title} moved into your four.` : '';
-      toast(`Hid ${entry.title}.${next}`, '', {
+      const t = toast(`Hid ${entry.title}.${next}`, '', {
         action: { label: 'Undo', onClick: () => actions.unhide(entry, { undo: true }) },
       });
+      // The card (and the button pressed) is gone: Undo takes the focus.
+      if (document.activeElement === document.body || !document.activeElement) t.button?.focus({ preventScroll: true });
     },
     async unhide(entry, { undo = false } = {}) {
       try {

@@ -1,6 +1,6 @@
 // App shell, hash router, chrome (header + bottom nav), and refresh polling.
 import { api } from './api.js';
-import { h, clear, toast, spinner, emptyState, icon } from './ui.js';
+import { h, clear, toast, spinner, emptyState, icon, ensureToastHost } from './ui.js';
 import { watchForUpdates } from './update.js';
 import { openSearch } from './search.js';
 import { startTour, shouldAutoTour, tourActive } from './tour.js';
@@ -245,19 +245,19 @@ const isOffline = (e) => !navigator.onLine || e instanceof TypeError || (e.statu
 function errorState(e) {
   const retry = h('button', { class: 'btn', type: 'button', onClick: async () => { await refreshStatus(); route(); } }, 'Retry');
   if (isOffline(e)) {
-    return emptyState('alert', 'You\'re offline', 'Reel Picks needs a connection to load this page. Retry once you\'re back online.', retry);
+    return emptyState('alert', 'You\'re offline', 'Reel Picks needs a connection to load this page. Retry once you\'re back online.', retry, { level: 1 });
   }
   if (e.status === 404) {
     return emptyState('search', 'Not found', e.message === 'Movie not found' ? 'There\'s no movie at this address.' : e.message,
-      h('a', { class: 'btn', href: '#/home' }, 'Go to Picks'));
+      h('a', { class: 'btn', href: '#/home' }, 'Go to Picks'), { level: 1 });
   }
-  return emptyState('alert', 'Something went wrong', e.message, retry);
+  return emptyState('alert', 'Something went wrong', e.message, retry, { level: 1 });
 }
 
 function notFound(root) {
   clear(root);
   root.appendChild(emptyState('search', 'Page not found', 'There is nothing at this address.',
-    h('a', { class: 'btn', href: '#/home' }, 'Go to Picks')));
+    h('a', { class: 'btn', href: '#/home' }, 'Go to Picks'), { level: 1 }));
 }
 
 function buildShell() {
@@ -299,6 +299,7 @@ function buildShell() {
 
 async function boot() {
   buildShell();
+  ensureToastHost();
   await refreshStatus();
   // A new friend (or anyone with under 5 ratings) who hasn't finished or
   // skipped the welcome setup starts there, whatever the link said.

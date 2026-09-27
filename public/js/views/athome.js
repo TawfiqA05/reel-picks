@@ -82,7 +82,9 @@ function homeCard(e, ctx, onHide) {
 export function homeSection(ctx) {
   const sub = h('span', { class: 'section-sub' });
   const change = h('button', { class: 'link-btn home-change', type: 'button', hidden: true }, 'Change services');
-  const body = h('div', { class: 'home-body', 'aria-live': 'polite' });
+  // Only the short status line speaks up; the four cards arriving would be
+  // read out whole otherwise.
+  const body = h('div', { class: 'home-body' });
   const section = h('section', { class: 'home-picks', id: 'at-home', 'aria-labelledby': 'at-home-title' },
     h('div', { class: 'section-head' },
       h('div', { class: 'section-title' }, h('h2', { id: 'at-home-title' }, 'At home'), sub),
@@ -94,7 +96,7 @@ export function homeSection(ctx) {
 
   const skeleton = (text) => {
     clear(body);
-    body.append(h('p', { class: 'muted small home-status' }, text),
+    body.append(h('p', { class: 'muted small home-status', role: 'status' }, text),
       h('div', { class: 'pick-grid home-grid', 'aria-hidden': 'true' },
         ...Array.from({ length: 4 }, () => h('div', { class: 'pick-card sk-card' }, h('div', { class: 'sk poster-card' }),
           h('div', { class: 'pick-body' }, h('div', { class: 'sk sk-line', style: { width: '70%', height: '20px' } }), h('div', { class: 'sk sk-line', style: { width: '50%' } }))))));
@@ -108,7 +110,9 @@ export function homeSection(ctx) {
       await api.hide(entry.tmdb_id, entry.title);
     } catch (e) { card?.classList.remove('is-leaving'); toast(e.message, 'error'); return; }
     await load();
-    toast(`Hid ${entry.title}.`, '', { action: { label: 'Undo', onClick: async () => { await api.unhide(entry.tmdb_id); load(); } } });
+    const t = toast(`Hid ${entry.title}.`, '', { action: { label: 'Undo', onClick: async () => { await api.unhide(entry.tmdb_id); load(); } } });
+    // The card (and the button pressed) is gone: Undo takes the focus.
+    if (document.activeElement === document.body || !document.activeElement) t.button?.focus({ preventScroll: true });
   };
 
   async function load() {

@@ -16,7 +16,7 @@ const MPAA = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'];
 const spanAll = (field) => { field.classList.add('span-all'); return field; };
 
 function card(title, ...children) {
-  return h('section', { class: 'settings-card' }, h('h3', {}, title), ...children);
+  return h('section', { class: 'settings-card' }, h('h2', { class: 'card-title' }, title), ...children);
 }
 
 // ---- Weekly picks notifications ------------------------------------------

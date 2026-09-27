@@ -203,10 +203,12 @@ export function spinner(text = 'Loading…') {
   return h('div', { class: 'spinner', role: 'status' }, h('div', { class: 'spinner-ring', 'aria-hidden': 'true' }), h('div', { class: 'spinner-text' }, text || 'Loading…'));
 }
 
-export function emptyState(icon, title, msg, action) {
+// `level` makes the title a heading, for a state that is the whole page
+// (not found, offline, an error).
+export function emptyState(icon, title, msg, action, { level = 0 } = {}) {
   return h('div', { class: 'empty' },
     h('div', { class: 'empty-icon' }, typeof icon === 'string' ? iconFor(icon) : icon),
-    h('div', { class: 'empty-title' }, title),
+    h(level ? `h${level}` : 'div', { class: 'empty-title' }, title),
     msg ? h('div', { class: 'empty-msg' }, msg) : null,
     action || null,
   );
@@ -230,34 +232,57 @@ let toastHost;
 // action: { label, onClick } adds a button (Undo) and keeps the toast up for
 // six seconds instead of the usual two and a half.
 // duration 0 keeps the toast up until its action is tapped.
-export function toast(message, type = '', { action = null, duration = action ? 6000 : 2600 } = {}) {
+// The live region is on the page before anything is said in it: screen
+// readers announce changes to a region that already exists, not a new one.
+// app.js calls this at start-up.
+export function ensureToastHost() {
   if (!toastHost) {
     toastHost = h('div', { class: 'toast-host', role: 'status', 'aria-live': 'polite' });
     document.body.appendChild(toastHost);
   }
+  return toastHost;
+}
+
+export function toast(message, type = '', { action = null, duration = action ? 6000 : 2600 } = {}) {
+  ensureToastHost();
   let timer;
+  let done = false;
   const dismiss = () => {
+    if (done) return;
+    done = true;
     clearTimeout(timer);
     t.classList.remove('show');
     setTimeout(() => t.remove(), 300);
   };
+  const button = action ? h('button', {
+    class: 'toast-action', type: 'button',
+    onClick: () => { dismiss(); action.onClick(); },
+  }, action.label) : null;
+  const mark = type === 'success' ? icon('check', { size: 16, cls: 'toast-icon ok' })
+    : type === 'error' ? icon('alert', { size: 16, cls: 'toast-icon bad', label: 'Problem' }) : null;
   const t = h('div', { class: `toast ${type}${action ? ' has-action' : ''}` },
-    h('span', {}, message),
-    action ? h('button', {
-      class: 'toast-action', type: 'button',
-      onClick: () => { dismiss(); action.onClick(); },
-    }, action.label) : null,
+    h('span', {}, mark, message),
+    button,
   );
   toastHost.appendChild(t);
   requestAnimationFrame(() => t.classList.add('show'));
-  if (duration > 0) timer = setTimeout(dismiss, duration);
-  return { dismiss };
+  // The clock stops while the toast is pointed at or focused, so its action
+  // can still be reached (by keyboard, the action button is focused for it).
+  const start = () => { if (duration > 0 && !done) timer = setTimeout(dismiss, duration); };
+  const stop = () => clearTimeout(timer);
+  t.addEventListener('mouseenter', stop); t.addEventListener('mouseleave', start);
+  t.addEventListener('focusin', stop); t.addEventListener('focusout', start);
+  start();
+  return { dismiss, button };
 }
 
 // Modal is portaled to <body> so page transforms never trap the fixed overlay.
 // It is a real dialog: labelled by its title, focus moves in on open, Tab
 // stays inside it, and focus goes back to whatever opened it on close.
 let modalSeq = 0;
+// Open dialogs, newest last: only the top one answers Escape and Tab, so
+// Escape in a sheet opened from a sheet closes just that one.
+const openStack = [];
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])';
 // `onClose` runs once, after the dialog starts closing. `cls` adds a class to
 // the overlay (the search sheet uses it to sit at the top on phones).
@@ -271,13 +296,16 @@ export function openModal(contentNode, { title, onClose, cls = '' } = {}) {
     overlay.classList.remove('show');
     setTimeout(() => overlay.remove(), 200);
     document.removeEventListener('keydown', onKey);
+    openStack.splice(openStack.indexOf(overlay), 1);
+    if (!openStack.length) document.querySelector('.shell')?.removeAttribute('inert');
     if (opener && document.contains(opener)) opener.focus?.();
     onClose?.();
   };
   const onKey = (e) => {
+    if (openStack[openStack.length - 1] !== overlay) return;
     if (e.key === 'Escape') { close(); return; }
     if (e.key !== 'Tab') return;
-    const items = [...card.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null);
+    const items = [...card.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null && !el.classList.contains('focus-wrap'));
     if (!items.length) { e.preventDefault(); card.focus(); return; }
     const first = items[0];
     const last = items[items.length - 1];
@@ -290,14 +318,23 @@ export function openModal(contentNode, { title, onClose, cls = '' } = {}) {
       h('button', { class: 'modal-x', type: 'button', 'aria-label': 'Close', onClick: close }, icon('x', { size: 20 })),
     ),
     h('div', { class: 'modal-body' }, contentNode),
+    // Tab out of an embedded frame (the trailer) arrives here and goes round
+    // to the first control, instead of leaving the dialog.
+    h('span', { class: 'focus-wrap', tabindex: '0', onFocus: () => {
+      const items = [...card.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null && !el.classList.contains('focus-wrap'));
+      (items[0] || card).focus();
+    } }),
   );
   const overlay = h('div', { class: `modal-overlay${cls ? ` ${cls}` : ''}`, onClick: (e) => { if (e.target === overlay) close(); } }, card);
   document.body.appendChild(overlay);
+  openStack.push(overlay);
+  // The page behind can't be reached by keyboard or screen reader meanwhile.
+  document.querySelector('.shell')?.setAttribute('inert', '');
   document.addEventListener('keydown', onKey);
   requestAnimationFrame(() => overlay.classList.add('show'));
   // Focus the first field if there is one, else the dialog itself; a caller
   // that focuses something specific right after opening still wins.
-  const firstField = card.querySelector('.modal-body input, .modal-body select, .modal-body textarea');
+  const firstField = [...card.querySelectorAll('.modal-body input, .modal-body select, .modal-body textarea')].find((el) => el.offsetParent !== null);
   (firstField || card).focus();
   return { close, card, overlay };
 }
