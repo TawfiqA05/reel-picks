@@ -11,7 +11,11 @@ import { planOf, planWords } from '../plans.js';
 let repaint = null;
 
 export async function render(root, params, ctx, { quiet = false } = {}) {
+  // Held weakly: once the reader has left Stats, the old page can go.
+  const rootRef = new WeakRef(root);
   repaint = async (kind, name) => {
+    const root = rootRef.deref();
+    if (!root?.isConnected) return;
     const y = window.scrollY;
     await render(root, params, ctx, { quiet: true });
     window.scrollTo(0, y);
