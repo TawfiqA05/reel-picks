@@ -24,6 +24,9 @@ import { activeUserIds } from './lib/theatres.js';
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 
 const app = express();
+app.disable('x-powered-by');
+// Nothing here is meant to be framed or sniffed as another type.
+app.use((req, res, next) => { res.set({ 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY' }); next(); });
 
 // Owner unlock: ?owner=<OWNER_TOKEN> sets a signed, HttpOnly cookie and then 302s
 // to a token-free URL, so the secret never lands in history, Referer, or a link
@@ -39,7 +42,8 @@ app.use((req, res, next) => {
   }
   const u = new URL(req.originalUrl, 'http://placeholder');
   u.searchParams.delete('owner');
-  res.redirect(302, u.pathname + (u.search || ''));
+  // One leading slash only: "//evil.example" would send the browser off-site.
+  res.redirect(302, u.pathname.replace(/^\/+/, '/') + (u.search || ''));
 });
 
 // Friend invites, in two steps so that merely opening a link changes nothing.
@@ -102,7 +106,23 @@ app.use('/api', (req, res, next) => {
   res.status(403).json({ error: 'This shared link is read only.' });
 });
 
-app.use(express.json({ limit: '20mb' })); // large enough for CSV ratings uploads
+// A change from another site's page is refused before it's read: at
+// localhost (and on a server without GUEST_MODE) every request is the owner,
+// so a page elsewhere could otherwise post to this one. The browser marks
+// where a request came from; our own pages are same-origin.
+app.use('/api', (req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD') return next();
+  const site = req.get('sec-fetch-site');
+  const origin = req.get('origin');
+  let foreign = site === 'cross-site' || site === 'same-site';
+  if (!foreign && origin && origin !== 'null') { try { foreign = new URL(origin).host !== req.get('host'); } catch { foreign = true; } }
+  if (foreign) return res.status(403).json({ error: 'Changes have to come from Reel Picks itself.' });
+  next();
+});
+
+// Big bodies only where a file comes in (a ratings CSV, a full-setup file).
+app.use(['/api/ratings/import', '/api/state'], express.json({ limit: '20mb' }));
+app.use(express.json({ limit: '200kb' }));
 
 // Every API request runs as one user (lib/user.js): the owner, a signed-in
 // friend, or — for the read-only guest link — the owner's picks with guest
@@ -127,7 +147,10 @@ app.get('*', (req, res, next) => {
 
 app.use((err, req, res, next) => {
   console.error('[api error]', err.message);
-  res.status(err.status || 500).json({ error: err.message || 'Server error' });
+  // A thrown error with a status was written for the reader; anything else is
+  // internal (a database message, say) and stays in the log.
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({ error: status < 500 || err.status ? err.message || 'Server error' : 'Something went wrong on the server. Try again.' });
 });
 
 app.listen(config.port, () => {
