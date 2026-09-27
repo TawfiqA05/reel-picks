@@ -155,7 +155,7 @@ export async function render(root, params, ctx) {
     ),
     status?.host === 'railway'
       ? h('p', { class: 'muted small' }, 'Keys are set as Railway variables. Change them there, then redeploy.')
-      : h('p', { class: 'muted small' }, 'Keys live in the ', h('code', {}, '.env'), ' file in the project root. Edit it, then hit Refresh or restart.'),
+      : h('p', { class: 'muted small' }, 'Keys live in the ', h('code', {}, '.env'), ' file in the project root. Edit it, then restart the server.'),
   ));
 
   // ---- Theatres: the primary plus any followed ones, in order.
