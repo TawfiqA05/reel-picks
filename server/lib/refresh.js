@@ -273,7 +273,7 @@ async function resolveTheatres(log) {
     const unauthorized = e.status === 403 || /unauthorized vendorkey/i.test(e.body?.errors?.[0]?.exceptionMessage || '');
     log.errors.push(unauthorized
       ? 'AMC key rejected ("Unauthorized VendorKey"). AMC\'s developer API is gated and this key is not authorized for showtimes. Ranking TMDB\'s current releases instead. Remove AMC_API_KEY from .env to hide this warning.'
-      : `AMC theatre lookup: ${e.message}`);
+      : `AMC theater lookup: ${e.message}`);
     return [];
   }
 }
@@ -620,7 +620,7 @@ export function refreshProblems(log) {
   const primary = amcSrc?.theatres?.find((t) => t.isPrimary) || amcSrc?.theatres?.[0] || null;
   if (amc.amcConfigured()) {
     if (!primary) {
-      const why = log.errors.find((e) => /^AMC key rejected|^AMC theatre lookup|^AMC key set but no theatre/.test(e));
+      const why = log.errors.find((e) => /^AMC key rejected|^AMC thea(?:tre|ter) lookup|^AMC key set but no theatre/.test(e));
       if (why) out.refresh = why;
     } else if (primary.liveFailed > 0 && primary.liveOk === 0) {
       out.refresh = `AMC didn't answer for ${primary.name || primary.short}: ${String(primary.liveError || 'no response').replace(/ for https?:\/\/\S+/, '')}`;

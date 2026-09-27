@@ -1,6 +1,6 @@
 // Settings: keys status, theatre, weights, filters, showtime windows, pricing, data.
 import { api } from '../api.js';
-import { h, clear, spinner, toast, chip, labeled, sectionTitle, badge, openModal, icon, withStars, setStatus } from '../ui.js';
+import { h, clear, spinner, toast, chip, labeled, badge, openModal, icon, setStatus } from '../ui.js';
 import { NUMBER_RULES, HOME_RULES, numberProblem } from '../settingsRules.js';
 import { openHiddenList } from './components.js';
 import { PLANS, PLAN_IDS, planOf, planWords } from '../plans.js';
@@ -580,7 +580,7 @@ export async function render(root, params, ctx) {
     const n = Number(uRange.value) || 0;
     const m = Math.max(1, Number(uMult.value) || 1);
     uLabel.replaceChildren(...(n
-      ? withStars(`Urgency up to +${n}  ·  ★ watchlisted up to +${Math.round(n * m * 10) / 10}`)
+      ? [`Urgency up to +${n} · saved films up to +${Math.round(n * m * 10) / 10}`]
       : ['Urgency off. A confirmed end date adds nothing.']));
   };
   uRange.addEventListener('input', paintU); uMult.addEventListener('input', paintU); paintU();
@@ -723,7 +723,7 @@ export async function render(root, params, ctx) {
     h('div', { class: 'grid-4 plan-fields' }, visitsField, periodField, feeField, labeled('Avg ticket ($)', ticket), labeled('Preview length (min)', previews)),
     planNote,
     h('p', { class: 'muted small' }, 'Showtimes always come from AMC theaters; the plan only changes the allowance, savings and wording.'),
-    h('p', { class: 'muted small' }, 'AMC\'s listed showtime is when previews start. Preview length sets the "be there by" time on every showtime (when the film itself begins) and is included in the end time. AMC publishes no preview or program length of its own, so this number is the only source for it.')));
+    h('p', { class: 'muted small' }, 'AMC\'s listed showtime is when previews start. Preview length sets the Seat by time (when the film itself begins) and is included in the "out around" time. AMC publishes no preview or program length of its own, so this number is the only source for it.')));
 
   // ---- Advanced boosts
   const wlB = h('input', { class: 'input num', type: 'number', value: String(s.watchlistBoost ?? 8) });

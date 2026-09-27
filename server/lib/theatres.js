@@ -111,9 +111,9 @@ export function purgeTheatreData(theatreId) {
 
 export function addFollowed(raw) {
   const t = normalize(raw);
-  if (!t.id) throw Object.assign(new Error('Theatre id is required.'), { status: 400 });
+  if (!t.id) throw Object.assign(new Error('A theater id is required.'), { status: 400 });
   const s = getSettings();
-  if (String(s.theatreId) === t.id) throw Object.assign(new Error(`${t.name || 'That theatre'} is already your primary theatre.`), { status: 400 });
+  if (String(s.theatreId) === t.id) throw Object.assign(new Error(`${t.name || 'That theater'} is already your primary theater.`), { status: 400 });
   const extras = (s.extraTheatres || []).map(normalize);
   if (extras.some((x) => x.id === t.id)) return s;
   if (extras.length + 1 >= MAX_THEATRES) {
@@ -155,7 +155,7 @@ export function promoteToPrimary(id) {
 // rejected rather than silently dropping a followed theatre.
 export function replacePrimary(raw) {
   const t = normalize(raw);
-  if (!t.id) throw Object.assign(new Error('Theatre id is required.'), { status: 400 });
+  if (!t.id) throw Object.assign(new Error('A theater id is required.'), { status: 400 });
   const s = getSettings();
   const oldId = String(s.theatreId || '');
   if (oldId === t.id) return s;
@@ -165,7 +165,7 @@ export function replacePrimary(raw) {
   assertRoomFor(t.id);
   if (next.length + 1 > MAX_THEATRES) {
     throw Object.assign(
-      new Error(`Making ${t.name || 'that theatre'} primary would mean following ${next.length + 1} theatres (max ${MAX_THEATRES}). Remove one first.`),
+      new Error(`Making ${t.name || 'that theater'} primary would mean following ${next.length + 1} theaters (max ${MAX_THEATRES}). Remove one first.`),
       { status: 400 },
     );
   }
@@ -228,7 +228,7 @@ export async function theatreDistance(theatreId, home = homeBase()) {
   const o = outboundHome(home); // rounded origin: the only form that goes out
   return cachedJson(geoKey(theatreId, o), 365 * 86400, async () => {
     const t = await amc.theatreDetail(theatreId);
-    if (t?.lat == null || t?.lng == null) throw new Error(`No coordinates for theatre ${theatreId}`);
+    if (t?.lat == null || t?.lng == null) throw new Error(`No coordinates for theater ${theatreId}`);
     const there = { lat: t.lat, lng: t.lng };
     try {
       const url = `https://router.project-osrm.org/route/v1/driving/${o.lng},${o.lat};${there.lng},${there.lat}?overview=false`;
