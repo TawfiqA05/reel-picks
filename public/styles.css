@@ -251,7 +251,9 @@ pre { background: var(--surface-2); padding: 12px; border-radius: var(--r-sm); o
 .wl-btn.active .icon { color: var(--gold); fill: currentColor; }
 /* Hidden ("Not for me"): a muted red on the control and the tag that say so. */
 .not-for-me:disabled, .wsw-film.is-hidden .wsw-hide { color: var(--red); }
-.badge.hidden { background: color-mix(in srgb, var(--red) 10%, var(--surface)); color: var(--red); }
+/* Outlined, not tinted: it sits in a row faded to 80%, where a tinted
+   background left it at 4:1. */
+.badge.hidden { background: transparent; color: var(--red); box-shadow: inset 0 0 0 1px currentColor; }
 .hidden-icon { color: var(--red); flex: 0 0 auto; }
 .wsw-hidden-note .hidden-icon { vertical-align: -2px; }
 /* Status lines (Settings): a dot in the state's colour before words that say it. */
