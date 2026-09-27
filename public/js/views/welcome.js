@@ -184,7 +184,7 @@ export async function render(root, params, ctx) {
       }, 300);
     });
     const filmRow = (m) => h('div', { class: 'wc-row wc-film' },
-      m.poster ? h('img', { class: 'wc-thumb', src: m.poster.replace(/\/w\d+\//, '/w92/'), alt: '', loading: 'lazy', width: '40', height: '60' }) : h('span', { class: 'wc-thumb' }),
+      m.poster ? h('img', { class: 'wc-thumb', loading: 'lazy', src: m.poster.replace(/\/w\d+\//, '/w92/'), alt: '', width: '40', height: '60' }) : h('span', { class: 'wc-thumb' }),
       h('div', { class: 'wc-row-main' }, h('div', { class: 'wc-row-title' }, m.title, m.year ? h('span', { class: 'muted' }, ` ${m.year}`) : null)),
       starsFor(m));
 
@@ -194,7 +194,7 @@ export async function render(root, params, ctx) {
       clear(popular);
       if (!movies.length) { popular.remove(); return; }
       popular.append(...movies.slice(0, 18).map((m) => h('div', { class: 'wc-tile' },
-        h('img', { class: 'wc-poster', src: m.poster, alt: '', loading: 'lazy' }),
+        h('img', { class: 'wc-poster', loading: 'lazy', src: m.poster.replace(/\/w\d+\//, '/w342/'), alt: '' }),
         h('div', { class: 'wc-tile-title' }, m.title),
         starsFor(m))));
     }, () => popular.remove());

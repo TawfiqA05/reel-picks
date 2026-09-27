@@ -58,7 +58,7 @@ function meta(e) {
 export function serviceTag(service) {
   if (!service) return null;
   return h('span', { class: 'service-tag' },
-    service.logo ? h('img', { class: 'service-logo', src: service.logo, alt: '', width: '20', height: '20', loading: 'lazy' }) : null,
+    service.logo ? h('img', { class: 'service-logo', loading: 'lazy', src: service.logo, alt: '', width: '20', height: '20' }) : null,
     `On ${service.name}`);
 }
 

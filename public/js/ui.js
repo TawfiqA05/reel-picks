@@ -53,10 +53,17 @@ function posterFallback(movie) {
     movie.year ? h('span', { class: 'poster-fallback-year' }, String(movie.year)) : null);
 }
 
-export function poster(movie, { size = 'md', link = true } = {}) {
+// TMDB serves posters at fixed widths; ask for about what the box needs at a
+// phone's 3x (a 54px row poster was loading the 500px file).
+const TMDB_WIDTH = { sm: 'w185', card: 'w342', grid: 'w342', md: 'w342', lg: 'w342', xl: 'w500' };
+export const tmdbSized = (url, w) => (typeof url === 'string' && url.startsWith('https://image.tmdb.org/') ? url.replace(/\/w\d+\//, `/${w}/`) : url);
+
+// `file` picks the TMDB width outright where the box is smaller than its size class.
+export function poster(movie, { size = 'md', link = true, file = null } = {}) {
   let inner;
   if (movie.poster) {
-    inner = h('img', { class: 'poster-img', src: movie.poster, alt: movie.title || '', loading: 'lazy', decoding: 'async' });
+    // loading before src: set after it, the browser has already started the download.
+    inner = h('img', { class: 'poster-img', loading: 'lazy', decoding: 'async', src: tmdbSized(movie.poster, file || TMDB_WIDTH[size] || 'w342'), alt: movie.title || '' });
     inner.addEventListener('error', () => inner.replaceWith(posterFallback(movie)), { once: true });
   } else inner = posterFallback(movie);
   const box = h('div', { class: `poster poster-${size}` }, inner);

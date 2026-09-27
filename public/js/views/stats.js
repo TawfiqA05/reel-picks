@@ -173,7 +173,7 @@ function barList(items, id, kind, ctx) {
 const thumb = (url) => (url ? url.replace(/\/w\d+\//, '/w92/') : null);
 
 const thumbOf = (f) => (f.poster
-  ? h('img', { class: 'sheet-thumb', src: thumb(f.poster), alt: '', loading: 'lazy', decoding: 'async', width: '40', height: '60' })
+  ? h('img', { class: 'sheet-thumb', loading: 'lazy', decoding: 'async', src: thumb(f.poster), alt: '', width: '40', height: '60' })
   : h('span', { class: 'sheet-thumb sheet-noposter', 'aria-hidden': 'true' }, icon('film', { size: 18 })));
 
 // The sheet for one row, in two parts. "You rated": every film the user rated

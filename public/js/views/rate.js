@@ -1,7 +1,7 @@
 // Rate: TMDB search + inline rating, the guided ratings-import flow, and your
 // ratings list.
 import { api } from '../api.js';
-import { h, clear, makeStars, toast, sectionTitle, chip, icon, withStars } from '../ui.js';
+import { h, clear, makeStars, toast, sectionTitle, chip, icon, withStars, tmdbSized } from '../ui.js';
 import { filterBox } from '../filter.js';
 
 // Where a rating came from, as the list names it.
@@ -32,7 +32,7 @@ export async function render(root, params, ctx) {
     if (!found.length) { results.appendChild(h('div', { class: 'muted pad' }, 'No matches.')); return; }
     for (const r of found.slice(0, 12)) {
       results.appendChild(h('div', { class: 'search-row' },
-        r.poster ? h('img', { class: 'search-poster', src: r.poster, alt: '', loading: 'lazy' }) : h('div', { class: 'search-poster ph' }),
+        r.poster ? h('img', { class: 'search-poster', loading: 'lazy', src: tmdbSized(r.poster, 'w92'), alt: '' }) : h('div', { class: 'search-poster ph' }),
         h('div', { class: 'search-info' },
           h('a', { class: 'search-title', href: `#/movie/${r.tmdb_id}` }, `${r.title}${r.year ? ` (${r.year})` : ''}`),
           h('div', { class: 'muted small' }, (r.genres || []).slice(0, 3).join(' · ')),
@@ -300,7 +300,7 @@ export async function render(root, params, ctx) {
   const ratingRow = (r) => {
     const title = r.title || 'Untitled';
     return h('div', { class: 'rating-item', 'data-rating-id': String(r.tmdb_id) },
-      r.poster ? h('img', { class: 'ri-poster', src: r.poster, alt: '', loading: 'lazy' }) : h('div', { class: 'ri-poster ph' }),
+      r.poster ? h('img', { class: 'ri-poster', loading: 'lazy', src: tmdbSized(r.poster, 'w92'), alt: '' }) : h('div', { class: 'ri-poster ph' }),
       h('div', { class: 'ri-info' },
         h('a', { class: 'ri-title', href: `#/movie/${r.tmdb_id}` }, `${title}${r.year ? ` (${r.year})` : ''}`),
         h('div', { class: 'muted small' }, SOURCES[r.source] || r.source),

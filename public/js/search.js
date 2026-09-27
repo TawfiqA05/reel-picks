@@ -142,7 +142,7 @@ export function openSearch(ctx = null) {
   }
 
   const poster = (m) => (m.poster
-    ? h('img', { class: 'sr-thumb', src: thumb(m.poster), alt: '', loading: 'lazy', decoding: 'async', width: '40', height: '60' })
+    ? h('img', { class: 'sr-thumb', loading: 'lazy', decoding: 'async', src: thumb(m.poster), alt: '', width: '40', height: '60' })
     : h('span', { class: 'sr-thumb sr-noposter', 'aria-hidden': 'true' }, icon('film', { size: 18 })));
 
   function openMovie(m, q) {
