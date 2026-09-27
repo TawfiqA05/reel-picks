@@ -761,7 +761,7 @@ router.get('/watchlist', (req, res) => {
   res.json({ movies: rows.map(card) });
 });
 
-router.post('/watchlist/toggle', (req, res) => {
+router.post('/watchlist/toggle', h(async (req, res) => {
   const tmdb_id = intId(req.body?.tmdb_id);
   if (!Number.isInteger(tmdb_id) || tmdb_id <= 0) return res.status(400).json({ error: 'tmdb_id required.' });
   const uid = currentUserId();
@@ -770,9 +770,15 @@ router.post('/watchlist/toggle', (req, res) => {
     run('DELETE FROM watchlist WHERE user_id = ? AND tmdb_id = ?', uid, tmdb_id);
     return res.json({ watchlisted: false });
   }
-  run('INSERT INTO watchlist(user_id, tmdb_id, added_at) VALUES(?, ?, ?)', uid, tmdb_id, new Date().toISOString());
+  // A film the app hasn't stored yet (from a Stats "More from" list, say) is
+  // fetched first, so the Watchlist page, which lists stored films, shows it.
+  if (!getMovie(tmdb_id)) {
+    await ingestOne(tmdb_id, { detailsOnly: true, gate: tmdbThrottle }).catch(() => {});
+    ingestOne(tmdb_id).catch(() => {});
+  }
+  run('INSERT OR IGNORE INTO watchlist(user_id, tmdb_id, added_at) VALUES(?, ?, ?)', uid, tmdb_id, new Date().toISOString());
   res.json({ watchlisted: true });
-});
+}));
 
 // ---- not for me (hidden films) ------------------------------------------
 // Owner only: none of these paths is on the guest allowlist, so the read-only

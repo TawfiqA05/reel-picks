@@ -14,7 +14,10 @@ export async function render(root, params, ctx) {
   clear(root);
 
   const page = h('div', { class: 'page' });
-  page.appendChild(sectionTitle('Watchlist', `${movies.length} starred`, { level: 1 }));
+  const title = sectionTitle('Watchlist', `${movies.length} starred`, { level: 1 });
+  page.appendChild(title);
+  const empty = () => emptyState('bookmark', 'No movies starred yet',
+    'Tap the bookmark on any movie to add it here. Watchlisted movies get a ranking boost.');
 
   const leaving = (recs.leavingSoon || []).filter((m) => m.watchlisted);
   if (leaving.length) {
@@ -25,19 +28,28 @@ export async function render(root, params, ctx) {
   }
 
   if (!movies.length) {
-    page.appendChild(emptyState('bookmark', 'No movies starred yet',
-      'Tap the bookmark on any movie to add it here. Watchlisted movies get a ranking boost.'));
+    page.appendChild(empty());
     root.appendChild(page);
     return;
   }
 
   const grid = h('div', { class: 'tile-grid' });
   const rows = [];
+  // A film unstarred here leaves the grid, and the count (and at zero, the
+  // empty state) follows.
+  let count = movies.length;
+  const removed = (tile) => {
+    tile.remove();
+    count--;
+    const sub = title.querySelector('.section-sub');
+    if (sub) sub.textContent = `${count} starred`;
+    if (!count) { grid.replaceWith(empty()); page.querySelector('.filter')?.remove(); }
+  };
   for (const mv of movies) {
     const tile = posterTile(mv, {
       caption: mv.title,
       corner: h('div', { class: 'tile-corner right' },
-        watchlistButton({ tmdb_id: mv.tmdb_id, title: mv.title, watchlisted: true }, ctx, { compact: true, onToggle: () => tile.remove() })),
+        watchlistButton({ tmdb_id: mv.tmdb_id, title: mv.title, watchlisted: true }, ctx, { compact: true, onToggle: (on) => { if (!on) removed(tile); } })),
     });
     grid.appendChild(tile);
     rows.push({ el: tile, fields: [mv.title] });
