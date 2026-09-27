@@ -42,6 +42,10 @@ async function pageAll(firstUrl, collection, { cap = 60 } = {}) {
   let pages = 0;
   while (url && pages < cap) {
     const res = await amcFetch(url);
+    // A maintenance page or a proxy's error arrives as text with a 200. Taken
+    // as "no showtimes" it was cached over the last good day; as an error,
+    // the cached copy is served and the owner is told AMC didn't answer.
+    if (!res || typeof res !== 'object') throw Object.assign(new Error('AMC sent something that isn\'t JSON'), { status: 502 });
     out.push(...embedded(res, collection));
     url = res?._links?.next?.href || null;
     pages += 1;

@@ -312,7 +312,10 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
     const theatres = await resolveTheatres(log);
     const primary = theatres[0] || null;
 
-    run('UPDATE movies SET playing = 0, upcoming = 0');
+    // The lineup flags are rebuilt at step 4, all at once. Clearing them here,
+    // before the network work, left Picks empty for everyone for the whole
+    // run (minutes), and empty for good if the run died part way.
+    let fallbackIds = [];
 
     // 2. AMC showtimes for the next `days` days, per theatre. Movies are
     //    deduped across theatres by AMC movie id so each is matched/ingested once.
@@ -382,7 +385,9 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
           );
         }
         // The ranking is driven by the primary; fall back to TMDB only if IT is empty.
-        if (t.isPrimary && ok) amcOk = true;
+        // A day AMC failed on but whose cached copy was kept still counts as
+        // the lineup: the TMDB fallback is for a theater with nothing at all.
+        if (t.isPrimary && (ok || get('SELECT 1 AS x FROM showtimes WHERE theatre_id = ? AND date >= ? LIMIT 1', t.id, localYMD(start)))) amcOk = true;
       }
       src.ok = amcOk;
       src.movies = uniqueMovies.size;
@@ -455,9 +460,7 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
         }
         ids.push(lm.tmdb_id);
       }
-      if (ids.length) {
-        run(`UPDATE movies SET playing = 1, playing_source = 'tmdb' WHERE tmdb_id IN (${ids.map(() => '?').join(',')})`, ...ids);
-      }
+      fallbackIds = ids;
       log.filtered = filtered;
       log.sources.tmdbFallback = {
         ok: ids.length > 0, movies: ids.length,
@@ -477,6 +480,11 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
     //    primary's lineup (ranked) versus only nearby (separate section).
     const today = localYMD(start);
     const weekEnd = localYMD(addDays(start, 6));
+    // No await from here to the last flag: a request never sees a half-built lineup.
+    run('UPDATE movies SET playing = 0');
+    if (fallbackIds.length) {
+      run(`UPDATE movies SET playing = 1, playing_source = 'tmdb' WHERE tmdb_id IN (${fallbackIds.map(() => '?').join(',')})`, ...fallbackIds);
+    }
     if (theatres.length) {
       run(
         `UPDATE movies SET playing = 1, playing_source = 'amc'
@@ -485,6 +493,8 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
         today, weekEnd,
       );
     }
+    // What's playing now isn't "coming" any more, even before step 5 redoes the list.
+    run('UPDATE movies SET upcoming = 0 WHERE playing = 1');
 
     // 5. Coming Soon: TMDB upcoming + any advance showtimes beyond this week.
     if (tmdb.tmdbConfigured()) {
@@ -498,6 +508,8 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
         upsertLightMovie(lm);
         upIds.push(lm.tmdb_id);
       }
+      // Rebuilt in one go, as with playing above.
+      run('UPDATE movies SET upcoming = 0');
       if (upIds.length) {
         run(`UPDATE movies SET upcoming = 1 WHERE playing = 0 AND tmdb_id IN (${upIds.map(() => '?').join(',')})`, ...upIds);
       }
@@ -507,7 +519,7 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
         weekEnd,
       );
       log.sources.upcoming = { movies: upIds.length };
-    }
+    } else run('UPDATE movies SET upcoming = 0');
 
     // 6. Housekeeping: resolve pending ratings, drop past showtimes. Rated films
     //    still missing credits are fetched by the backfill, started below.
