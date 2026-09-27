@@ -5,6 +5,7 @@ import { weeklyCard, heroPick, movieRow, lastChanceCard, dayPicker, openHiddenLi
 import { filterBox } from '../filter.js';
 import { homeSection } from './athome.js';
 import { openWhatToWatch } from '../wsw.js';
+import { pullToRefresh } from '../pull.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -88,6 +89,10 @@ export async function render(root, params, ctx) {
   };
 
   draw();
+  // Pull down at the top of Picks: the owner's real refresh (showtimes and
+  // scores, then the page again); for friends and the guest, the page's data
+  // fetched again (their showtimes come with the owner's daily refresh).
+  pullToRefresh({ onRefresh: () => (ctx.isOwner() ? ctx.triggerRefresh() : reload().catch((e) => toast(e.message, 'error'))) });
 }
 
 function buildPage(data, status, ctx, state, actions) {

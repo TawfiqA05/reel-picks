@@ -43,7 +43,7 @@ export async function render(root, params, ctx, { quiet = false } = {}) {
   const weekOf = wy ? new Date(wy, wm - 1, wd).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
   page.appendChild(sectionTitle(words.statsTitle,
     !plan.subscription ? `Pay per ticket · week of ${weekOf}`
-      : monthly ? `Resets on the 1st · ${monthName}` : `Resets Friday · week of ${weekOf}`, { level: 1 }));
+      : monthly ? `Resets on the 1st · ${monthName}` : `Resets Friday · week of ${weekOf}`));
   page.appendChild(h('div', { class: 'stat-grid' }, ...(plan.subscription ? [
     plan.unlimited
       ? bigStat(String(week.used), `${plan.units} this ${plan.period}`, 'no limit')

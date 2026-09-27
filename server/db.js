@@ -516,7 +516,7 @@ export const USER_SETTING_KEYS = new Set([
   'weightPublic', 'weightTaste', 'preferImax',
   'watchlistBoost', 'imaxBoost', 'windowFitBoost', 'urgencyBoost', 'urgencyWatchlistMultiplier',
   'onboardingDone', 'everythingPlayingCollapsed', 'watchTogether',
-  'setupDone', 'tourDone',
+  'setupDone', 'tourDone', 'youNoteSeen',
   'moviePlan', 'planPeriod', 'streamingServices',
 ]);
 
@@ -805,6 +805,8 @@ export const DEFAULT_SETTINGS = {
   // its own. Replay tour in Settings still opens the tour.
   setupDone: false,
   tourDone: false,
+  // Seen "Stats, Together and Settings are now under You." (js/app.js).
+  youNoteSeen: false,
   // A friend's "Let <owner> plan movies with me" switch (lib/together.js).
   // Off until they turn it on; the owner has no switch and is always available.
   watchTogether: false,

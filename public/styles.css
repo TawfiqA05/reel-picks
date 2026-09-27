@@ -1,7 +1,8 @@
 /* Reel Picks — poster-forward UI. Colours and fonts come from the palette
    blocks below the shared :root; every rule uses the role tokens. */
 :root {
-  /* shape */
+  /* shape: every button, chip and field uses --r-btn */
+  --r-btn: 12px;
   --r-sm: 10px;
   --r-md: 14px;
   --r-lg: 18px;
@@ -237,7 +238,9 @@ pre { background: var(--surface-2); padding: 12px; border-radius: var(--r-sm); o
 .boot { display: grid; place-items: center; height: 70vh; color: var(--muted); }
 
 /* ---- shell / chrome ---- */
-.shell { max-width: 1200px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; }
+.shell { position: relative; max-width: 1200px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; }
+/* The header: the logo on the left and search on the right, nothing else. On
+   wide screens the tab links sit between them. */
 .app-header {
   position: sticky; top: 0; z-index: 30; isolation: isolate;
   display: flex; align-items: center; gap: var(--sp-3);
@@ -249,123 +252,105 @@ pre { background: var(--surface-2); padding: 12px; border-radius: var(--r-sm); o
    once the page scrolled under it (a blank bar on the movie page). */
 .app-header::before {
   content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: color-mix(in srgb, var(--bg) 78%, transparent);
-  -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px);
-  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(18px); backdrop-filter: saturate(1.4) blur(18px);
+  border-bottom: 1px solid var(--divider);
 }
-.brand { display: flex; align-items: center; gap: var(--sp-2); flex: 0 0 auto; min-height: 44px; }
-.brand-mark { color: var(--text); }
+.brand { display: flex; align-items: center; gap: var(--sp-2); flex: 0 0 auto; min-height: 44px; color: var(--text); }
+.brand-mark { color: var(--accent-text); }
 .brand-name { font-size: var(--fs-lg); line-height: 1; }
-.header-actions { display: flex; align-items: center; gap: var(--sp-2); margin-left: auto; min-width: 0; }
-.theatre-name {
-  display: none; font-size: var(--fs-sm); font-weight: 500; color: var(--text-2);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: var(--sp-2) var(--sp-1); min-width: 0;
-}
-.theatre-name:hover { color: var(--text); }
+.header-search { margin-left: auto; }
+/* Icon buttons: 44px rounded squares, the same corner as every other button. */
 .icon-btn {
-  position: relative; width: 44px; height: 44px; flex: 0 0 44px; display: grid; place-items: center;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm);
-  color: var(--text); cursor: pointer; padding: 0;
+  position: relative; flex: 0 0 44px; width: 44px; height: 44px; display: grid; place-items: center; padding: 0;
+  border: none; border-radius: var(--r-btn); background: var(--chip); color: var(--text); cursor: pointer;
 }
-.icon-btn.round { border-radius: 50%; }
-.icon-btn:hover { background: var(--surface-2); }
-.icon-btn.active { color: var(--accent-text); border-color: color-mix(in srgb, var(--accent-text) 45%, transparent); }
-.icon-btn.active .icon { fill: currentColor; }
-/* Saved to the watchlist: the bookmark fills in gold, wherever it appears
-   (aria-pressed and the button's name say the same in words). */
-.wl-btn.active { color: var(--text); }
-.wl-btn.icon-btn.active { border-color: color-mix(in srgb, var(--gold) 55%, transparent); }
-.wl-btn.active .icon { color: var(--gold); fill: currentColor; }
-/* Hidden ("Not for me"): a muted red on the control and the tag that say so. */
-.not-for-me:disabled, .wsw-film.is-hidden .wsw-hide { color: var(--red); }
-/* Outlined, not tinted: it sits in a row faded to 80%, where a tinted
-   background left it at 4:1. */
-.badge.hidden { background: transparent; color: var(--red); box-shadow: inset 0 0 0 1px currentColor; }
-.hidden-icon { color: var(--red); flex: 0 0 auto; }
-.wsw-hidden-note .hidden-icon { vertical-align: -2px; }
+.icon-btn:hover { background: color-mix(in srgb, var(--chip) 85%, var(--text)); }
 /* Status lines (Settings): a dot in the state's colour before words that say it. */
 .status-line { display: flex; align-items: flex-start; gap: var(--sp-2); }
 .status-dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; margin-top: calc(0.5lh - 4px); background: var(--muted); }
-.status-dot.ok { background: var(--green); }
-.status-dot.bad { background: var(--red); }
-.status-dot.warn { background: var(--amber); }
-.status-line.bad { color: var(--red); }
+.status-dot.ok { background: var(--good); }
+.status-dot.bad { background: var(--bad); }
+.status-dot.warn { background: var(--warn); }
+.status-line.bad { color: var(--bad); }
 /* Toasts: a green check for done, a red mark for a problem. */
 .toast-icon { display: inline-flex; vertical-align: -3px; margin-right: 6px; }
-.toast-icon.ok { color: var(--green); }
-.toast-icon.bad { color: var(--red); }
-.attn-dot { display: none; position: absolute; top: 9px; right: 9px; width: 9px; height: 9px; border-radius: 50%; background: var(--text); box-shadow: 0 0 0 2px var(--surface); }
-.icon-btn.has-dot .attn-dot { display: block; }
-#refresh-btn.spinning .icon { animation: spin 0.9s linear infinite; }
-#refresh-btn.spinning { color: var(--text); }
+.toast-icon.ok { color: var(--good); }
+.toast-icon.bad { color: var(--bad); }
+.hidden-icon { color: var(--bad); flex: 0 0 auto; }
+.wsw-hidden-note .hidden-icon { vertical-align: -2px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Segmented section switcher (wide screens only). */
-.seg { display: none; }
-.seg-item {
-  display: inline-flex; align-items: center; justify-content: center; min-height: 36px;
-  padding: 0 var(--sp-4); border-radius: 999px; color: var(--muted);
-  font-size: var(--fs-sm); font-weight: 500; white-space: nowrap;
-}
-.seg-item:hover { color: var(--text); }
-.seg-item.active { background: var(--surface-3); color: var(--accent-text); box-shadow: var(--shadow-soft); }
-
-main { padding: var(--sp-4); padding-bottom: calc(var(--chrome-bottom) + var(--end-gap)); }
+main { position: relative; padding: var(--sp-4); padding-bottom: calc(var(--chrome-bottom) + var(--end-gap)); }
 body.has-save main { padding-bottom: calc(var(--chrome-bottom) + var(--savebar-h) + var(--end-gap)); }
 /* Whatever a page ends with, its last box brings no margin of its own, so the
    gap above the chrome is --end-gap exactly. */
-#main :is(.view, .page, .detail, .sched-panel, .welcome) > :last-child { margin-bottom: 0; }
+#main :is(.view, .page, .detail, .sched-panel, .you-panel, .welcome) > :last-child { margin-bottom: 0; }
 .page { display: flex; flex-direction: column; gap: var(--sp-1); }
 /* One page's box inside main (app.js); it takes no part in the layout. */
 .view { display: contents; }
+/* The glow behind the top of the page, dark theme only (app.js setGlow). */
+.page-glow { display: none; }
 
-/* ---- bottom nav (frosted) ---- */
+/* ---- the tab bar: five tabs, the active one in the accent ---- */
 .bottom-nav {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 1200px; z-index: 30;
   display: flex; justify-content: space-around; align-items: flex-start;
   height: var(--chrome-bottom); box-sizing: border-box; overflow: hidden;
   padding: var(--sp-1) var(--sp-1) var(--sab);
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
-  -webkit-backdrop-filter: saturate(1.6) blur(20px); backdrop-filter: saturate(1.6) blur(20px);
-  border-top: 1px solid var(--line);
+  background: var(--tabbar);
+  -webkit-backdrop-filter: saturate(1.4) blur(20px); backdrop-filter: saturate(1.4) blur(20px);
+  border-top: 1px solid var(--divider);
 }
-.nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 52px; min-height: 48px; padding: var(--sp-1) var(--sp-2); border-radius: var(--r-sm); color: var(--muted); font-size: var(--fs-xs); font-weight: 500; }
-.nav-icon { display: grid; place-items: center; }
+.nav-item { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 44px; min-height: 48px; padding: var(--sp-1) 2px; color: var(--muted); font-size: var(--fs-xs); font-weight: 500; }
+.nav-icon { position: relative; display: grid; place-items: center; }
 .nav-item.active { color: var(--accent-text); }
+.nav-item.active .icon { stroke-width: 2.1; }
+/* Something in Settings needs the owner: a dot on You (the tab's name says it in words). */
+.attn-dot { display: none; position: absolute; top: -2px; right: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 2px var(--tabbar); }
+.has-dot .attn-dot { display: block; }
+.seg-item .attn-dot { position: static; margin-left: 6px; box-shadow: none; }
 
-/* Narrow phones (320): the name steps aside for the mark (the link keeps its
-   label), and the six tabs share the width by their labels, 44px at least. */
-@media (max-width: 359px) {
-  .app-header { gap: var(--sp-2); padding-left: var(--sp-3); padding-right: var(--sp-3); }
-  .brand { min-width: 44px; justify-content: center; }
-  .brand-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .header-actions { gap: var(--sp-1); }
-  .bottom-nav { justify-content: space-between; }
-  .nav-item { flex: 1 1 auto; min-width: 44px; padding-left: 2px; padding-right: 2px; }
-  /* "RealD 3D  Book 9:20 PM tomorrow" fits one line. */
-  .hero-actions .btn.book { padding: 0 var(--sp-3); }
+/* Wide screens: the tab links move into the header, between logo and search. */
+.seg { display: none; }
+.seg-item {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
+  padding: 0 var(--sp-4); color: var(--muted); font-size: var(--fs-base); font-weight: 500; white-space: nowrap;
+  border-bottom: 2px solid transparent;
 }
-
+.seg-item:hover { color: var(--text); }
+.seg-item.active { color: var(--accent-text); border-bottom-color: var(--accent); }
 @media (min-width: 900px) {
-  .seg {
-    display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--line);
-    position: absolute; left: 50%; transform: translateX(-50%);
-  }
-  .app-header { position: sticky; }
-  .theatre-name { display: block; }
+  .seg { display: flex; gap: var(--sp-1); margin: 0 auto; }
+  .header-search { margin-left: 0; }
   .bottom-nav { display: none; }
   main { padding: var(--sp-6) var(--sp-6) var(--end-gap); }
 }
+@media (min-width: 900px) and (max-width: 1099px) { .seg-item { padding: 0 var(--sp-3); } }
 
-/* ---- Schedule: the Leaving soon / Coming soon switch (views/schedule.js) ---- */
-.sched-seg { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--line); width: 100%; max-width: 420px; margin: var(--sp-1) 0 var(--sp-2); }
-.sched-item { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 var(--sp-4); border-radius: 999px; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
-.sched-item:hover { color: var(--text); }
-.sched-item.active { background: var(--surface-3); color: var(--text); box-shadow: var(--shadow-soft); }
+/* Pull to refresh (js/pull.js): a small arrow under the header that turns
+   as you pull, then spins while the refresh runs. */
+.pull {
+  position: fixed; z-index: 29; left: 50%; top: calc(64px + var(--sat));
+  width: 36px; height: 36px; margin-left: -18px; display: grid; place-items: center;
+  border-radius: 12px; background: var(--raised); color: var(--accent-text); box-shadow: var(--shadow);
+  opacity: 0; visibility: hidden; transform: translateY(var(--pull, 0px));
+}
+.pull.show { visibility: visible; }
+.pull .icon { transform: rotate(var(--turn, 0deg)); }
+.pull.busy .icon { animation: spin .9s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .pull.busy .icon { animation: none; } }
+
+/* ---- segments: Schedule (Leaving soon / Coming soon) and You ---- */
+.segmented { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--chip); width: 100%; max-width: 520px; margin: var(--sp-1) 0 var(--sp-3); }
+.segment { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 0; padding: 0 var(--sp-2); border-radius: 10px; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
+.segment:hover { color: var(--text); }
+.segment.active { background: var(--accent); color: var(--on-accent); }
+.page-head { margin-top: var(--sp-2); }
 
 /* ---- welcome setup (views/welcome.js) ---- */
-.shell.in-setup .bottom-nav, .shell.in-setup .seg, .shell.in-setup .header-actions { display: none; }
+.shell.in-setup :is(.bottom-nav, .seg, .header-search) { display: none; }
 .welcome { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--sp-3); }
 .wc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); margin-top: var(--sp-2); }
 .wc-title { font-family: var(--font-display); font-weight: var(--display-weight); font-size: var(--fs-xl); line-height: var(--lh-display); letter-spacing: var(--display-tracking); }
@@ -967,35 +952,11 @@ body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h)
 /* ---- guest (read-only shared link) ---- */
 .guest-banner { display: none; }
 .shell.guest .guest-banner {
-  display: block;
-  text-align: center;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--text);
-  background: var(--surface-3);
-  padding: 6px 12px;
+  display: block; text-align: center; font-size: var(--fs-sm); font-weight: 500;
+  color: var(--text); background: var(--accent-soft); padding: var(--sp-2) var(--sp-4);
 }
-.shell.guest .app-header .icon-btn { display: none; }
-.shell.friend #refresh-btn { display: none; }
-.user-chip { color: var(--text-2); max-width: 10em; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
-.user-chip[hidden] { display: none; }
-.uc-initial { display: none; }
-/* Phones: the name shrinks to its first letter in a round badge (the full name
-   is still there for screen readers and on hover), leaving room for the ?. */
-@media (max-width: 480px) {
-  .header-actions { gap: 6px; }
-  .user-chip { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; font-weight: 700; font-size: var(--fs-sm); }
-  .uc-initial { display: inline; }
-  .uc-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-}
-.shell.guest .nav-item[data-name="rate"],
-.shell.guest .nav-item[data-name="watchlist"],
-.shell.guest .nav-item[data-name="stats"],
-.shell.guest .seg-item[data-name="rate"],
-.shell.guest .seg-item[data-name="watchlist"],
-.shell.guest .seg-item[data-name="stats"],
-.shell.guest .nav-item[data-name="together"],
-.shell.guest .seg-item[data-name="together"] { display: none; }
+/* The guest link has Picks and Schedule only. */
+.shell.guest :is(.nav-item, .seg-item):is([data-name="rate"], [data-name="watchlist"], [data-name="you"]) { display: none; }
 
 /* ---- responsive ---- */
 @media (min-width: 720px) {
@@ -1460,19 +1421,6 @@ a.tg-time:hover { border-color: var(--text-2); }
 .import-head { display: flex; align-items: center; gap: 8px; }
 .import-head svg { color: var(--text-2); flex: 0 0 auto; }
 
-/* Wide header: the tabs sit in the flow, centred in the space between the
-   brand and the buttons, so they can never run under the theatre name (they
-   used to be absolutely centred and overlapped it below about 1100px). They
-   tighten below 1180px, and under 1000px the theatre name steps aside. */
-@media (min-width: 900px) {
-  .seg { position: static; transform: none; margin: 0 auto; flex: 0 0 auto; }
-  .header-actions { margin-left: 0; min-width: 0; }
-  .theatre-name { flex: 0 1 auto; }
-}
-@media (min-width: 900px) and (max-width: 1179px) { .seg-item { padding: 0 var(--sp-3); } }
-@media (min-width: 900px) and (max-width: 999px) { .theatre-name { display: none; } }
-@media (min-width: 1000px) and (pointer: coarse) { .theatre-name { display: flex; align-items: center; min-height: 44px; } }
-
 /* ---- guided tour (js/tour.js) ---- */
 .tour-layer { position: fixed; inset: 0; z-index: 250; }
 .tour-spot {
@@ -1503,19 +1451,18 @@ a.tg-time:hover { border-color: var(--text-2); }
    stack. Last in the file, so it wins over the rules it narrows. */
 @media (max-width: 299px) {
   .app-header { flex-wrap: wrap; position: static; }
-  .header-actions { flex-wrap: wrap; justify-content: flex-end; }
   .bottom-nav { justify-content: flex-start; overflow-x: auto; scrollbar-width: none; left: 0; transform: none; width: 100vw; }
   .nav-item { flex: 0 0 auto; }
   .wc-head { flex-wrap: wrap; }
   .stat-grid { grid-template-columns: minmax(0, 1fr); }
   .hero-title, .detail-hero .hero-title { font-size: var(--fs-xl); overflow-wrap: anywhere; }
-  .sched-item { white-space: normal; text-align: center; line-height: var(--lh-tight); }
+  .segment { white-space: normal; text-align: center; line-height: var(--lh-tight); }
   .row-head, .stat-head { flex-wrap: wrap; }
   .factor-row { grid-template-columns: minmax(0, 1fr) auto; }
   .factor-row > .stars { grid-column: 1 / -1; grid-row: 2; }
   /* Labels that hold one line elsewhere may take two here. */
   .badge, .runway-text, .st-seat, .st-end, .key-status, .factor-name, .btn, .row-gap:has(> .input) > .btn { white-space: normal; }
-  .sched-item { min-width: 0; overflow-wrap: anywhere; }
+  .segment { overflow-wrap: anywhere; }
   .rr-left, .key-row { flex-wrap: wrap; }
   html .stars.interactive { font-size: var(--fs-lg) !important; }
   .rating-item > .stars { grid-column: 1 / -1; grid-row: 3; }

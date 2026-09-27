@@ -24,9 +24,9 @@ export async function render(root, params, ctx) {
   clear(root);
   const panel = h('div', { class: 'sched-panel' });
   root.append(
-    h('nav', { class: 'sched-seg', 'aria-label': 'Schedule' },
+    h('nav', { class: 'segmented', 'aria-label': 'Schedule' },
       ...SEGMENTS.map((s) => h('a', {
-        class: `sched-item${s === seg ? ' active' : ''}`, href: `#/schedule/${s.key}`, 'data-seg': s.key,
+        class: `segment${s === seg ? ' active' : ''}`, href: `#/schedule/${s.key}`, 'data-seg': s.key,
         ...(s === seg ? { 'aria-current': 'page' } : {}),
       }, s.label))),
     panel,

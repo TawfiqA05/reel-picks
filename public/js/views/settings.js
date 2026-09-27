@@ -139,7 +139,6 @@ export async function render(root, params, ctx) {
   clear(root);
 
   const page = h('div', { class: 'page settings' });
-  page.appendChild(sectionTitle('Settings', null, { level: 1 }));
   // A friend sees their own settings only: no key status, no AMC matching, and
   // none of the shared tuning (fallback window, good-match cutoff, Last chance),
   // which the owner sets for everyone. The server enforces the same split.
@@ -869,12 +868,6 @@ export async function render(root, params, ctx) {
     offsiteSlot.append(offLine, h('div', {}, offBtn));
     api.offsite().then(paintOff).catch(() => {});
   }
-
-  // ---- Help: the guided tour again (js/tour.js).
-  page.appendChild(card('Help',
-    h('p', { class: 'muted small' }, 'A quick walk through Picks, Schedule, Search and the rest. The ? at the top opens it too.'),
-    h('div', {}, h('button', { class: 'btn ghost', type: 'button', onClick: () => ctx.startTour() }, icon('help', { size: 16 }), 'Replay tour')),
-  ));
 
   // ---- Alerts (owner only): the last 10 problems and recoveries.
   if (isOwner) page.appendChild(alertsCard());

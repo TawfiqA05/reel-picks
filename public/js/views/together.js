@@ -17,7 +17,7 @@ export async function render(root, params, ctx) {
 
   if (info.role === 'friend') {
     const owner = info.ownerName;
-    page.appendChild(sectionTitle('Together', `You and ${owner}`, { level: 1 }));
+    page.appendChild(sectionTitle(`You and ${owner}`, 'Films you would both enjoy'));
     if (!info.optedIn) {
       // Short enough for one line at 320; the Settings switch keeps the full wording.
       const turnOn = h('button', { class: 'btn', type: 'button' }, `Plan movies with ${owner}`);
@@ -41,7 +41,7 @@ export async function render(root, params, ctx) {
   }
 
   // Owner.
-  page.appendChild(sectionTitle('Together', 'Films you and a friend would both enjoy', { level: 1 }));
+  page.appendChild(sectionTitle('Plan with a friend', 'Films you would both enjoy'));
   const partners = info.partners || [];
   if (!partners.length) {
     page.appendChild(emptyState('users', 'No friends have turned this on yet',

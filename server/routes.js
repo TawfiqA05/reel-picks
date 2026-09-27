@@ -148,6 +148,7 @@ router.get('/status', (req, res) => {
       onboardingDone: Boolean(s.onboardingDone),
       setupDone: Boolean(s.setupDone),
       tourDone: Boolean(s.tourDone),
+      youNoteSeen: Boolean(s.youNoteSeen),
       everythingPlayingCollapsed: Boolean(s.everythingPlayingCollapsed),
       lastRefresh: s.lastRefresh,
       refreshing: refreshState.running,
@@ -197,6 +198,7 @@ router.get('/status', (req, res) => {
     onboardingDone: Boolean(s.onboardingDone),
     setupDone: Boolean(s.setupDone),
     tourDone: Boolean(s.tourDone),
+    youNoteSeen: Boolean(s.youNoteSeen),
     everythingPlayingCollapsed: Boolean(s.everythingPlayingCollapsed),
     lastRefresh: s.lastRefresh,
     refreshing: refreshState.running,
@@ -327,7 +329,7 @@ router.put('/settings', (req, res) => {
   }
   // Urgency: a non-negative point value and a multiplier of at least 1, so what
   // is stored is what ranking uses and what the Settings page shows.
-  for (const k of ['setupDone', 'tourDone']) if (k in patch) patch[k] = Boolean(patch[k]);
+  for (const k of ['setupDone', 'tourDone', 'youNoteSeen']) if (k in patch) patch[k] = Boolean(patch[k]);
   if ('streamingServices' in patch) patch.streamingServices = cleanServices(patch.streamingServices);
   if ('urgencyBoost' in patch) patch.urgencyBoost = Math.max(0, Number(patch.urgencyBoost) || 0);
   if ('urgencyWatchlistMultiplier' in patch) patch.urgencyWatchlistMultiplier = Math.max(1, Number(patch.urgencyWatchlistMultiplier) || 1);

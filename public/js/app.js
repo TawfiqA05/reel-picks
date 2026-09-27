@@ -9,9 +9,7 @@ import * as detail from './views/detail.js';
 import * as schedule from './views/schedule.js';
 import * as rate from './views/rate.js';
 import * as watchlist from './views/watchlist.js';
-import * as stats from './views/stats.js';
-import * as together from './views/together.js';
-import * as settings from './views/settings.js';
+import * as you from './views/you.js';
 import * as onboarding from './views/onboarding.js';
 import * as welcome from './views/welcome.js';
 
@@ -21,9 +19,12 @@ const routes = {
   schedule: schedule.render,
   rate: rate.render,
   watchlist: watchlist.render,
-  stats: stats.render,
-  together: together.render,
-  settings: settings.render,
+  // You holds Stats, Together, Settings and Help; each keeps its own address.
+  you: you.render,
+  stats: (root, params, c) => you.render(root, ['stats', ...params], c),
+  together: (root, params, c) => you.render(root, ['together', ...params], c),
+  settings: (root, params, c) => you.render(root, ['settings', ...params], c),
+  help: (root, params, c) => you.render(root, ['help', ...params], c),
   onboarding: onboarding.render,
   welcome: welcome.render,
 };
@@ -33,9 +34,10 @@ const NAV = [
   { name: 'schedule', label: 'Schedule', icon: 'calendar' },
   { name: 'rate', label: 'Rate', icon: 'star' },
   { name: 'watchlist', label: 'Watchlist', icon: 'bookmark' },
-  { name: 'together', label: 'Together', icon: 'users' },
-  { name: 'stats', label: 'Stats', icon: 'chart' },
+  { name: 'you', label: 'You', icon: 'user' },
 ];
+// Pages that live under a tab without being its first page.
+const TAB_OF = { stats: 'you', together: 'you', settings: 'you', help: 'you' };
 
 let status = null;
 let refreshing = false;
@@ -51,7 +53,19 @@ const ctx = {
   rerender: () => route(),
   triggerRefresh: doRefresh,
   startTour: () => startTour(ctx),
+  setGlow,
 };
+
+// The dark theme's glow behind the top of the page (Picks and the movie
+// page): the film's poster colour, or `null` for the faint amber one.
+// Anything else (undefined) takes it away; every route change does.
+function setGlow(color) {
+  const shell = document.querySelector('.shell');
+  if (!shell) return;
+  shell.classList.toggle('has-glow', color !== undefined);
+  if (color) shell.style.setProperty('--glow-color', color);
+  else shell.style.removeProperty('--glow-color');
+}
 
 // Schedule's Leaving segment reads only /api/recommendations, which is already
 // on the guest allowlist and already strips drive times and home coordinates
@@ -79,84 +93,48 @@ function parseHash() {
 
 function chromeEls() {
   return {
-    theatre: document.querySelector('#theatre-name'),
-    userChip: document.querySelector('#user-chip'),
-    settingsBtn: document.querySelector('#settings-btn'),
-    refreshBtn: document.querySelector('#refresh-btn'),
     searchBtn: document.querySelector('#search-btn'),
-    helpBtn: document.querySelector('#help-btn'),
-    nav: document.querySelector('#bottom-nav'),
+    youTabs: document.querySelectorAll('.nav-item[data-name="you"], .seg-item[data-name="you"]'),
   };
 }
 
 function renderChrome() {
   const els = chromeEls();
-  if (!els.theatre) return;
+  if (!els.searchBtn) return;
   const guest = Boolean(status?.guest);
   document.querySelector('.shell')?.classList.toggle('guest', guest);
-  // Who's signed in, beside Settings. The guest link has its own banner.
-  // On phones it shrinks to the first letter, which leaves room for the ?.
-  if (els.userChip) {
-    const name = !guest && status?.user?.name ? status.user.name : '';
-    els.userChip.replaceChildren(
-      h('span', { class: 'uc-initial', 'aria-hidden': 'true' }, [...name][0] || ''),
-      h('span', { class: 'uc-name' }, name));
-    els.userChip.hidden = !name;
-    els.userChip.title = name ? `Signed in as ${name}` : '';
-  }
-  // The tour, again (js/tour.js). Not on the guest link.
-  if (els.helpBtn) els.helpBtn.hidden = !status || guest;
+  // A friend can't force a refresh (pull-to-refresh just re-fetches for them).
+  document.querySelector('.shell')?.classList.toggle('friend', !guest && status?.user?.isOwner === false);
   // Search is the owner's and friends'; the guest link has none (and the
   // server refuses it). Hidden until status says who this is.
-  if (els.searchBtn) els.searchBtn.hidden = !status || guest;
-  // Until status says who this is (or while offline), no Refresh: a friend
-  // and the guest can't use it.
-  els.refreshBtn.hidden = !status;
-  // A friend can't force a refresh; the server would refuse it anyway.
-  document.querySelector('.shell')?.classList.toggle('friend', !guest && status?.user?.isOwner === false);
+  els.searchBtn.hidden = !status || guest;
 
   // The guest link's one piece of guidance, in place of the setup and tour.
   const banner = document.querySelector('#guest-banner');
   if (banner) banner.textContent = guest ? `You're viewing ${status?.ownerName || 'the owner'}'s picks. Ask him for an invite to get your own.` : '';
 
-  const extra = Math.max(0, (status?.theatres?.length || 1) - 1);
-  const primary = status?.theatre;
-  // "Set your theater" only when status says there is none, not while it's unknown.
-  els.theatre.textContent = (primary?.short || primary?.name || (guest || !status ? '' : 'Set your theater')) + (extra ? ` +${extra}` : '');
-  els.theatre.hidden = !els.theatre.textContent;
-  // Guests can't open Settings, so the label just goes back to Picks.
-  els.theatre.setAttribute('href', guest ? '#/home' : '#/settings');
-  els.theatre.title = extra
-    ? `${primary?.name || ''}. Also following ${status.theatres.filter((t) => !t.isPrimary).map((t) => t.name).join(', ')}`
-    : (primary?.name || '');
-
-  // Anything that needs the owner's attention (a missing key, AMC titles that
-  // couldn't be matched and so are invisible to the ranking, matches to review)
-  // is a dot on the Settings button. The full text lives in Settings and in the
-  // note above Everything playing, not in the header.
+  // Anything in Settings that needs the owner (a missing key, AMC titles that
+  // couldn't be matched, matches to review) is a dot on the You tab, and the
+  // tab says so in words. The full text lives in Settings.
   const missing = (!guest && status?.keys) ? Object.values(status.keys).filter((v) => !v).length : 0;
   const unmatched = guest ? 0 : (status?.counts?.unmatchedAmc || 0);
   const review = guest ? 0 : (status?.counts?.reviewAmc || 0);
   const attention = missing + unmatched + review;
-  els.settingsBtn.classList.toggle('has-dot', attention > 0);
-  els.settingsBtn.setAttribute('aria-label', attention
-    ? `Settings, ${attention} item${attention > 1 ? 's' : ''} need${attention > 1 ? '' : 's'} attention`
-    : 'Settings');
-  els.settingsBtn.title = attention
+  const words = attention
     ? [missing && `${missing} missing key${missing > 1 ? 's' : ''}`, unmatched && `${unmatched} unmatched AMC title${unmatched > 1 ? 's' : ''}`, review && `${review} match${review > 1 ? 'es' : ''} to review`].filter(Boolean).join(', ')
-    : 'Settings';
-
-  els.refreshBtn.classList.toggle('spinning', refreshing || Boolean(status?.refreshing));
-  els.refreshBtn.title = status?.lastRefresh
-    ? `Refresh. Last updated ${new Date(status.lastRefresh).toLocaleString()}`
-    : 'Refresh';
-  els.refreshBtn.setAttribute('aria-busy', String(refreshing || Boolean(status?.refreshing)));
+    : '';
+  for (const tab of els.youTabs) {
+    tab.classList.toggle('has-dot', attention > 0);
+    tab.setAttribute('aria-label', attention ? `You. Settings: ${words}` : 'You');
+    tab.title = attention ? `Settings: ${words}` : '';
+  }
 }
 
 function updateNavActive(name) {
   // A movie page belongs to no tab; everything else lights its own.
+  const tab = TAB_OF[name] || name;
   document.querySelectorAll('.nav-item, .seg-item').forEach((el) => {
-    const on = el.dataset.name === name;
+    const on = el.dataset.name === tab;
     el.classList.toggle('active', on);
     if (on) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
     // A tab left for another page (the back button, a link in the page) lets
@@ -225,6 +203,7 @@ async function route() {
   document.body.classList.remove('has-save');
   // Picks draws its own skeleton; everything else gets the spinner.
   if (view !== routes.home) root.appendChild(spinner('Loading…'));
+  setGlow(undefined);
   updateNavActive(name);
   try {
     await view(root, params, ctx);
@@ -238,6 +217,21 @@ async function route() {
   // Anyone who hasn't seen the tour gets it once, on Picks (right after the
   // welcome setup for someone new).
   if (name === 'home' && location.hash.startsWith('#/home') && shouldAutoTour(status) && !welcome.needsSetup(status) && !tourActive()) startTour(ctx);
+  else youNote();
+}
+
+// Once, for everyone who knew the old six tabs: where three of them went.
+// Someone new learns it from the tour instead (which marks it seen too).
+let youNoted = false;
+function youNote() {
+  if (youNoted || !status || status.guest || !status.user || status.youNoteSeen || !status.tourDone || tourActive()) return;
+  youNoted = true;
+  status.youNoteSeen = true;
+  toast('Stats, Together and Settings are now under You.', '', {
+    duration: 9000,
+    action: { label: 'Open You', onClick: () => { location.hash = '#/you'; } },
+  });
+  api.saveSettings({ youNoteSeen: true }).catch(() => {});
 }
 
 // The service worker answers API calls with a 503 "You appear to be offline."
@@ -267,31 +261,24 @@ function buildShell() {
   clear(app);
   app.appendChild(
     h('div', { class: 'shell' },
+      h('div', { class: 'page-glow', 'aria-hidden': 'true' }),
       h('header', { class: 'app-header' },
         h('a', { class: 'brand', href: '#/home', 'aria-label': 'Reel Picks, home' },
           icon('reel', { size: 22, cls: 'brand-mark' }),
           h('span', { class: 'brand-name' }, 'Reel Picks'),
         ),
-        // Wide screens: the tabs move up here as a segmented control and the
-        // bottom bar goes away.
+        // Wide screens: the tabs move up here and the bottom bar goes away.
         h('nav', { class: 'seg', 'aria-label': 'Sections' },
-          ...NAV.map((n) => h('a', { class: 'seg-item', 'data-name': n.name, href: `#/${n.name}` }, n.label)),
+          ...NAV.map((n) => h('a', { class: 'seg-item', 'data-name': n.name, href: `#/${n.name}` }, n.label,
+            h('span', { class: 'attn-dot', 'aria-hidden': 'true' }))),
         ),
-        h('div', { class: 'header-actions' },
-          h('a', { id: 'theatre-name', class: 'theatre-name', href: '#/settings' }, ''),
-          h('button', { id: 'search-btn', class: 'icon-btn round', type: 'button', hidden: true, 'aria-label': 'Search movies', title: 'Search (/)', 'aria-haspopup': 'dialog', onClick: () => openSearch(ctx) }, icon('search', { size: 20 })),
-          h('button', { id: 'help-btn', class: 'icon-btn round', type: 'button', hidden: true, 'aria-label': 'Take the tour', title: 'Help: take the tour', onClick: () => startTour(ctx) }, icon('help', { size: 20 })),
-          h('button', { id: 'refresh-btn', class: 'icon-btn round', type: 'button', 'aria-label': 'Refresh showtimes and scores', title: 'Refresh', onClick: doRefresh }, icon('refresh', { size: 20 })),
-          h('span', { id: 'user-chip', class: 't-chip user-chip', hidden: true }),
-          h('a', { id: 'settings-btn', class: 'icon-btn round', href: '#/settings', 'aria-label': 'Settings', title: 'Settings' },
-            icon('settings', { size: 20 }), h('span', { class: 'attn-dot', 'aria-hidden': 'true' })),
-        ),
+        h('button', { id: 'search-btn', class: 'icon-btn header-search', type: 'button', hidden: true, 'aria-label': 'Search movies', title: 'Search (/)', 'aria-haspopup': 'dialog', onClick: () => openSearch(ctx) }, icon('search', { size: 20 })),
       ),
       h('div', { id: 'guest-banner', class: 'guest-banner' }),
       h('main', { id: 'main' }),
       h('nav', { id: 'bottom-nav', class: 'bottom-nav', 'aria-label': 'Sections' },
         ...NAV.map((n) => h('a', { class: 'nav-item', 'data-name': n.name, href: `#/${n.name}` },
-          h('span', { class: 'nav-icon' }, icon(n.icon, { size: 22 })),
+          h('span', { class: 'nav-icon' }, icon(n.icon, { size: 22 }), h('span', { class: 'attn-dot', 'aria-hidden': 'true' })),
           h('span', { class: 'nav-label' }, n.label),
         )),
       ),

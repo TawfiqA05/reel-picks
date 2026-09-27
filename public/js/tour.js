@@ -1,8 +1,8 @@
 // The guided tour: a spotlight on the real element and a short card beside
 // it, step by step across the tabs. It opens on its own once, on Picks, for
 // anyone who hasn't finished or skipped it (tourDone, stored per user), right
-// after the welcome setup for someone new; Replay tour in Settings and the ?
-// in the header open it again. The guest link never gets it.
+// after the welcome setup for someone new; Replay tour under You, Help, opens
+// it again. The guest link never gets it.
 //
 // The spotlight only ever lands on an element that is on screen and showing:
 // page elements are scrolled into view first, and a step whose element isn't
@@ -36,12 +36,9 @@ function steps(status) {
       text: 'What\'s leaving soon (last chance) and what\'s opening soon.' },
     { route: null, targets: [['#search-btn']], title: 'Search',
       text: 'Find any movie, even old ones, to rate or save.' },
-    isOwner ? null : { route: 'together', targets: tab('together').map((s) => [s]), title: 'Together',
-      text: `Plan a movie with ${owner}. Turn it on in Settings and you'll both see what you'd both enjoy.` },
-    { route: 'stats', targets: tab('stats').map((s) => [s]), title: 'Stats',
-      text: 'Your taste in numbers. Tap any genre, director or actor to see those movies.' },
-    { route: 'settings', targets: [['#settings-btn']], title: 'Settings',
-      text: 'Theaters, notifications and more live here. You can replay this tour anytime.' },
+    { route: 'stats', targets: tab('you').map((s) => [s]), title: 'You',
+      text: isOwner ? 'Your stats, Together, Settings and this tour live under You.'
+        : `Your stats, Together (plan a movie with ${owner}), Settings and this tour live under You.` },
   ].filter(Boolean);
 }
 
@@ -225,7 +222,9 @@ export function startTour(ctx) {
     endedHere = true;
     if (done) ctx.navigate('#/home');
     else if (opener && document.contains(opener)) opener.focus?.({ preventScroll: true });
-    try { await api.saveSettings({ tourDone: true }); } catch { /* shows again next time; nothing lost */ }
+    // The tour shows where Stats, Together and Settings are, so the one-time
+    // note about them moving (js/app.js) isn't needed after it.
+    try { await api.saveSettings({ tourDone: true, youNoteSeen: true }); } catch { /* shows again next time; nothing lost */ }
     ctx.refreshStatus();
   };
 
