@@ -530,7 +530,7 @@ function weeklyFour(ctx, { list, eligible, nearbyEval, guest, lockHow }) {
   let pending = false;
   if (!lock && weekOpen(week)) {
     lock = guest
-      ? { user_id: uid, week_start: week, locked_at: at, how: 'preview', picks: eligible.slice(0, 4).map((e) => ({ tmdb_id: e.tmdb_id, via: 'lock' })), unscored: unscored(), swapped_at: null, preview: true }
+      ? { user_id: uid, week_start: week, locked_at: at, how: 'preview', slots: eligible.slice(0, 4).map((e) => [{ tmdb_id: e.tmdb_id, via: 'lock' }]), unscored: unscored(), swapped_at: null, preview: true }
       : createLock(uid, week, eligible.slice(0, 4), unscored(), lockHow || 'first-view', at);
   }
   // Until this week's four lock, last week's stays up.
@@ -541,28 +541,48 @@ function weeklyFour(ctx, { list, eligible, nearbyEval, guest, lockHow }) {
   const entries = new Map([...list, ...nearbyEval].map((e) => [e.tmdb_id, e]));
   const seenThisWeek = new Set(all('SELECT DISTINCT tmdb_id FROM watched WHERE user_id = ? AND watched_date >= ?', uid, lock.week_start).map((r) => r.tmdb_id));
   const out = (id) => ctx.rated.has(id) || ctx.hidden.has(id) || seenThisWeek.has(id) || !entries.has(id) || !stillShowing(ctx, id);
-  // A film leaves when rated, marked seen, hidden or no longer showing; the
-  // rest keep their places and the next best by current score fills in.
-  const picks = lock.picks.filter((p) => !out(p.tmdb_id));
-  for (const e of eligible) {
-    if (picks.length >= 4) break;
-    if (picks.some((p) => p.tmdb_id === e.tmdb_id) || seenThisWeek.has(e.tmdb_id) || !stillShowing(ctx, e.tmdb_id)) continue;
-    picks.push({ tmdb_id: e.tmdb_id, via: 'refill' });
+  // Each of the four places keeps its films in order, the locked one first.
+  // A place shows the first of them that hasn't left (rated, marked seen,
+  // hidden, no showtimes left). When all of a place's films have left, the
+  // next best film by current score joins it. Undoing a rating, a Not for me
+  // or a Mark seen brings the film back to its place.
+  const slots = lock.slots.map((s) => s.slice());
+  const shown = new Set();
+  const pick = slots.map((stack) => {
+    const e = stack.find((x) => !out(x.tmdb_id) && !shown.has(x.tmdb_id));
+    if (e) shown.add(e.tmdb_id);
+    return e || null;
+  });
+  const next = () => eligible.find((e) => !shown.has(e.tmdb_id) && !out(e.tmdb_id));
+  for (let i = 0; i < 4; i++) {
+    if (pick[i]) continue;
+    const f = next();
+    if (!f) break;
+    const entry = { tmdb_id: f.tmdb_id, via: 'refill' };
+    if (!slots[i]) slots[i] = [];
+    slots[i].push(entry);
+    pick[i] = entry;
+    shown.add(f.tmdb_id);
   }
   // Once a week at most: a film unscored at the lock that now beats #4 by a
-  // clear margin takes #4's place.
+  // clear margin takes #4's place (at the front of that place's films).
   let swappedAt = null;
-  if (!lock.swapped_at && picks.length === 4) {
-    const fourth = entries.get(picks[3].tmdb_id);
+  if (!lock.swapped_at && pick.length === 4 && pick.every(Boolean)) {
+    const fourth = entries.get(pick[3].tmdb_id);
     const wasUnscored = new Set(lock.unscored);
     const swap = fourth && eligible.find((e) => wasUnscored.has(e.tmdb_id) && !e.flags.noScores
-      && !picks.some((p) => p.tmdb_id === e.tmdb_id) && !seenThisWeek.has(e.tmdb_id) && stillShowing(ctx, e.tmdb_id)
-      && e.final - fourth.final >= SWAP_MARGIN);
-    if (swap) { picks[3] = { tmdb_id: swap.tmdb_id, via: 'swap' }; swappedAt = at; }
+      && !shown.has(e.tmdb_id) && !out(e.tmdb_id) && e.final - fourth.final >= SWAP_MARGIN);
+    if (swap) {
+      const entry = { tmdb_id: swap.tmdb_id, via: 'swap' };
+      slots[3].unshift(entry);
+      pick[3] = entry;
+      swappedAt = at;
+    }
   }
-  if (!guest && !lock.preview && (swappedAt || JSON.stringify(picks) !== JSON.stringify(lock.picks))) saveLock(lock, picks, { swappedAt, at });
+  const four = pick.filter(Boolean);
+  if (!guest && !lock.preview && (swappedAt || JSON.stringify(slots) !== JSON.stringify(lock.slots))) saveLock(lock, slots, four, { swappedAt, at });
   return {
-    four: picks.map((p) => ({ ...entries.get(p.tmdb_id), pick: { via: p.via, newThisWeek: p.via === 'swap' } })),
+    four: four.map((p) => ({ ...entries.get(p.tmdb_id), pick: { via: p.via, newThisWeek: p.via === 'swap' } })),
     meta: { week: lock.week_start, lockedAt: lock.preview ? null : lock.locked_at, how: lock.how, pending },
   };
 }

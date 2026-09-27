@@ -44,13 +44,17 @@ export function openWeek(week) {
   if (!open || open < week) setSetting('lockWeek', week);
 }
 
+// picks is stored as the four places, each a list of films in order: the
+// locked one first, then any that took the place later (lib/recommend.js
+// shows the first that hasn't left). `picks` below is what each place
+// started with.
 export function readLock(userId, week) {
   const r = get('SELECT * FROM weekly4_lock WHERE user_id = ? AND week_start = ?', userId, week);
   if (!r) return null;
-  let picks = []; let unscored = [];
-  try { picks = JSON.parse(r.picks) || []; } catch { picks = []; }
+  let slots = []; let unscored = [];
+  try { slots = (JSON.parse(r.picks) || []).map((s) => (Array.isArray(s) ? s : [s])); } catch { slots = []; }
   try { unscored = JSON.parse(r.unscored) || []; } catch { unscored = []; }
-  return { ...r, picks, unscored };
+  return { ...r, slots, picks: slots.map((s) => s[0]).filter(Boolean), unscored };
 }
 
 function logPicks(userId, week, picks, at) {
@@ -68,26 +72,18 @@ export function createLock(userId, week, picks, unscored, how, at) {
   const made = run(
     `INSERT INTO weekly4_lock(user_id, week_start, locked_at, how, picks, unscored, swapped_at)
       VALUES(?,?,?,?,?,?,NULL) ON CONFLICT(user_id, week_start) DO NOTHING`,
-    userId, week, at, how, JSON.stringify(rows), JSON.stringify(unscored),
+    userId, week, at, how, JSON.stringify(rows.map((p) => [p])), JSON.stringify(unscored),
   ).changes;
   if (made) logPicks(userId, week, rows, at);
   return readLock(userId, week);
 }
 
-// After the four changed midweek: the new list, the swap if one happened, and
-// a log row for every film that joined.
-export function saveLock(lock, picks, { swappedAt = null, at }) {
+// After a film joined a place midweek: the places, the swap if one happened,
+// and a log row for each film shown that the log doesn't have yet.
+export function saveLock(lock, slots, shown, { swappedAt = null, at }) {
   run('UPDATE weekly4_lock SET picks = ?, swapped_at = COALESCE(swapped_at, ?) WHERE user_id = ? AND week_start = ?',
-    JSON.stringify(picks), swappedAt, lock.user_id, lock.week_start);
-  const had = new Set(lock.picks.map((p) => p.tmdb_id));
-  const joined = picks.filter((p) => !had.has(p.tmdb_id));
-  if (joined.length) {
-    joined.forEach((p) => run(
-      `INSERT INTO weekly4_log(user_id, week_start, tmdb_id, rank, first_seen_at)
-        VALUES(?,?,?,?,?) ON CONFLICT(user_id, week_start, tmdb_id) DO NOTHING`,
-      lock.user_id, lock.week_start, p.tmdb_id, picks.indexOf(p) + 1, at,
-    ));
-  }
+    JSON.stringify(slots), swappedAt, lock.user_id, lock.week_start);
+  logPicks(lock.user_id, lock.week_start, shown, at);
 }
 
 // Opens the week and locks everyone's four now (the refresh that made the
