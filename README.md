@@ -435,8 +435,16 @@ minute instead of giving up after one try. That single try was why my Home Scree
 used to sit on an old version. When the page is behind, it reloads onto the new version
 once, unless a sheet is open, a save is in flight or I'm typing. Then it shows "Update
 ready" with a Refresh button and reloads at the next quiet moment. It never reloads twice
-for the same version, so it can't loop. Bump `CACHE` in `public/sw.js` with every frontend
-change, and add any new file under `public/js/` to its `CORE` list, so offline has it too.
+for the same version, so it can't loop.
+
+Two more things keep a launch on a waking network from getting stuck. The service worker
+treats an error reply (a 408 or a 5xx) like no reply and uses its cached copy, since one
+script arriving as an error would stop the whole app from starting. And if the app still
+hasn't started 12 seconds after a launch from the Home Screen, a tiny script at the top
+of `index.html` loads the page again, at most twice a minute.
+
+Bump `CACHE` in `public/sw.js` with every frontend change, and add any new file under
+`public/js/` to its `CORE` list, so offline has it too.
 
 ## Settings
 
