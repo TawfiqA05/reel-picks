@@ -1,6 +1,7 @@
 // Reel Picks server: JSON API + static PWA frontend, single process.
 import './env.js';
 import express from 'express';
+import compression from 'compression';
 import { fileURLToPath } from 'node:url';
 import { config } from './env.js';
 import router from './routes.js';
@@ -25,6 +26,9 @@ const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 
 const app = express();
 app.disable('x-powered-by');
+// Gzip or Brotli for anything worth it: the Picks list alone is ~900 KB of
+// JSON and ~70 KB compressed.
+app.use(compression({ threshold: 1024 }));
 // Nothing here is meant to be framed or sniffed as another type.
 app.use((req, res, next) => { res.set({ 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY' }); next(); });
 
