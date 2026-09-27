@@ -119,6 +119,7 @@ export function startTour(ctx) {
   if (!status || status.guest) return;
   const list = steps(status);
   const opener = document.activeElement;
+  const startHash = location.hash;
   const count = h('p', { class: 'tour-count' });
   const title = h('h2', { class: 'tour-title', id: 'tour-title' });
   const text = h('p', { class: 'tour-text', id: 'tour-text' });
@@ -215,7 +216,18 @@ export function startTour(ctx) {
     next.focus({ preventScroll: true });
   };
 
-  const end = async ({ done }) => {
+  // Skipped from a page the tour moved to (it began on Help, say): go back
+  // there and put focus on Replay tour again, where it was.
+  const returnToStart = async () => {
+    ctx.navigate(startHash);
+    for (let i = 0; i < 50; i++) {
+      await new Promise((r) => setTimeout(r, 60));
+      const again = document.querySelector('.tour-replay');
+      if (again) { again.focus({ preventScroll: true }); return; }
+    }
+  };
+
+  const end = async ({ done, away = false }) => {
     if (!active) return;
     active = null;
     resized.disconnect();
@@ -228,6 +240,7 @@ export function startTour(ctx) {
     endedHere = true;
     if (done) ctx.navigate('#/home');
     else if (opener && document.contains(opener)) opener.focus?.({ preventScroll: true });
+    else if (!away && location.hash !== startHash) returnToStart();
     // The tour shows where Stats, Together and Settings are, so the one-time
     // note about them moving (js/app.js) isn't needed after it.
     try { await api.saveSettings({ tourDone: true, youNoteSeen: true }); } catch { /* shows again next time; nothing lost */ }
@@ -237,7 +250,7 @@ export function startTour(ctx) {
   // Leaving the tour's page some other way (the browser's back button) ends it.
   const onHash = () => {
     if (ourNav) { ourNav(); ourNav = null; return; }
-    end({ done: false });
+    end({ done: false, away: true });
   };
   const onKey = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); end({ done: false }); return; }

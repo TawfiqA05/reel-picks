@@ -21,7 +21,7 @@ export async function render(root, params, ctx) {
           h('div', { class: 'row-text' },
             h('div', { class: 'row-title' }, 'Guided tour'),
             h('p', { class: 'muted small' }, 'A quick walk through Picks, Schedule, Rate, Watchlist and You.')),
-          h('button', { class: 'btn soft', type: 'button', onClick: () => ctx.startTour() }, icon('play', { size: 16 }), 'Replay tour')))),
+          h('button', { class: 'btn soft tour-replay', type: 'button', onClick: () => ctx.startTour() }, icon('play', { size: 16 }), 'Replay tour')))),
     h('section', { class: 'group', 'aria-labelledby': 'guide-title' },
       h('h2', { class: 'group-title', id: 'guide-title' }, 'How it works'),
       h('dl', { class: 'group-body guide' },
