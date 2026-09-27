@@ -25,7 +25,13 @@ export function openWhatToWatch(ctx) {
   const shown = new Set();
   let answers = {};
   let step = 0;
-  const modal = openModal(body, { title: 'What should I watch?', cls: 'wsw-overlay', onClose: () => { openNow = null; } });
+  // A film hidden, rated or watchlisted here changes the Picks page behind the
+  // sheet; it's drawn again when the sheet closes.
+  let changed = false;
+  const modal = openModal(body, {
+    title: 'What should I watch?', cls: 'wsw-overlay',
+    onClose: () => { openNow = null; if (changed && /^#\/home/.test(location.hash || '#/home')) ctx.rerender?.(); },
+  });
   modal.card.classList.add('wsw-card-sheet');
   openNow = modal;
 
@@ -119,7 +125,7 @@ export function openWhatToWatch(ctx) {
       if (!rateSlot.childElementCount) {
         rateSlot.append(h('span', { class: 'muted small' }, 'How was it?'), starRater(f, ctx, {
           value: 0,
-          onRated: (v) => { toast(v ? withStars(`Thanks. Rated ${f.title} ${v}★`) : 'Rating cleared'); },
+          onRated: (v) => { changed = true; toast(v ? withStars(`Thanks. Rated ${f.title} ${v}★`) : 'Rating cleared'); },
         }));
       }
       rateSlot.hidden = !rateSlot.hidden;
@@ -128,6 +134,7 @@ export function openWhatToWatch(ctx) {
     });
     const hide = h('button', { class: 'chip-btn wsw-hide', type: 'button', 'aria-label': `Not for me, hide ${f.title}` }, icon('eyeOff', { size: 16 }), h('span', {}, 'Not for me'));
     hide.addEventListener('click', async () => {
+      changed = true;
       hide.disabled = true;
       try {
         await api.hide(f.tmdb_id, f.title);
@@ -141,7 +148,7 @@ export function openWhatToWatch(ctx) {
       cardEl.append(note);
       undo.focus();
     });
-    tools.append(seen, watchlistButton(f, ctx), hide);
+    tools.append(seen, watchlistButton(f, ctx, { onToggle: () => { changed = true; } }), hide);
     return cardEl;
   }
 
