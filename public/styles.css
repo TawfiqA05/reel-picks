@@ -133,7 +133,7 @@
     --warn: #f2a93b;
     --bad: #ff7b72;
     --bad-soft: rgba(255, 123, 114, .13);
-    --field-edge: #66718f;
+    --field-edge: #7883a1;
     --blue: #8fb8ff;
     --blue-soft: rgba(143, 184, 255, .14);
     --purple: #c9a8ff;
@@ -620,6 +620,8 @@ input[type="checkbox"] { accent-color: var(--accent); width: 20px; height: 20px;
 .tag-row.one-line { flex-wrap: nowrap; overflow: hidden; }
 .hero-actions { display: flex; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-1); }
 .btn.book { font-size: var(--fs-md); min-height: 48px; }
+/* 320: the longest label ("Book 9:20 PM tomorrow · RealD 3D") on one line. */
+@media (max-width: 359px) { .btn.book { font-size: var(--fs-base); padding: 0 12px; } }
 .hero-buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); }
 .hero-buttons.one { grid-template-columns: minmax(0, 1fr); }
 .hero-buttons .btn { min-width: 0; padding: 0 var(--sp-2); gap: 6px; white-space: nowrap; }
@@ -708,17 +710,18 @@ input[type="checkbox"] { accent-color: var(--accent); width: 20px; height: 20px;
 .st-list { display: flex; flex-direction: column; }
 .st-list > .st-row + .st-row { border-top: 1px solid var(--divider); }
 .st-row {
-  position: relative; display: grid; align-items: center; column-gap: 5px; min-height: 44px; min-width: 0;
-  /* Measured on IBM Plex: "10:45 PM" bold, the widest format chip, "ends
-     12:59 AM", the Fits mark, Book and the calendar button. 314px in all,
-     inside the 319px of a card at 375. */
-  grid-template-columns: 56px 46px minmax(76px, 1fr) 38px auto 28px;
+  position: relative; display: grid; align-items: center; column-gap: 4px; min-height: 44px; min-width: 0;
+  /* Measured on IBM Plex: the widest time ("12:08 PM" bold, 58.2px), the
+     widest format chip ("70mm", 43.8px), "ends 12:08 PM" (81.7px), the Fits
+     mark, Book (46.6px) and the calendar button: 318px in all, inside the
+     319px of a card at 375. */
+  grid-template-columns: 59px 44px minmax(82px, 1fr) 38px auto 28px;
   grid-template-areas: "time fmt end fit book cal";
   font-size: var(--fs-xs); color: var(--text);
 }
 .st-time { grid-area: time; font-size: var(--fs-sm); font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .st-fmt { grid-area: fmt; display: flex; }
-.st-fmt .tag { padding: 2px 6px; }
+.st-fmt .tag { padding: 2px 4px; }
 .st-end { grid-area: end; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .st-fit { grid-area: fit; display: inline-flex; align-items: center; gap: 2px; color: var(--good); font-weight: 600; white-space: nowrap; }
 .st-book { grid-area: book; justify-self: end; display: inline-flex; align-items: center; gap: 2px; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
@@ -735,7 +738,7 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 /* 320: the same cells on two fixed lines, time, format and Book over ends,
    fits and the calendar, every column at the same x in every row. */
 @media (max-width: 359px) {
-  .st-row { grid-template-columns: 56px 46px minmax(0, 1fr) auto; grid-template-areas: "time fmt . book" "end end fit cal"; row-gap: 2px; padding: 4px 0; }
+  .st-row { grid-template-columns: 59px 44px minmax(0, 1fr) auto; grid-template-areas: "time fmt . book" "end end fit cal"; row-gap: 2px; padding: 4px 0; }
   .st-fit { justify-self: start; }
 }
 /* Nothing on the chosen day: the next showing, and Book. */
@@ -748,7 +751,7 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 .list-row { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--sp-3); row-gap: var(--sp-2); align-items: start; padding: var(--sp-3) 0; }
 /* The showtime, All times and the controls run under the poster, across the row. */
 .list-row > .row-wide { grid-column: 1 / -1; min-width: 0; }
-.list-row.excluded, .list-row.seen, .list-row.is-hidden { opacity: .85; }
+.list-row:is(.excluded, .seen, .is-hidden) .row-poster { opacity: .6; }
 .row-poster { flex: 0 0 auto; }
 .row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .row-head { display: flex; align-items: flex-start; gap: var(--sp-2); width: 100%; }
@@ -778,7 +781,7 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 .tile-poster { position: relative; }
 .tile-link { display: block; }
 .tile-corner { position: absolute; top: 6px; right: 6px; }
-.tile-cap { font-size: var(--fs-sm); font-weight: 600; line-height: var(--lh-tight); }
+.tile-cap { position: relative; font-size: var(--fs-sm); font-weight: 600; line-height: var(--lh-tight); }
 .tile-sub { font-size: var(--fs-xs); color: var(--muted); }
 .tile-tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
@@ -810,7 +813,10 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 .lv-film { display: flex; gap: var(--sp-3); padding: var(--sp-3) 0; min-width: 0; }
 .lv-poster { position: relative; flex: 0 0 auto; }
 .lv-film-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.lv-film-title { font-weight: 600; line-height: var(--lh-tight); }
+.lv-film-title { position: relative; font-weight: 600; line-height: var(--lh-tight); }
+/* A title link is one short line: its tap area reaches 44px tall over the
+   plain text around it. */
+.tile-cap::after, .lv-film-title::after { content: ''; position: absolute; top: -14px; bottom: -14px; left: 0; right: 0; }
 .lv-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
 .lv-when { font-size: var(--fs-sm); font-weight: 600; }
 .lv-when:is(.urgent, .soon) { color: var(--bad); }
@@ -869,7 +875,7 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 .match-line { margin: var(--sp-2) 0 0; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-snug); }
 .nowrap { white-space: nowrap; }
 .link-btn.match-fix { display: inline; position: relative; min-height: 0; min-width: 0; padding: 0; font-size: inherit; }
-.link-btn.match-fix::after { content: ''; position: absolute; top: -14px; bottom: -14px; left: -12px; right: -12px; }
+.link-btn.match-fix::after { content: ''; position: absolute; top: -14px; bottom: -14px; left: -13px; right: -13px; }
 .about .synopsis { margin: 0; line-height: var(--lh-body); max-width: 65ch; }
 .cast { margin: 0; font-size: var(--fs-sm); }
 
@@ -1025,7 +1031,7 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 /* 8px between a row and its note: the row gives up some padding (a pulled-up
    note would overlap it). */
 .group-body > :has(+ p.muted.small, + .muted.small:not([role="status"])) { padding-bottom: var(--sp-2); }
-.group-body > [role="status"]:empty, .group-body > .form-error:empty { display: none; }
+.group-body > [role="status"]:empty, .group-body > .form-error:empty, .group-body > div:empty { display: none; }
 .key-list { display: flex; flex-direction: column; gap: var(--sp-2); }
 .key-row { display: flex; align-items: center; gap: 10px; min-height: 28px; }
 .key-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
