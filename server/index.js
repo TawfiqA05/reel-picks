@@ -22,6 +22,7 @@ import { startWeeklyOffsite, offsiteEnabled } from './lib/offsite.js';
 import { warmHomePicks } from './lib/home.js';
 import { activeUserIds } from './lib/theatres.js';
 import { initLockWeek } from './lib/lock.js';
+import { afterNightlyBackup } from './lib/housekeeping.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 const RETRY_CHECK_MS = 60 * 1000;
@@ -186,9 +187,14 @@ app.listen(config.port, () => {
   // Pick up any credits backfill a restart interrupted (a no-op when nothing is missing).
   startCreditsBackfill('startup');
   // Nightly database backup at 3am local time (lib/backup.js); a failure
-  // alerts the owner, and the next good one says it's back to normal.
+  // alerts the owner, and the next good one says it's back to normal. Only
+  // after a good one, expired cache rows are cleared (lib/housekeeping.js).
   startNightlyBackups(db, dataDir, {
-    onResult: (err) => (err ? raiseLater('backup', `The nightly backup failed: ${err}`) : resolveLater('backup')),
+    onResult: (err) => {
+      if (err) return raiseLater('backup', `The nightly backup failed: ${err}`);
+      resolveLater('backup');
+      afterNightlyBackup();
+    },
   });
   // Off-site copy of the newest nightly, Sunday 4am, when BACKUP_S3_* is set (lib/offsite.js).
   startWeeklyOffsite(dataDir);
