@@ -120,9 +120,22 @@ There are five, along the bottom on a phone and across the top on a computer.
 The header holds only the logo and Search. Search opens a sheet that searches TMDB and the
 films I already have around (playing, coming soon, rated, saved, hidden) as I type.
 It forgives typos, ranks well-known films first, and badges what's playing, rated,
-saved or hidden. With the box empty it shows my recents: the last 10 searches and
-the last 8 films I opened, kept per person on the server, with Clear all and an Undo.
-Pressing `/` anywhere outside a text field opens it.
+saved or hidden. It finds people too: type a director's or an actor's full name, just the
+last name, or a close typo ("tarentino") and up to two people show above the films, each
+with a photo, Director or Actor, and two or three films they're known for. A typo is fixed
+against the names the app already knows (the directors and casts of the films it has, and
+of the 100 films with the most TMDB votes, fetched once a week), and a person never goes
+above a well-known film whose title is what I typed. With the box empty it shows my
+recents: the last 10 searches and the last 8 films and people I opened, kept per person on
+the server, with Clear all and an Undo. Pressing `/` anywhere outside a text field opens it.
+
+A person page (`#/person/<TMDB id>`) opens from search and from the director and cast
+names on a movie page. It shows their films playing at my theaters this week, then the ones
+I rated with my stars, then everything else they directed or acted in, most popular first,
+with a Directed / Acted switch for someone who has done both. TV isn't in it. Every film can
+be rated and saved right there, like in the Stats sheets, and a film I rate moves up into
+my rated ones. Their films come from the same 7-day TMDB credits cache the Stats "More from"
+sheets use, shared by everyone, so a second person opening the same page costs no TMDB call.
 
 A movie page has the hero, a Trailer button, Mark seen, the public score broken down by
 source, the taste match broken down by the genres, director and actors I've rated, and
@@ -331,7 +344,8 @@ data.
 
 Friends and the guest link have hourly limits on the lookups that spend the shared keys:
 about 200 films the app hasn't stored yet, 300 rating searches and 30 home-base lookups an
-hour for a friend, less for the guest link. Over a limit the app says "Slow down a bit, try
+hour for a friend, less for the guest link. Looking up a person TMDB hasn't answered about
+yet counts as one of the 200 (over the limit, search still finds films, just not people). Over a limit the app says "Slow down a bit, try
 again in a few minutes." A busy evening doesn't come close. I have no limits.
 
 Revoking a friend stops their cookie on the next request and keeps everything they
@@ -397,9 +411,10 @@ With `GUEST_MODE` on, anyone who reaches a deployment from outside without a coo
 the read-only guest view. The same goes for anyone coming through the `npm run share`
 tunnel. They see one banner ("You're viewing Tawfiq's picks. Ask him for an invite to
 get your own.") instead of the setup and tour, and they get my picks, the full list,
-Schedule (Leaving soon and Coming soon), and movie pages. Rating, settings, imports,
-search, stats and everything else are hidden in the UI and rejected at the API. At
-localhost it's always me.
+Schedule (Leaving soon and Coming soon), and movie pages. A person page opened from a movie
+page or a link works too, read only: no stars, no Save, and none of my ratings. Rating,
+settings, imports, search, stats and everything else are hidden in the UI and rejected at
+the API. At localhost it's always me.
 
 On Railway the app fails closed: if `GUEST_MODE` is missing or not 1 there, it treats every
 visitor as a guest anyway, and sends me an owner alert each time it starts until I set it.
@@ -597,7 +612,7 @@ server/
   env.js              the .env loader
   lib/                scoring, taste, ranking, runway, geocoding, accounts,
                       AMC/TMDB/OMDb clients, refresh pipeline, backups,
-                      push, Letterboxd, At home, Together, search
+                      push, Letterboxd, At home, Together, search, people
 public/               buildless frontend (vanilla ESM + CSS, PWA)
 scripts/              share tunnel, icon generation
 data/                 SQLite db + backups (git-ignored)
