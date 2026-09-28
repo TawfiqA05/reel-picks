@@ -6,6 +6,7 @@ import { filterBox } from '../filter.js';
 import { homeSection } from './athome.js';
 import { openWhatToWatch } from '../wsw.js';
 import { pullToRefresh } from '../pull.js';
+import { loadSocial, inbox } from '../social.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -22,7 +23,9 @@ export async function render(root, params, ctx) {
     return;
   }
 
-  let data = await api.recommendations();
+  // Plans, who else is going and picks sent to you (js/social.js), fetched
+  // beside the picks so every line draws with them.
+  let [data] = await Promise.all([api.recommendations(), loadSocial(ctx)]);
   // Page state that has to survive a re-render after a hide: the chosen day,
   // the collapse toggle, and which films just moved into the four.
   const state = {
@@ -39,12 +42,14 @@ export async function render(root, params, ctx) {
   // which would jump back to the top.
   const reload = async () => {
     const y = window.scrollY;
-    data = await api.recommendations();
+    [data] = await Promise.all([api.recommendations(), loadSocial(ctx)]);
     draw();
     window.scrollTo(0, y);
   };
 
   const actions = {
+    // A Yes to "Did you see it?" logs the film seen, which can move the picks.
+    answered() { reload().catch((e) => toast(e.message, 'error')); },
     async hide(entry, card) {
       const before = new Set(data.weekly4.map((e) => e.tmdb_id));
       card?.classList.add('is-leaving');
@@ -105,6 +110,10 @@ function buildPage(data, status, ctx, state, actions) {
   if (!guest && status && !status.onboardingDone && data.profile.count < 10) {
     page.appendChild(onboardingBanner(ctx));
   }
+
+  // "Did you see <film>?" the morning after a plan, and picks sent to you.
+  // Empty, it takes no room.
+  if (!guest) page.appendChild(inbox(ctx, { onChange: () => actions.answered?.() }));
 
   if (!data.list.length) {
     // Guests can't refresh (read-only), so no setup copy and no button.

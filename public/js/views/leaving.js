@@ -13,13 +13,14 @@
 import { api } from '../api.js';
 import { h, clear, spinner, emptyState, sectionTitle, poster, matchBadge, icon } from '../ui.js';
 import { showtimeRow } from './components.js';
+import { loadSocial, leavingPlan } from '../social.js';
 
 const DAYS_AHEAD = 7;
 
 export async function render(root, params, ctx) {
   clear(root);
   root.appendChild(spinner('Working out what\'s leaving…'));
-  const data = await api.recommendations();
+  const [data] = await Promise.all([api.recommendations(), loadSocial(ctx)]);
   clear(root);
 
   const page = h('div', { class: 'page' });
@@ -175,6 +176,8 @@ function filmRow(e, ctx, { date = null, showDate = false } = {}) {
       e.handoff ? h('div', { class: 'lv-handoff' }, icon('handoff', { size: 13 }), ' ', e.handoff.text) : null,
       shown.length ? h('div', { class: 'st-list' }, ...shown.map((st) => showtimeRow(st))) : null,
       live.length > shown.length ? h('a', { class: 'lv-more', href: `#/movie/${e.tmdb_id}` }, `${live.length - shown.length} more that day`) : null,
+      // I'm going: that day's showings in a sheet, or the plan (js/social.js).
+      live.length && !ctx?.isGuest?.() ? leavingPlan(e, date, ctx) : null,
     ),
   );
 }

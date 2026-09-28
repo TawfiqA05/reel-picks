@@ -1405,6 +1405,116 @@ a.tg-time:hover { border-color: var(--text); }
 .tour-moves { display: flex; gap: 8px; margin-left: auto; }
 .tour-skip { padding-left: 0; }
 
+/* ---- I'm going and Send a pick (js/social.js) ----
+   A plan is the soft accent everywhere it shows: the line on the hero and the
+   movie page, and the showtime row it's for. */
+.plan-pill {
+  display: flex; align-items: center; gap: var(--sp-2); min-height: 44px; padding: 2px 2px 2px var(--sp-3);
+  border-radius: var(--r-btn); background: var(--accent-soft); color: var(--accent-text);
+  font-size: var(--fs-sm); font-weight: 600; line-height: var(--lh-snug);
+}
+.plan-icon { flex: 0 0 auto; }
+.plan-text { flex: 1 1 auto; min-width: 0; padding: 6px 0; }
+.plan-acts { display: flex; flex: 0 0 auto; }
+.plan-acts .link-btn { padding: 0 8px; }
+.hero-plan { display: flex; flex-direction: column; gap: var(--sp-2); }
+.hero-plan-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); }
+.hero-plan-btns.one { grid-template-columns: minmax(0, 1fr); }
+.hero-plan-btns .btn { min-width: 0; padding: 0 var(--sp-2); gap: 6px; white-space: nowrap; }
+@media (max-width: 429px) { .hero-plan-btns .btn { font-size: var(--fs-sm); } .hero-plan-btns .btn .icon { width: 16px; height: 16px; } }
+.detail-plan { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-2); margin: var(--sp-2) 0 var(--sp-3); }
+.detail-plan .plan-pill { align-self: stretch; }
+.lv-plan { margin-top: var(--sp-2); }
+.plan-pill.compact { font-size: var(--fs-xs); }
+.going-lines { display: flex; flex-direction: column; gap: 2px; }
+.going-line { display: flex; align-items: flex-start; gap: 6px; margin: 0; color: var(--text); font-size: var(--fs-sm); line-height: var(--lh-snug); }
+.going-line .icon { flex: 0 0 auto; margin-top: 2px; color: var(--accent-text); }
+/* Your showing in a list: tinted, with the plan's line under its cells.
+   The margin and padding cancel, so every column stays where it was. */
+.st-row.planned {
+  margin: 0 -6px; padding: 0 6px 6px; border-radius: var(--r-poster); background: var(--accent-soft);
+  grid-template-areas: "time fmt end fit book cal" "plan plan plan plan plan plan";
+}
+.st-list > .st-row.planned, .st-list > .st-row + .st-row.planned, .st-list > .st-row.planned + .st-row { border-top-color: transparent; }
+.st-plan { grid-area: plan; display: flex; align-items: center; gap: 4px; color: var(--accent-text); font-size: var(--fs-xs); font-weight: 600; line-height: var(--lh-snug); }
+.st-plan .icon { flex: 0 0 auto; }
+@media (max-width: 359px) {
+  .st-row.planned { grid-template-areas: "time fmt . book" "end end fit cal" "plan plan plan plan"; }
+}
+
+/* Detail: Save, Send and Trailer on one row. */
+.detail-actions.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.detail-actions .btn { min-width: 0; }
+.detail-actions.three .btn { padding: 0 var(--sp-2); gap: 6px; white-space: nowrap; }
+@media (max-width: 429px) { .detail-actions.three .btn { font-size: var(--fs-sm); } .detail-actions.three .btn .icon { width: 16px; height: 16px; } }
+@media (max-width: 359px) { .detail-actions.three .btn .icon { display: none; } }
+
+/* "Sent by" on the movie page. */
+.sent-by-list { display: flex; flex-direction: column; gap: var(--sp-2); }
+.sent-by { display: flex; align-items: center; gap: var(--sp-2); padding: 2px 2px 2px var(--sp-3); border-radius: var(--r-btn); background: var(--accent-soft); }
+.sent-icon { flex: 0 0 auto; color: var(--accent-text); }
+.sent-words { flex: 1 1 auto; min-width: 0; padding: 6px 0; }
+.sent-from { margin: 0; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; }
+.sent-note { margin: 2px 0 0; color: var(--text); font-size: var(--fs-sm); line-height: var(--lh-snug); overflow-wrap: anywhere; }
+.sent-dismiss { flex: 0 0 auto; background: transparent; color: var(--accent-text); }
+
+/* The top of Picks: "Did you see it?" and "Sent to you". */
+.inbox { display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.inbox:not([hidden]) ~ .hero-slot .hero-pick { margin-top: 0; }
+@media (min-width: 900px) { .inbox { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); align-items: start; } }
+.inbox-card {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: var(--sp-3);
+  padding: var(--sp-3); border-radius: var(--r-card); background: var(--raised); border-left: 4px solid var(--accent);
+}
+.ask-card { grid-template-columns: auto minmax(0, 1fr); }
+.inbox-body { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.inbox-q { margin: 0; font-size: var(--fs-md); font-weight: 700; line-height: var(--lh-snug); }
+.inbox-sub { margin: 0; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-snug); }
+.inbox-acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
+.inbox-acts .btn { min-width: 88px; }
+.inbox-from { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--accent-text); font-size: var(--fs-xs); font-weight: 600; }
+/* A 44px tap area around the title, with the card's spacing unchanged. */
+.inbox-title { display: block; padding: 11px 0; margin: -11px 0; font-size: var(--fs-md); font-weight: 700; line-height: var(--lh-snug); }
+.inbox-title:hover { text-decoration: underline; text-underline-offset: 3px; }
+.inbox-side { display: flex; flex-direction: column; gap: var(--sp-2); }
+.inbox-side .sent-dismiss { background: var(--chip); color: var(--text); }
+
+/* The sheets: which showing, send a pick, rate it. */
+.pp-intro { margin: 0 0 var(--sp-3); }
+.pp-theatre + .pp-theatre { margin-top: var(--sp-4); }
+.pp-where { margin: 0 0 var(--sp-2); font-size: var(--fs-md); }
+.pp-day + .pp-day { margin-top: var(--sp-3); }
+.pp-date { margin: 0 0 6px; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+.pp-times { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.pp-time {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; min-width: 44px; padding: 0 12px;
+  border: none; border-radius: var(--r-btn); background: var(--bg); color: var(--text);
+  font-size: var(--fs-sm); font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer;
+}
+/* On the sheet's raised card, unpicked showings sit on the page colour (as
+   chips in a group do), where the format tags keep their contrast. */
+.pp-time:hover { box-shadow: inset 0 0 0 1.5px var(--field-edge); } /* an edge, so the tags keep their contrast */
+.pp-time .tag { padding: 2px 4px; }
+.pp-clock { display: inline-flex; align-items: center; gap: 4px; }
+.pp-time.on { background: var(--accent); color: var(--on-accent); }
+.pp-time.on .tag { background: color-mix(in srgb, var(--on-accent) 20%, transparent); color: var(--on-accent); }
+.pp-foot { display: flex; margin-top: var(--sp-5); }
+.send-form, .send-sheet { display: flex; flex-direction: column; gap: var(--sp-4); }
+.send-film { display: flex; align-items: center; gap: var(--sp-3); }
+.send-film-title { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.send-to { display: flex; flex-direction: column; margin: 0; padding: 0; border: none; min-width: 0; }
+.send-to legend { padding: 0; margin-bottom: 4px; }
+.send-to-one { margin: 0; }
+.radio-row { display: flex; align-items: center; gap: var(--sp-3); min-height: 44px; cursor: pointer; }
+.radio-row input { width: 20px; height: 20px; margin: 0; flex: 0 0 auto; accent-color: var(--accent); }
+.note-input { resize: vertical; min-height: 88px; font-size: var(--fs-md); line-height: var(--lh-snug); }
+.note-count { align-self: flex-end; color: var(--muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.form-error:empty { display: none; }
+.send-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.send-foot p { margin: 0; }
+.rate-sheet { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-4); }
+.rate-sheet p { margin: 0; }
+
 /* Zoomed far in (200% on a phone is about 195px): the header's buttons wrap
    under the name, the tab bar scrolls sideways instead of the page, and rows
    stack. Last in the file, so it wins over the rules it narrows. */
@@ -1415,6 +1525,11 @@ a.tg-time:hover { border-color: var(--text); }
   .wc-head { flex-wrap: wrap; }
   .stat-grid { grid-template-columns: minmax(0, 1fr); }
   .hero-title, .detail-hero .hero-title { font-size: var(--fs-xl); overflow-wrap: anywhere; }
+  .inbox-card, .ask-card { grid-template-columns: minmax(0, 1fr); }
+  .inbox-poster { display: none; }
+  .inbox-side { flex-direction: row; }
+  .hero-plan-btns, .detail-actions.three { grid-template-columns: minmax(0, 1fr); }
+  .plan-pill, .sent-by { flex-wrap: wrap; }
   .segment { white-space: normal; text-align: center; line-height: var(--lh-tight); }
   .row-head { flex-wrap: wrap; }
   .factor-row { grid-template-columns: minmax(0, 1fr); row-gap: 2px; }

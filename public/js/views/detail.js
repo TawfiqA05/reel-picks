@@ -4,13 +4,15 @@ import { h, clear, spinner, scoreNum, matchBadge, badge, makeStars, toast, openM
 import { planOf, planWords, loggedLine } from '../plans.js';
 import { streamSection } from '../stream.js';
 import { dayLabel, showtimeRow, watchlistButton, starRater, runwayLine, handoffLine, heroMedia, filmTags, reasonLine, metaLine } from './components.js';
+import { loadSocial, sentBy, sendButton, detailPlan } from '../social.js';
 
 export async function render(root, params, ctx) {
   clear(root);
   root.appendChild(spinner('Loading…'));
   const guest = ctx.isGuest?.();
   // This week's watch log, for "Seen · Undo" (the same log Stats lists).
-  const [d, week] = await Promise.all([api.movie(params[0]), guest ? null : api.alist().catch(() => null)]);
+  // Plans, who else is going and picks sent to you (js/social.js).
+  const [d, week] = await Promise.all([api.movie(params[0]), guest ? null : api.alist().catch(() => null), guest ? null : loadSocial(ctx)]);
   const m = d.movie;
   clear(root);
   // Dark theme: the film's poster colour glows behind the top of the page.
@@ -32,8 +34,11 @@ export async function render(root, params, ctx) {
         : null,
       tags,
       reasonLine(d, ctx, { cls: 'reason-line hero-reason', lastChance: d.runway?.urgent }),
-      (!guest || m.trailer_key) ? h('div', { class: `detail-actions${guest || !m.trailer_key ? ' one' : ''}` },
+      // "Sent by <name>" and the note, while it's waiting for you.
+      guest ? null : sentBy(m.tmdb_id, ctx),
+      (!guest || m.trailer_key) ? h('div', { class: `detail-actions${guest ? ' one' : m.trailer_key ? ' three' : ''}` },
         guest ? null : watchlistButton({ tmdb_id: m.tmdb_id, title: m.title, watchlisted: d.watchlisted }, ctx, { words: true }),
+        guest ? null : sendButton(m, ctx, { words: true }),
         m.trailer_key ? h('button', {
           class: 'btn soft', type: 'button', 'aria-haspopup': 'dialog',
           onClick: () => openTrailer(m),
@@ -199,7 +204,9 @@ function dayBlocks(showtimesByDay) {
 // With a single theater this is the same flat day list as before.
 function showtimesSection(d, ctx) {
   const wrap = h('section', { class: 'showtimes', id: 'showtimes', 'aria-labelledby': 'showtimes-title' },
-    h('h2', { class: 'group-title', id: 'showtimes-title' }, 'Showtimes'));
+    h('h2', { class: 'group-title', id: 'showtimes-title' }, 'Showtimes'),
+    // I'm going (pick a showing) or your plan, and who else is going.
+    ctx.isGuest?.() ? null : detailPlan(d, ctx));
   const groups = d.showtimesByTheatre || (d.showtimesByDay?.length ? [{ theatre: null, runway: d.runway, showtimesByDay: d.showtimesByDay }] : []);
   if (d.handoff) wrap.appendChild(handoffLine(d));
   if (!groups.length) {

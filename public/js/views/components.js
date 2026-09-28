@@ -3,6 +3,7 @@
 // hero, the pick cards and the list rows.
 import { api } from '../api.js';
 import { h, clear, poster, matchBadge, badge, makeStars, toast, icon, spinner, openModal, withStars } from '../ui.js';
+import { paintRow, heroPlan, goingLine } from '../social.js';
 
 export function fmtRuntime(min) {
   if (!min) return null;
@@ -178,11 +179,14 @@ export function showtimeRow(st) {
   }
   const when = dayLabel(st.date);
   const label = [`Book ${when === 'Today' ? '' : `${when} `}${st.time}`, fmt, st.end ? `ends ${st.end}` : null, st.fits_window ? 'fits your times' : null].filter(Boolean).join(', ');
-  return h('div', { class: 'st-row', title: showtimeTitle(st) },
+  const row = h('div', { class: 'st-row', title: showtimeTitle(st), dataset: st.id ? { st: String(st.id) } : null },
     ...cells,
     h('a', { class: 'st-book', href: st.purchase_url || '#', target: '_blank', rel: 'noopener', 'aria-label': label }, 'Book', icon('arrowRight', { size: 14 })),
     st.id ? calendarButton(st, { cls: 'st-cal' }) : h('span', { class: 'st-cal' }),
   );
+  // Your "I'm going" showing: the soft accent and the plan's line (js/social.js).
+  if (st.id) paintRow(row);
+  return row;
 }
 
 // "Add to calendar": the showtime as an .ics file (server/lib/calendar.js). A
@@ -492,6 +496,8 @@ export function heroPick(entry, ctx, { day = null, multi = 0, onHide = null, mov
         ),
       ),
       seatLine(st),
+      // I'm going (this showing) and Send, or the plan (js/social.js).
+      guest ? null : heroPlan(entry, st, ctx),
     ),
   );
 }
@@ -517,6 +523,7 @@ export function weeklyCard(entry, ctx, rank, { day = null, multi = 0, onHide = n
         runwayLine(entry.runway, { compact: true }),
         theatreChips(entry, { multi }),
         handoffLine(entry),
+        ctx.isGuest?.() ? null : goingLine(entry.tmdb_id),
       ),
     ),
     h('div', { class: 'pc-times' }, best ? showtimeRow(best) : nextLine(entry, day)),
@@ -626,6 +633,7 @@ export function movieRow(entry, ctx, { day = null, compact = false, multi = 0, n
       runwayLine(entry.runway, { theatre: nearby ? entry.theatre : null, compact: true }),
       theatreChips(entry, { multi }),
       handoffLine(entry),
+      owner && !compact ? goingLine(entry.tmdb_id) : null,
     ),
     h('div', { class: 'row-wide' }, next ? showtimeRow(next) : nextLine(entry, day)),
     total > 1 ? toggle : null,
