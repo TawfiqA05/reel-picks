@@ -646,7 +646,7 @@ person page), search ranking on real TMDB answers, scores and picks against save
 values, security for every API route, the owner, friend and guest roles, privacy between
 friends, the hourly limits, the weekly lock, and the background jobs on a mocked timeline.
 
-`npm run test:ui` runs the browser checks in about 8 minutes: accessibility (keyboard,
+`npm run test:ui` runs the browser checks in about 10 minutes: accessibility (keyboard,
 focus rings, names, dialogs, reduced motion, 200% zoom), layout at 320, 390 and 1280 in
 light and dark for every role with no sideways scroll, clipped text, contrast problem or
 console error, the design itself (tokens, fonts, buttons, cards, showtime rows), the
