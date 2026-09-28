@@ -12,11 +12,16 @@
     "dev": "node --disable-warning=ExperimentalWarning --watch server/index.js",
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "share": "node scripts/share.mjs",
-    "gen-icons": "node scripts/gen-icons.mjs"
+    "gen-icons": "node scripts/gen-icons.mjs",
+    "test": "node --disable-warning=ExperimentalWarning test/run.mjs fast",
+    "test:ui": "node --disable-warning=ExperimentalWarning test/run.mjs ui"
   },
   "dependencies": {
     "compression": "^1.8.2",
     "express": "^4.21.2",
     "jpeg-js": "^0.4.4"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
   }
 }
