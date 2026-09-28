@@ -112,6 +112,7 @@ addAll([
   'guided tour', 'Replay tour', 'Search', 'recents', 'Letterboxd', 'Sync now', 'IMDb', 'ratings.csv',
   'quick rate', 'welcome setup', 'Export full setup', 'Import full setup', 'Export backup CSV',
   'Download latest backup', 'Upload now', 'off-site', 'nightly', 'Notify me when my weekly picks are ready',
+  'I\'m going', 'Send a pick', 'Sent to you', 'Did you see it', 'Sent by',
   'Home Screen', 'offline', 'service worker', 'Railway', 'Dockerfile', 'drive time', 'OpenStreetMap',
   'Ticket stub', 'Midnight marquee', 'hit-rate', 'Seen · Undo', 'Mark seen', 'Stats', 'More from',
   'You', 'Together', 'Settings', 'Help', 'Big Shoulders Display', 'IBM Plex Sans', 'glow',

@@ -4,8 +4,10 @@
 // (page.evaluate) and return findings { kind, sel, detail }; everything is
 // measured from layout, never guessed from class names, except the short
 // allowlists written next to each rule with its reason.
+// opts.scope (a selector): measure only what is inside it (a new feature's
+// parts), the page-wide sideways check aside.
 export function measure(opts) {
-  const { phone, atBottom } = opts;
+  const { phone, atBottom, scope = null } = opts;
   const out = [];
   const vw = document.documentElement.clientWidth;
   const vh = window.innerHeight;
@@ -59,7 +61,8 @@ export function measure(opts) {
     }
     return rs;
   };
-  const all = roots.flatMap((r) => [r, ...r.querySelectorAll('*')]).filter((e) => !(e instanceof SVGElement && e.tagName !== 'svg')).filter(visible);
+  const all = roots.flatMap((r) => [r, ...r.querySelectorAll('*')]).filter((e) => !(e instanceof SVGElement && e.tagName !== 'svg')).filter(visible)
+    .filter((e) => !scope || e.closest(scope));
   const ownText = (el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
   const texty = all.filter(ownText);
   const textyIn = texty.filter(inView);
@@ -403,7 +406,7 @@ export function measure(opts) {
     const targets = all.filter((e) => e.matches('a[href], button, input:not([type=hidden]), select, textarea, summary, [role=button], label.switch-row'));
     for (const el of targets) {
       if (el.matches(':disabled, [aria-disabled="true"]') || S(el).pointerEvents === 'none') continue;
-      if (el.matches('label.switch-row input, input[type=checkbox]') && el.closest('label')) continue;
+      if (el.matches('label.switch-row input, input[type=checkbox], input[type=radio]') && el.closest('label')) continue;
       if (el.parentElement?.closest('a[href], button, summary')) continue;
       // Inline links inside running text are exempt (WCAG 2.5.8).
       if (S(el).display === 'inline' && el.parentElement && ownText(el.parentElement)) continue;
@@ -466,7 +469,8 @@ export function measure(opts) {
 // Tab through the page: every stop shows a focus ring and isn't hidden
 // behind the header, the tab bar or the Save bar.
 
-export function contrastProbe() {
+// scope (a selector): probe only what is inside it.
+export function contrastProbe({ scope = null } = {}) {
   const out = [];
   const S = (el, p) => getComputedStyle(el, p);
   const desc = (el) => {
@@ -533,7 +537,8 @@ export function contrastProbe() {
     return worst;
   };
   const roots = document.querySelector('.modal-overlay') ? [...document.querySelectorAll('.modal-overlay')] : [document.querySelector('.shell'), document.querySelector('.toast-host')].filter(Boolean);
-  const all = roots.flatMap((r) => [r, ...r.querySelectorAll('*')]).filter((e) => !(e instanceof SVGElement && e.tagName !== 'svg')).filter(visible).filter(inScroller);
+  const all = roots.flatMap((r) => [r, ...r.querySelectorAll('*')]).filter((e) => !(e instanceof SVGElement && e.tagName !== 'svg')).filter(visible).filter(inScroller)
+    .filter((e) => !scope || e.closest(scope));
   const ownText = (el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
   let nText = 0; let nField = 0; let nIcon = 0;
 
