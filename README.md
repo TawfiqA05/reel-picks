@@ -639,8 +639,8 @@ port. Nothing reaches TMDB, OMDb or AMC: the tests answer from saved sample resp
 so they run with no keys and no network, and they never touch `data/`. The clock is fixed
 to one Wednesday, so every run gives the same result.
 
-`npm test` runs the fast checks in about 2 minutes: every feature driven through the app
-(rate, watchlist, Not for me, filters, Schedule, Stats, search and recents, trailer,
+`npm test` runs the fast checks in about 2 minutes: the function suite drives every feature
+through the app (rate, watchlist, Not for me, filters, Schedule, Stats, search and recents, trailer,
 calendar, every Settings save, CSV import, setup export and import, the invite flow, the
 person page), search ranking on real TMDB answers, scores and picks against saved expected
 values, security for every API route, the owner, friend and guest roles, privacy between
@@ -648,7 +648,7 @@ friends, the hourly limits, the weekly lock, and the background jobs on a mocked
 
 `npm run test:ui` runs the browser checks in about 8 minutes: accessibility (keyboard,
 focus rings, names, dialogs, reduced motion, 200% zoom), layout at 320, 390 and 1280 in
-both themes for every role with no sideways scroll, clipped text, contrast problem or
+light and dark for every role with no sideways scroll, clipped text, contrast problem or
 console error, the design itself (tokens, fonts, buttons, cards, showtime rows), the
 installed iPhone app, service worker updates and offline, and size budgets.
 
