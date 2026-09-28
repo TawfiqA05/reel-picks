@@ -26,6 +26,11 @@ function steps(status) {
       text: 'Book opens the best showtime on AMC. Seat by, under it, is when the film itself starts after the previews.' },
     { route: 'home', targets: [['.hero-pick .hero-buttons']], title: 'Save or skip',
       text: 'Save keeps a film on your watchlist and gives it a boost. Not for me hides it; you can bring it back from Settings.' },
+    { route: 'home', targets: [['.hero-pick .go-btn'], ['.hero-pick .plan-pill']], title: 'I\'m going',
+      text: 'Going to a showing? Tap I\'m going. You get a reminder two hours before, and the next morning a quick question: did you see it?' },
+    { route: 'home', targets: [['.hero-pick .send-btn']], title: 'Send a pick',
+      text: isOwner ? 'Think a friend would love it? Send it with a short note. It waits for them at the top of their Picks.'
+        : `Think ${owner} would love it? Send it with a short note. It waits for them at the top of their Picks.` },
     { route: 'home', targets: [['.day-strip']], title: 'Pick a day',
       text: 'Every showtime on Picks follows the day you choose here.' },
     { route: 'home', targets: [['.pick-card .rate-inline'], ['.worth-list .rate-inline']], title: 'Rate as you go',
