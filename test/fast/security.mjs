@@ -105,6 +105,7 @@ export const ROUTES = [
   ['POST', '/api/friends/999999/reissue', 'owner', {}],
   ['GET', '/api/home-picks', 'user'],
   ['POST', '/api/suggest', 'user', {}],
+  ['POST', '/api/suggest/state', 'user', { ids: [] }],
   ['GET', '/api/offsite', 'owner'],
   ['POST', '/api/offsite/upload', 'owner', {}, { skipOwner: true }],
   ['GET', '/api/alerts', 'owner'],

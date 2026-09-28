@@ -319,14 +319,8 @@ async function groupA() {
     await page.waitForSelector('.wsw-film, .wsw .muted', { timeout: 30000 }).catch(() => {});
     const films = await sheet.locator('.wsw-film').count();
     check('wsw: three films', films === 3, String(films));
-    const firstIds = await sheet.locator('.wsw-film').evaluateAll((els) => els.map((e) => e.dataset.id));
-    const moreBtn = sheet.locator('button', { hasText: 'Show me 3 more' });
-    if (await moreBtn.isEnabled()) {
-      await moreBtn.click();
-      await page.waitForFunction((ids) => { const now = [...document.querySelectorAll('.wsw-film')].map((e) => e.dataset.id); return now.length && now.every((x) => !ids.includes(x)); }, firstIds, { timeout: 30000 }).catch(() => {});
-      const next = await sheet.locator('.wsw-film').evaluateAll((els) => els.map((e) => e.dataset.id));
-      check('wsw: Show me 3 more brings new films', next.length && next.every((x) => !firstIds.includes(x)), `${firstIds} -> ${next}`);
-    } else check('wsw: Show me 3 more brings new films', false, 'disabled');
+    // Show me 3 more is checked as the owner below: only three of Robin's
+    // films clear the suggestion bar here (test/fast/wsw.mjs).
     const c1 = sheet.locator('.wsw-film').first();
     const fid = Number(await c1.getAttribute('data-id'));
     await c1.locator('.wsw-seen').click();
@@ -349,14 +343,35 @@ async function groupA() {
     check('wsw: Undo unhides it', !(await api(heavy, 'GET', '/api/hidden')).json.movies.some((m) => m.tmdb_id === hidId));
     await sheet.locator('.wsw-restart').first().click();
     check('wsw: Change answers restarts at 1 of 3', /1 of 3/.test(await sheet.locator('.wsw-step').textContent()));
-    await sheet.locator('[data-answer="home"]').click();
-    await sheet.locator('.wsw-skip').click();
-    await sheet.locator('[data-answer="surprise"]').click();
-    await page.waitForSelector('.wsw-film, .wsw h3.wsw-q', { timeout: 30000 }).catch(() => {});
-    await page.waitForFunction(() => !document.querySelector('.wsw .spinner'), null, { timeout: 30000 }).catch(() => {});
-    const homeFilms = await sheet.locator('.wsw-film').count();
-    const tags = await sheet.locator('.wsw-film .service-tag').allTextContents();
-    check('wsw: at-home answers give films on Netflix or HBO Max', homeFilms > 0 && tags.length === homeFilms && tags.every((t) => /On (Netflix|HBO Max)/.test(t)), `${homeFilms} films; ${tags.join(' / ')}`);
+    // Show me 3 more and At home, as the owner (Netflix): Robin's films on
+    // Netflix and HBO Max all match under the suggestion floor.
+    {
+      const op = (await g.open(null, 390, 'dark')).page;
+      await go(op, w, '#/home', 500);
+      await op.locator('#wsw-btn').click();
+      const os = op.locator('.wsw');
+      await os.locator('[data-answer="either"]').click();
+      await os.locator('.wsw-skip').click();
+      await os.locator('[data-answer="surprise"]').click();
+      await op.waitForSelector('.wsw-film', { timeout: 30000 }).catch(() => {});
+      const firstIds = await os.locator('.wsw-film').evaluateAll((els) => els.map((e) => e.dataset.id));
+      const moreBtn = os.locator('button', { hasText: 'Show me 3 more' });
+      if (await moreBtn.isEnabled()) {
+        await moreBtn.click();
+        await op.waitForFunction((ids) => { const now = [...document.querySelectorAll('.wsw-film')].map((e) => e.dataset.id); return now.length && now.every((x) => !ids.includes(x)); }, firstIds, { timeout: 30000 }).catch(() => {});
+        const next = await os.locator('.wsw-film').evaluateAll((els) => els.map((e) => e.dataset.id));
+        check('wsw: Show me 3 more brings new films', next.length && next.every((x) => !firstIds.includes(x)), `${firstIds} -> ${next}`);
+      } else check('wsw: Show me 3 more brings new films', false, 'disabled');
+      await os.locator('.wsw-restart').first().click();
+      await os.locator('[data-answer="home"]').click();
+      await os.locator('.wsw-skip').click();
+      await os.locator('[data-answer="surprise"]').click();
+      await op.waitForSelector('.wsw-film, .wsw h3.wsw-q', { timeout: 30000 }).catch(() => {});
+      await op.waitForFunction(() => !document.querySelector('.wsw .spinner'), null, { timeout: 30000 }).catch(() => {});
+      const homeFilms = await os.locator('.wsw-film').count();
+      const tags = await os.locator('.wsw-film .service-tag').allTextContents();
+      check('wsw: at-home answers give films on Netflix or HBO Max', homeFilms > 0 && tags.length === homeFilms && tags.every((t) => /On (Netflix|HBO Max)/.test(t)), `${homeFilms} films; ${tags.join(' / ')}`);
+    }
     await page.keyboard.press('Escape');
     await page.waitForTimeout(300);
     check('wsw: Escape closes the sheet', await page.locator('.wsw').count() === 0);
