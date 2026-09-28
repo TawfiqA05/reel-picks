@@ -1326,12 +1326,22 @@ a.tg-time:hover { border-color: var(--text); }
 .search-status { margin: 0 2px; min-height: 1.2em; color: var(--muted); font-size: var(--fs-sm); overflow-wrap: anywhere; }
 .search-status:empty { display: none; }
 .search-body { overflow-y: auto; overscroll-behavior: contain; min-height: 0; flex: 1; margin: 0 -8px; padding: 0 8px 4px; display: flex; flex-direction: column; gap: 2px; }
-.sr-row, .recent-main {
+.sr-row, .sr-person, .recent-main {
   display: flex; align-items: center; gap: 12px; min-width: 0; flex: none; padding: 6px 8px; border-radius: var(--r-btn);
   color: var(--text); text-align: left; background: none; border: none; font: inherit; cursor: pointer; min-height: 48px;
 }
-.sr-row:hover, .recent-main:hover, .sr-row.active, .recent-main.active { background: var(--chip); }
-.sr-row.active, .recent-main.active { outline: 2px solid var(--focus); outline-offset: -2px; }
+.sr-row:hover, .sr-person:hover, .recent-main:hover, .sr-row.active, .sr-person.active, .recent-main.active { background: var(--chip); }
+.sr-row.active, .sr-person.active, .recent-main.active { outline: 2px solid var(--focus); outline-offset: -2px; }
+/* People sit above the films, a round photo where a film has its poster, and
+   a hairline under the last of them. */
+.sr-face { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%; object-fit: cover; object-position: 50% 20%; background: var(--chip); }
+.recent-main .sr-face { margin: 0 -2px; }
+.sr-noface { display: grid; place-items: center; color: var(--muted); }
+.sr-person .sr-title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.sr-person:hover .sr-role, .sr-person.active .sr-role { background: var(--raised); }
+.sr-known { color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-snug); overflow-wrap: anywhere; }
+.sr-person + .sr-row { position: relative; margin-top: 9px; }
+.sr-person + .sr-row::before { content: ''; position: absolute; top: -6px; left: 8px; right: 8px; border-top: 1px solid var(--divider); }
 .sr-thumb { flex: 0 0 40px; width: 40px; height: 60px; border-radius: 6px; object-fit: cover; background: var(--chip); }
 .sr-noposter { display: grid; place-items: center; color: var(--muted); }
 .sr-text { display: flex; flex-direction: column; gap: 5px; min-width: 0; }

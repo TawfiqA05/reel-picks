@@ -71,13 +71,17 @@ function afterTheatreChange(wasShared, tag) {
 // Per-person hourly limits on what spends the shared keys (lib/limits.js):
 // friends by account, the guest link by address, the owner not at all.
 // Answers 429 and returns true when `n` more would go over.
-function limited(req, res, kind, n = 1) {
+// Counts `n` against the caller's limit; false when that would go over.
+function spendLimit(req, kind, n = 1) {
   const u = currentUser();
-  if (!u || u.isOwner || n <= 0) return false;
+  if (!u || u.isOwner || n <= 0) return true;
   const who = u.guest
     ? `ip:${req.get('cf-connecting-ip') || String(req.get('x-forwarded-for') || '').split(',')[0].trim() || req.socket?.remoteAddress || '?'}`
     : `user:${u.userId}`;
-  if (takeLimit(kind, who, u.guest ? 'guest' : 'friend', Date.now(), n)) return false;
+  return takeLimit(kind, who, u.guest ? 'guest' : 'friend', Date.now(), n);
+}
+function limited(req, res, kind, n = 1) {
+  if (spendLimit(req, kind, n)) return false;
   res.status(429).json({ error: LIMIT_MESSAGE });
   return true;
 }
@@ -687,7 +691,9 @@ router.get('/ratings/search', h(async (req, res) => {
 // Owner and friends; none of these is on the guest allowlist, so the guest
 // link gets a 403 before a handler runs. Recents are the caller's own.
 
-router.get('/search', h(async (req, res) => res.json(await search(req.query.q))));
+// Looking up people spends the caller's new-film allowance, one per live TMDB
+// call; over it, the films still come back, just without people.
+router.get('/search', h(async (req, res) => res.json(await search(req.query.q, { spend: () => spendLimit(req, 'newFilm') }))));
 router.get('/search/recents', (req, res) => res.json(listRecents()));
 router.post('/search/recents', (req, res) => res.json(addRecent(req.body)));
 router.delete('/search/recents', (req, res) => res.json(removeRecent(req.query.kind, req.query.key)));

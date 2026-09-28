@@ -1,6 +1,6 @@
 // The header search sheet (owner and friends): search as you type over TMDB
-// and the films already around, with this person's recents while the box is
-// empty. Recents live on the server, per person, so they follow them across
+// and the films already around, with up to two people (directors and actors)
+// above the films, and this person's recents while the box is empty. Recents live on the server, per person, so they follow them across
 // devices; the guest link never gets the button (and the API refuses it).
 import { api } from './api.js';
 import { h, clear, toast, icon, openModal, star } from './ui.js';
@@ -12,6 +12,8 @@ const DEBOUNCE_MS = 300;
 const DWELL_MS = 2000; // results looked at this long count as a search, even if typed over later
 const MIN_CHARS = 2;
 const thumb = (url) => (url ? url.replace(/\/w\d+\//, '/w92/') : null);
+// A face for a 44px circle: TMDB's 45px-wide size on a 1x screen, the 185 one on anything sharper.
+const faceUrl = (url) => (url && window.devicePixelRatio > 1 ? url : url?.replace(/\/w\d+\//, '/w45/') || null);
 const yearOf = (y) => (y ? ` ${y}` : '');
 
 let open = null; // one sheet at a time
@@ -53,7 +55,7 @@ export function openSearch(ctx = null) {
       controller?.abort();
       stopViewport();
       // A search that found something counts as a recent even if nothing was opened.
-      if (results?.list.length) remember(results.q);
+      if (results?.list.length || results?.people?.length) remember(results.q);
     },
   });
   open = { input };
@@ -123,8 +125,8 @@ export function openSearch(ctx = null) {
     try {
       const r = await api.search(q, { signal: controller.signal });
       if (mine !== ticket) return;
-      results = { q, list: r.results };
-      paintResults(q, r.results);
+      results = { q, list: r.results, people: r.people || [] };
+      paintResults(q, r.results, results.people);
     } catch (err) {
       if (err.name === 'AbortError' || mine !== ticket) return;
       statusLine.textContent = err.message;
@@ -153,20 +155,49 @@ export function openSearch(ctx = null) {
     location.hash = `#/movie/${m.tmdb_id}`;
   }
 
-  function paintResults(q, list) {
+  function openPerson(p, q) {
+    if (q) remember(q);
+    results = null;
+    modal.close();
+    location.hash = `#/person/${p.id}`;
+  }
+
+  // A round photo, so a person never reads as a poster.
+  const face = (p) => (p.photo
+    ? h('img', { class: 'sr-face', loading: 'lazy', decoding: 'async', src: faceUrl(p.photo), alt: '', width: '44', height: '44' })
+    : h('span', { class: 'sr-face sr-noface', 'aria-hidden': 'true' }, icon('user', { size: 20 })));
+
+  // One person: photo, name, Director or Actor, and what they're known for.
+  // The option's name says all of it in one line.
+  function personRow(p, i, q) {
+    const known = (p.knownFor || []).join(', ');
+    return h('a', {
+      class: 'sr-person', id: `sr-p${i}`, role: 'option', href: `#/person/${p.id}`, tabindex: '-1',
+      'aria-label': `${p.name}, ${p.role}${known ? `. Known for ${known}` : ''}`,
+      onClick: (e) => { e.preventDefault(); openPerson(p, q); },
+    }, face(p),
+    h('span', { class: 'sr-text' },
+      h('span', { class: 'sr-title' }, p.name, h('span', { class: 'tag sr-badge sr-role' }, p.role)),
+      known ? h('span', { class: 'sr-known' }, known) : null));
+  }
+
+  function paintResults(q, list, people = []) {
     clear(body);
     credit.hidden = true;
     active = -1;
     input.removeAttribute('aria-activedescendant');
-    if (!list.length) {
+    if (!list.length && !people.length) {
       statusLine.textContent = `No matches for "${q.trim()}"`;
       setExpanded(false);
       return;
     }
-    statusLine.textContent = `${list.length} result${list.length === 1 ? '' : 's'}`;
+    const films = `${list.length} result${list.length === 1 ? '' : 's'}`;
+    const who = `${people.length} ${people.length === 1 ? 'person' : 'people'}`;
+    statusLine.textContent = !people.length ? films : list.length ? `${who} · ${films}` : who;
     setExpanded(true);
     clearTimeout(dwell);
     dwell = setTimeout(() => remember(q), DWELL_MS);
+    people.forEach((p, i) => body.appendChild(personRow(p, i, q)));
     // Films not in theaters get a small "Stream on …" line, and the JustWatch
     // credit shows under the list once one does.
     list.forEach((m, i) => {

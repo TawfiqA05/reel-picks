@@ -45,7 +45,7 @@ export function query(q) {
 }
 
 // Optimal string alignment distance, giving up once it passes `max`.
-function distance(a, b, max) {
+export function distance(a, b, max) {
   if (Math.abs(a.length - b.length) > max) return max + 1;
   let prev2 = null;
   let prev = Array.from({ length: b.length + 1 }, (_, j) => j);

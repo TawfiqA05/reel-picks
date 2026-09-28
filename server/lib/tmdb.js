@@ -143,6 +143,20 @@ export async function person(personId, { gate = null } = {}) {
   return req(`person:${personId}`, 7 * DAY, `/person/${personId}`, { language: 'en-US' }, { gate });
 }
 
+// Who directed a film and its first ten billed actors, for the header
+// search's list of names it can correct a typo to (lib/people.js). Only those
+// few fields are kept, 7 days, apart from the film's full details (details()),
+// which feed scores.
+export async function filmPeople(tmdbId, { gate = null } = {}) {
+  return req(`filmpeople:${tmdbId}`, 7 * DAY, `/movie/${tmdbId}/credits`, { language: 'en-US' }, {
+    gate,
+    more: (d) => ({
+      directors: (d?.crew || []).filter((c) => c.job === 'Director').map((c) => ({ id: c.id, name: c.name })),
+      cast: (d?.cast || []).slice().sort((a, b) => (a.order ?? 99) - (b.order ?? 99)).slice(0, 10).map((c) => ({ id: c.id, name: c.name })),
+    }),
+  });
+}
+
 // Whether a TMDB answer is already cached and fresh, so asking for it costs
 // no live call.
 export function cachedFresh(key) {
@@ -201,7 +215,8 @@ let sweptAt = 0;
 function sweepSearches() {
   if (Date.now() - sweptAt < 3600e3) return;
   sweptAt = Date.now();
-  run("DELETE FROM cache WHERE key LIKE 'tmdb:find:%' AND fetched_at < ?", new Date(Date.now() - DAY * 1000).toISOString());
+  const dayAgo = new Date(Date.now() - DAY * 1000).toISOString();
+  run("DELETE FROM cache WHERE (key LIKE 'tmdb:find:%' OR key LIKE 'tmdb:findperson:%') AND fetched_at < ?", dayAgo);
 }
 
 // The header search. Cached a day per spelling, and `gate` (the shared TMDB
@@ -212,6 +227,29 @@ export async function searchTitles(query, { gate = null } = {}) {
   const data = await req(`find:${query.toLowerCase()}`, DAY, '/search/movie',
     { query, include_adult: 'false', language: 'en-US' }, { gate });
   return (data?.results || []).map((r) => ({ ...lightMovie(r), popularity: r.popularity ?? 0 }));
+}
+
+// The header search's people: TMDB's person search, cached a day per
+// spelling like searchTitles, behind the same throttle.
+export const personKey = (query) => `findperson:${query.toLowerCase()}`;
+export async function searchPeople(query, { gate = null } = {}) {
+  sweepSearches();
+  const data = await req(personKey(query), DAY, '/search/person',
+    { query, include_adult: 'false', language: 'en-US' }, { gate });
+  return (data?.results || []).filter((p) => !p.adult).map(lightPerson);
+}
+
+// Compact shape for a person in search: the films they're known for, not TV.
+export function lightPerson(p) {
+  return {
+    id: p.id,
+    name: p.name,
+    department: p.known_for_department || null,
+    popularity: p.popularity ?? 0,
+    photo: img(p.profile_path, 'w185'),
+    knownFor: (p.known_for || []).filter((k) => k.media_type === 'movie' && !k.adult && k.title)
+      .map((k) => ({ tmdb_id: k.id, title: k.title, votes: k.vote_count ?? 0 })),
+  };
 }
 
 // Live (uncached) search for the in-app rating screen so results feel instant/fresh.

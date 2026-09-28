@@ -1,14 +1,16 @@
 // The header search: TMDB's movie search merged with the films this person
 // already has around (playing at their theatres, coming soon, rated,
 // watchlisted, hidden), matched forgivingly (public/js/fuzzy.js) and ranked
-// for them. Plus their recents. Read-only toward scoring: nothing here writes
-// a rating, a pick or a movie row.
+// for them, and up to two people above them (lib/people.js). Plus their
+// recents. Read-only toward scoring: nothing here writes a rating, a pick or
+// a movie row.
 import { all, get, run } from '../db.js';
 import * as tmdb from './tmdb.js';
 import { tmdbThrottle } from './backfill.js';
 import { followedTheatres } from './theatres.js';
 import { currentUserId } from './user.js';
 import { localYMD } from './util.js';
+import { findPeople } from './people.js';
 import { norm, prepare, query as prepQuery, score as fit, EXACT, STARTS, isTypoOnly } from '../../public/js/fuzzy.js';
 
 export const MIN_QUERY = 2;
@@ -94,12 +96,31 @@ function shortened(q) {
   return out;
 }
 
-export async function search(raw) {
+// `spend` (optional) is asked before each live TMDB call for people: the
+// caller's hourly new-film limit (routes.js). Films are never limited here.
+export async function search(raw, { spend } = {}) {
   const q = prepQuery(String(raw || '').slice(0, 200));
-  if (q.c.length < MIN_QUERY) return { query: q.n, results: [] };
+  if (q.c.length < MIN_QUERY) return { query: q.n, results: [], people: [] };
   const uid = currentUserId();
   const me = mine(uid);
+  // People are asked for alongside the films; which of them show waits on
+  // the films (lib/people.js: a film titled what was typed can keep them out).
+  let filmsIn;
+  const filmFit = new Promise((resolve) => { filmsIn = resolve; });
+  const peopleP = findPeople(q.n, { filmFit, spend }).catch(() => []);
+  try {
+    const out = await films(q, me);
+    filmsIn({
+      title: out.results.some((r) => r.match === 'title' && wellKnown(r)),
+      words: out.results.some((r) => r.match === 'title' || r.match === 'words'),
+    });
+    return { ...out, people: await peopleP };
+  } finally {
+    filmsIn({ title: true, words: true }); // the films failed: the people finish on their own and are dropped
+  }
+}
 
+async function films(q, me) {
   const byId = new Map();
   const add = (f, s, source) => {
     const had = byId.get(f.tmdb_id);

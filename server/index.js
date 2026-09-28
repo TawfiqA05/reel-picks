@@ -25,6 +25,7 @@ import { initLockWeek } from './lib/lock.js';
 import { afterNightlyBackup } from './lib/housekeeping.js';
 import { sendIndex } from './lib/version.js';
 import { backfillPosterColors } from './lib/posterColor.js';
+import { warmPeople } from './lib/people.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 const RETRY_CHECK_MS = 60 * 1000;
@@ -209,6 +210,9 @@ app.listen(config.port, () => {
   if (shouldAutoRefresh()) autoRefresh('startup');
   // Pick up any credits backfill a restart interrupted (a no-op when nothing is missing).
   startCreditsBackfill('startup');
+  // The names the header search can correct a typo to (lib/people.js):
+  // cached a week, so a restart reads them from the cache.
+  warmPeople();
   // Poster colours for the dark-mode glow, for any playing film still without one.
   backfillPosterColors().catch((e) => console.error('[poster colours]', e.message));
   // Nightly database backup at 3am local time (lib/backup.js); a failure
@@ -238,6 +242,7 @@ app.listen(config.port, () => {
     letterboxd();
     // This week's "At home" picks, ready before anyone opens Picks (lib/home.js).
     warmHomePicks(activeUserIds()).catch((e) => console.error('[home]', e.message));
+    warmPeople(); // once a week
     if (refreshState.running) return;
     if (shouldAutoRefresh()) autoRefresh('new day');
     else sendWeeklyIfDue().catch((e) => console.error('[push]', e.message));
