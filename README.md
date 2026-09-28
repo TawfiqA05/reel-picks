@@ -615,6 +615,7 @@ server/
                       push, Letterboxd, At home, Together, search, people
 public/               buildless frontend (vanilla ESM + CSS, PWA)
 scripts/              share tunnel, icon generation
+test/                 the fast and browser test suites and their made-up sample data
 data/                 SQLite db + backups (git-ignored)
 ```
 
@@ -624,9 +625,41 @@ data/                 SQLite db + backups (git-ignored)
 - `npm run dev`: start with auto-reload
 - `npm run share`: start plus a temporary public read-only tunnel (needs `cloudflared`)
 - `npm run gen-icons`: regenerate the PWA icons
+- `npm test`: the fast checks (see Tests)
+- `npm run test:ui`: the browser checks (see Tests)
 
 Deleting `data/` resets everything: ratings, friends, watch history, caches. Keys in
 `.env` survive.
+
+## Tests
+
+I keep two test commands. Both build their own sample database in a temp folder, with
+made-up friends, theaters and films, and start the app from a copy of the code on a free
+port. Nothing reaches TMDB, OMDb or AMC: the tests answer from saved sample responses,
+so they run with no keys and no network, and they never touch `data/`. The clock is fixed
+to one Wednesday, so every run gives the same result.
+
+`npm test` runs the fast checks in about 2 minutes: every feature driven through the app
+(rate, watchlist, Not for me, filters, Schedule, Stats, search and recents, trailer,
+calendar, every Settings save, CSV import, setup export and import, the invite flow, the
+person page), search ranking on real TMDB answers, scores and picks against saved expected
+values, security for every API route, the owner, friend and guest roles, privacy between
+friends, the hourly limits, the weekly lock, and the background jobs on a mocked timeline.
+
+`npm run test:ui` runs the browser checks in about 8 minutes: accessibility (keyboard,
+focus rings, names, dialogs, reduced motion, 200% zoom), layout at 320, 390 and 1280 in
+both themes for every role with no sideways scroll, clipped text, contrast problem or
+console error, the design itself (tokens, fonts, buttons, cards, showtime rows), the
+installed iPhone app, service worker updates and offline, and size budgets.
+
+The first time, I install the browsers with `npx playwright install chromium webkit`.
+Real app bugs the tests have found but I haven't fixed yet are listed in
+`test/known-bugs.json`; they're expected to fail and don't fail the run, and a run fails
+if one of them starts passing, so the list stays honest. When a change is meant to move
+scores, I rerun the scores suite with `RP_UPDATE_EXPECTED=1` to save the new values.
+
+Checks that need the real friend accounts run against a copy of the Railway database
+from a local folder, `~/reel-picks-qa`, which is never committed.
 
 ## License
 
