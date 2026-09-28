@@ -64,6 +64,8 @@ you want your own, you run your own copy with your own keys.
   me 3 more" never repeats a film while the sheet is open, and Seen it (a rating),
   Save and Not for me work right there. With no ratings yet it leans on popularity,
   so a brand-new friend still gets well-known films that fit the mood.
+- Lets me say "I'm going" to a showing and reminds me before it (see I'm going below).
+- Sends a film to a friend with a short note (see Send a pick below).
 - Shares a read-only guest link so other people can see my picks without touching anything.
 
 ## The weekly four
@@ -365,6 +367,42 @@ a strong match for the other, or a strong match for both. Each film gets one sho
 ("On both watchlists", "Strong match for both") and the next few showtimes, weekend
 evenings first. Neither person's ratings, scores or full watchlist are ever sent.
 
+## I'm going
+
+When I've decided on a showing, I tap I'm going. On the Picks hero it's the showing the
+Book button points at; on a movie page and in Schedule's Leaving list it opens a sheet
+of the showings still to come, by theater and day. There's one plan per film: picking
+another showing of the same film moves it, and I can change it or cancel it any time.
+The plan shows in the soft accent as "You're going · Tonight 7:10 PM · Maple Grove" on
+the hero, on the movie page and on that showing's own row.
+
+Two hours before the showing I get a reminder push (none if I made the plan with less than
+two hours to go). The next morning at 10 a push and a card at the top of Picks ask "Did you
+see it?". Yes logs the film seen on the day of the showing, the same way Mark seen does,
+so it counts toward my movie plan, and then offers the star rating. No just clears the
+plan. If I don't answer, the card stays for three days and then goes. Marking the film
+seen or rating it any other way clears the plan and the question on their own.
+
+Plans follow the Together rule. When a friend has Together turned on, I see "(name) is going
+Sat 7:10 PM" on that film and they see my plans. A friend never sees another friend's plan,
+and nobody sees anyone's plan without Together. The guest link sees none of it.
+
+The reminders and questions are checked every minute and recorded in the database before
+they go out, so a restart or a deploy never sends one twice and a cancelled plan never
+sends anything.
+
+## Send a pick
+
+Send on a movie page or on the Picks hero opens a small sheet. I can send a film to any
+friend; a friend can send only to me, so a friend never sees another friend's name. There's
+an optional note of up to 140 characters, kept as plain text.
+
+The person it's for gets a push (if they have push on), "(my name) thinks you'd like
+(the film)", and a "Sent to you" row at the top of Picks with the note. The row goes
+when they dismiss it, save the film, mark it seen or rate it, and the movie page shows
+"Sent by" with the note while it's there. Each person can send ten a day. The guest link
+can't send or receive, and sending never changes a score or a pick.
+
 ## Privacy
 
 Everything lives in the SQLite file. Two keyless OpenStreetMap services see location
@@ -389,6 +427,9 @@ It's once per person per week even across restarts and deploys: the send is reco
 the database before it goes out. A device the push service reports as gone (404/410) is
 deleted. I can run the week's send by hand with `POST /api/push/weekly/send`,
 and it skips anyone who already got this week's.
+
+The same devices get the I'm going reminders and next-morning questions, and the pushes
+for picks sent to me. Each goes only to the person it's about.
 
 It's plain Web Push with VAPID keys, no extra dependency. Without `VAPID_PUBLIC_KEY` and
 `VAPID_PRIVATE_KEY` the feature is off and the switch never appears.
@@ -612,7 +653,8 @@ server/
   env.js              the .env loader
   lib/                scoring, taste, ranking, runway, geocoding, accounts,
                       AMC/TMDB/OMDb clients, refresh pipeline, backups,
-                      push, Letterboxd, At home, Together, search, people
+                      push, Letterboxd, At home, Together, search, people,
+                      I'm going plans and sent picks
 public/               buildless frontend (vanilla ESM + CSS, PWA)
 scripts/              share tunnel, icon generation
 test/                 the fast and browser test suites and their made-up sample data
@@ -644,13 +686,16 @@ through the app (rate, watchlist, Not for me, filters, Schedule, Stats, search a
 calendar, every Settings save, CSV import, setup export and import, the invite flow, the
 person page), search ranking on real TMDB answers, scores and picks against saved expected
 values, security for every API route, the owner, friend and guest roles, privacy between
-friends, the hourly limits, the weekly lock, and the background jobs on a mocked timeline.
+friends, the hourly limits, the weekly lock, the background jobs on a mocked timeline,
+I'm going plans (reminders, the next morning's question, restarts) on a mocked clock, and
+sending picks.
 
 `npm run test:ui` runs the browser checks in about 10 minutes: accessibility (keyboard,
 focus rings, names, dialogs, reduced motion, 200% zoom), layout at 320, 390 and 1280 in
 light and dark for every role with no sideways scroll, clipped text, contrast problem or
 console error, the design itself (tokens, fonts, buttons, cards, showtime rows), the
-installed iPhone app, service worker updates and offline, and size budgets.
+installed iPhone app, service worker updates and offline, size budgets, and I'm going and
+Send a pick for every role, width and theme.
 
 The first time, I install the browsers with `npx playwright install chromium webkit`.
 Real app bugs the tests have found but I haven't fixed yet are listed in
