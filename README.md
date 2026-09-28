@@ -59,11 +59,10 @@ you want your own, you run your own copy with your own keys.
 - Answers "What should I watch?" from a button on Picks and in the search sheet. Three
   one-tap questions, each skippable: where (Theater, At home, Either), how long (Under 2h,
   Any length) and the mood (Funny, Intense, Feel-good, Mind-bending, Scary, Romantic,
-  Surprise me). Out come three films that fit, from what's playing at my theaters and what's
-  on my services, scored like the picks and each with a reason from my own ratings. "Show
-  me 3 more" never repeats a film while the sheet is open, and Seen it (a rating),
-  Save and Not for me work right there. With no ratings yet it leans on popularity,
-  so a brand-new friend still gets well-known films that fit the mood.
+  Surprise me). Out come three good films that fit, from what's playing at my theaters and
+  what's on my services, each with its match, its best public score and a reason. It keeps
+  my place when I open one of them, and it doesn't show me the same film twice in a week
+  while there are others to show (see What should I watch? below).
 - Lets me say "I'm going" to a showing and reminds me before it (see I'm going below).
 - Sends a film to a friend with a short note (see Send a pick below).
 - Shares a read-only guest link so other people can see my picks without touching anything.
@@ -367,6 +366,53 @@ a strong match for the other, or a strong match for both. Each film gets one sho
 ("On both watchlists", "Strong match for both") and the next few showtimes, weekend
 evenings first. Neither person's ratings, scores or full watchlist are ever sent.
 
+## What should I watch?
+
+It's for the evening I don't know what I want. The button sits under the four on Picks,
+and there's a "Not sure? What should I watch?" link in the search sheet. Three questions,
+one tap each, and I can skip any of them: where I'm watching (Theater, At home, Either),
+how much time I have (Under 2h, Any length) and the mood (Funny, Intense, Feel-good,
+Mind-bending, Scary, Romantic, Surprise me). Then three films.
+
+Only good films make it. A film needs a match of 65 or more (the same match every other
+page shows me) and a solid public score: TMDB 7.0 or better from at least 200 votes, or
+Rotten Tomatoes 75% or better, or IMDb 7.0 or better. A film with no scores yet only
+counts when it's a theater film showing in the next 48 hours, and then on its match alone.
+I tried a floor of 75 first, on a copy of the real database with Either, Any length and
+Surprise me. That left my friend with 700 ratings only 5 films at their theater, and 70
+left 9, so the floor came down to 65, the lowest I allow. What holds them back is how few
+films are left that they haven't rated, not the floor.
+
+The films that clear the bar are ranked by a blend of my match (60%) and the public score
+(40%). With 5 to 19 ratings it's half and half, and under 5 ratings it's the public score
+alone, since the match doesn't know me yet. The three are then drawn at random, with the
+better ones more likely, so the same answers don't always give the same three. No two in
+a set share a director, and a Surprise me set never has three of the same main genre.
+
+It remembers every film it has shown me, on the server, for 7 days. A film I was shown
+doesn't come back that week unless fewer than three others would clear the bar. "Show me
+3 more" never repeats anything from the same run, and when nothing is left it says that's
+everything.
+
+When fewer than three clear the bar, it lowers it a step (TMDB 6.5, Rotten Tomatoes 70%,
+IMDb 6.5), then another (6.0, 65%, 6.0), and says so above the results in plain words:
+"Not much great for this mood in theaters. These are the closest." When nothing fits even
+then, it says "Nothing fits right now. Try another mood or At home." and names whatever
+else I could change.
+
+Each card shows the match and the score that cleared the bar in one pill, like "88% match ·
+RT 92%", then the year, genres and length, where to see it (the theater and next showing,
+or the service), and a one-line reason. Seen it (a star rating), Save and Not for me work
+right on the card.
+
+It keeps my place. If I open one of the films (its page, the trailer on its page, anyone
+in its cast) and come back with the back button, the back swipe in the installed app, or
+by tapping Picks, the sheet opens again on the same answers and the same three, and "Show
+me 3 more" carries on from there. Anything I did on the film's page, like saving it, shows
+on its card. The place is kept on that device only, separately for each person who uses
+it, and ends when I tap Start over, close the sheet, or leave it for 30 minutes. The guest
+link has no way in.
+
 ## I'm going
 
 When I've decided on a showing, I tap I'm going. On the Picks hero it's the showing the
@@ -642,6 +688,8 @@ For test servers only. Never set these on a real deployment:
 - `RP_AMC_BASE`: points the AMC client at a stand-in AMC.
 - `RP_LETTERBOXD_ORIGIN`: points the Letterboxd sync at a local copy of the feed.
 - `RP_PUSH_TEST_ORIGIN`: lets push subscriptions point at a local fake push service.
+- `RP_WSW_SEED`: any text. "What should I watch?" draws its three films from it, so the
+  same answers give the same films on every run.
 
 ## Project layout
 
