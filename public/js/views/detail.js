@@ -54,15 +54,29 @@ export async function render(root, params, ctx) {
   // Where to stream it in the US. Not on the guest link, which can't ask TMDB.
   if (!guest) page.appendChild(streamSection(m.tmdb_id));
 
-  // Synopsis + cast
-  if (m.synopsis || (m.cast || []).length) {
+  // Synopsis, then who made it: each name opens their person page.
+  const cast = (m.cast || []).slice(0, 6);
+  if (m.synopsis || cast.length || m.director) {
     page.appendChild(h('section', { class: 'group about', 'aria-labelledby': 'about-title' },
       h('h2', { class: 'group-title', id: 'about-title' }, 'About'),
       m.synopsis ? h('p', { class: 'synopsis' }, m.synopsis) : null,
-      (m.cast || []).length ? h('p', { class: 'cast' }, h('span', { class: 'muted' }, 'Starring '), (m.cast || []).slice(0, 6).join(', ')) : null));
+      m.director ? creditLine('Directed by', [{ name: m.director, id: m.director_id }]) : null,
+      cast.length ? creditLine('Starring', cast.map((name, i) => ({ name, id: m.cast_ids?.[i] }))) : null));
   }
 
   root.appendChild(page);
+}
+
+// "Starring" and its names, each a link to the person's page when TMDB's id
+// for them is stored (a film fetched before ids were kept shows plain names
+// until its details refresh).
+function creditLine(label, people) {
+  return h('div', { class: 'credit-line' },
+    h('span', { class: 'credit-label muted' }, label),
+    h('ul', { class: 'person-links', 'aria-label': label },
+      ...people.map((p) => h('li', {}, p.id
+        ? h('a', { class: 'person-link', href: `#/person/${p.id}` }, p.name)
+        : h('span', { class: 'person-link static' }, p.name)))));
 }
 
 function ratingRow(d, m, ctx, week) {

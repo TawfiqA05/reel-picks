@@ -728,6 +728,9 @@ export function getMovieDetail(tmdbId, { guest = false } = {}) {
     movie: {
       ...cardShape(m),
       cast: m.cast || [],
+      // TMDB person ids, so the page can link each name to its person page.
+      director_id: m.director_id ?? null,
+      cast_ids: m.cast_ids || [],
       synopsis: m.synopsis || '',
       trailer_key: m.trailer_key || null,
       release_date: m.release_date || null,
