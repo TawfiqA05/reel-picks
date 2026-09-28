@@ -117,6 +117,7 @@ export const api = {
   searchRecents: () => req('GET', '/search/recents'),
   addRecentQuery: (query) => req('POST', '/search/recents', { query }),
   addRecentMovie: (movie) => req('POST', '/search/recents', { movie }),
+  addRecentPerson: (person) => req('POST', '/search/recents', { person }),
   removeRecent: (kind, key) => req('DELETE', `/search/recents?kind=${encodeURIComponent(kind)}&key=${encodeURIComponent(key)}`),
   clearRecents: () => req('POST', '/search/recents/clear'),
   restoreRecents: (cleared) => req('POST', '/search/recents/restore', cleared),

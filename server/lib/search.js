@@ -176,30 +176,40 @@ async function films(q, me) {
 }
 
 // ---- recents ---------------------------------------------------------------
+//
+// Queries (kind 'query'), and what was opened from the search: films (kind
+// 'movie') and people (kind 'person', where `query` holds their role and
+// `poster` their photo). Films and people share one "Recently viewed" list,
+// newest first by `seq`, which each row carries as `at`.
 
 export const MAX_QUERIES = 10;
-export const MAX_MOVIES = 8;
+export const MAX_MOVIES = 8; // films and people together
+const VIEWED = "('movie', 'person')";
+const ROLES = new Set(['Director', 'Actor']);
 
 const nextSeq = (uid) => (get('SELECT MAX(seq) AS s FROM search_recents WHERE user_id = ?', uid)?.s || 0) + 1;
 
 function prune(uid) {
-  for (const [kind, max] of [['query', MAX_QUERIES], ['movie', MAX_MOVIES]]) {
-    run(`DELETE FROM search_recents WHERE user_id = ? AND kind = ? AND key NOT IN
-          (SELECT key FROM search_recents WHERE user_id = ? AND kind = ? ORDER BY seq DESC LIMIT ?)`, uid, kind, uid, kind, max);
-  }
+  run(`DELETE FROM search_recents WHERE user_id = ? AND kind = 'query' AND key NOT IN
+        (SELECT key FROM search_recents WHERE user_id = ? AND kind = 'query' ORDER BY seq DESC LIMIT ?)`, uid, uid, MAX_QUERIES);
+  run(`DELETE FROM search_recents WHERE user_id = ? AND kind IN ${VIEWED} AND kind || ':' || key NOT IN
+        (SELECT kind || ':' || key FROM search_recents WHERE user_id = ? AND kind IN ${VIEWED} ORDER BY seq DESC LIMIT ?)`, uid, uid, MAX_MOVIES);
 }
 
 export function listRecents() {
   const uid = currentUserId();
-  const rows = all('SELECT kind, key, query, tmdb_id, title, year, poster FROM search_recents WHERE user_id = ? ORDER BY seq DESC', uid);
+  const rows = all('SELECT kind, key, query, tmdb_id, title, year, poster, seq FROM search_recents WHERE user_id = ? ORDER BY seq DESC', uid);
   return {
     queries: rows.filter((r) => r.kind === 'query').map((r) => ({ key: r.key, query: r.query })),
-    movies: rows.filter((r) => r.kind === 'movie').map((r) => ({ tmdb_id: r.tmdb_id, title: r.title, year: r.year, poster: r.poster })),
+    movies: rows.filter((r) => r.kind === 'movie').map((r) => ({ tmdb_id: r.tmdb_id, title: r.title, year: r.year, poster: r.poster, at: r.seq })),
+    people: rows.filter((r) => r.kind === 'person').map((r) => ({ id: r.tmdb_id, name: r.title, role: r.query, photo: r.poster, at: r.seq })),
   };
 }
 
 const bad = (msg) => Object.assign(new Error(msg), { status: 400 });
 const cleanText = (s, max) => String(s ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+// Only TMDB's own image host, so a stored recent can't point a page anywhere else.
+const tmdbImage = (u) => (typeof u === 'string' && /^https:\/\/image\.tmdb\.org\/t\/p\/\w+\/[\w.-]+$/.test(u) ? u : null);
 
 // A query: under two letters (after normalizing) is never kept; the same
 // query again moves to the top, keeping the latest spelling.
@@ -218,23 +228,37 @@ function putMovie(uid, m) {
   const title = cleanText(m.title, 300) || get('SELECT title FROM movies WHERE tmdb_id = ?', id)?.title;
   if (!title) throw bad('title required.');
   const year = Number.isInteger(Number(m.year)) && Number(m.year) > 1800 ? Number(m.year) : null;
-  // Only TMDB's own image host, so a stored recent can't point a page anywhere else.
-  const poster = typeof m.poster === 'string' && /^https:\/\/image\.tmdb\.org\/t\/p\/\w+\/[\w.-]+$/.test(m.poster) ? m.poster : null;
   run(`INSERT INTO search_recents(user_id, kind, key, tmdb_id, title, year, poster, seq) VALUES(?, 'movie', ?, ?, ?, ?, ?, ?)
         ON CONFLICT(user_id, kind, key) DO UPDATE SET title = excluded.title, year = excluded.year, poster = excluded.poster, seq = excluded.seq`,
-  uid, String(id), id, title, year, poster, nextSeq(uid));
+  uid, String(id), id, title, year, tmdbImage(m.poster), nextSeq(uid));
+}
+
+function personFields(p) {
+  const id = Number(p?.id);
+  if (!Number.isInteger(id) || id <= 0) throw bad('id required.');
+  const name = cleanText(p.name, 300);
+  if (!name) throw bad('name required.');
+  return { id, name, role: ROLES.has(p.role) ? p.role : null, photo: tmdbImage(p.photo) };
+}
+
+function putPerson(uid, p) {
+  const f = personFields(p);
+  run(`INSERT INTO search_recents(user_id, kind, key, tmdb_id, title, query, poster, seq) VALUES(?, 'person', ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id, kind, key) DO UPDATE SET title = excluded.title, query = excluded.query, poster = excluded.poster, seq = excluded.seq`,
+  uid, String(f.id), f.id, f.name, f.role, f.photo, nextSeq(uid));
 }
 
 export function addRecent(body) {
   const uid = currentUserId();
   if (body?.movie) putMovie(uid, body.movie);
+  else if (body?.person) putPerson(uid, body.person);
   else if (!putQuery(uid, body?.query)) return { saved: false, ...listRecents() };
   prune(uid);
   return { saved: true, ...listRecents() };
 }
 
 export function removeRecent(kind, key) {
-  if (kind !== 'query' && kind !== 'movie') throw bad('kind must be query or movie.');
+  if (kind !== 'query' && kind !== 'movie' && kind !== 'person') throw bad('kind must be query, movie or person.');
   run('DELETE FROM search_recents WHERE user_id = ? AND kind = ? AND key = ?', currentUserId(), kind, String(key ?? ''));
   return listRecents();
 }
@@ -247,28 +271,40 @@ export function clearRecents() {
 }
 
 // Undo: put back what Clear all removed, oldest first so the order returns,
-// without pushing out anything added since.
+// without pushing out anything added since. Films and people go back in the
+// order they were viewed (their `at`).
 export function restoreRecents(body) {
   const uid = currentUserId();
   const queries = Array.isArray(body?.queries) ? body.queries.slice(0, MAX_QUERIES) : [];
   const movies = Array.isArray(body?.movies) ? body.movies.slice(0, MAX_MOVIES) : [];
+  const people = Array.isArray(body?.people) ? body.people.slice(0, MAX_MOVIES) : [];
+  const viewed = [...movies.map((m) => ({ kind: 'movie', m })), ...people.map((m) => ({ kind: 'person', m }))]
+    .map((v, i) => ({ ...v, i, at: Number.isFinite(Number(v.m?.at)) ? Number(v.m.at) : -i }))
+    .sort((a, b) => b.at - a.at || a.i - b.i);
   const have = new Set(all('SELECT kind || \':\' || key AS k FROM search_recents WHERE user_id = ?', uid).map((r) => r.k));
   const floor = (get('SELECT MIN(seq) AS s FROM search_recents WHERE user_id = ?', uid)?.s ?? nextSeq(uid));
-  let seq = floor - queries.length - movies.length - 1;
+  let seq = floor - queries.length - viewed.length - 1;
   for (const q of [...queries].reverse()) {
     const text = cleanText(q?.query, 100);
     const key = norm(text);
     if (key.replace(/ /g, '').length < MIN_QUERY || have.has(`query:${key}`)) continue;
     run("INSERT INTO search_recents(user_id, kind, key, query, seq) VALUES(?, 'query', ?, ?, ?)", uid, key, text, seq++);
   }
-  for (const m of [...movies].reverse()) {
-    const id = Number(m?.tmdb_id);
-    if (!Number.isInteger(id) || id <= 0 || have.has(`movie:${id}`)) continue;
-    const poster = typeof m.poster === 'string' && /^https:\/\/image\.tmdb\.org\/t\/p\/\w+\/[\w.-]+$/.test(m.poster) ? m.poster : null;
-    const title = cleanText(m.title, 300);
-    if (!title) continue;
-    run("INSERT INTO search_recents(user_id, kind, key, tmdb_id, title, year, poster, seq) VALUES(?, 'movie', ?, ?, ?, ?, ?, ?)",
-      uid, String(id), id, title, Number(m.year) || null, poster, seq++);
+  for (const { kind, m } of [...viewed].reverse()) {
+    if (kind === 'movie') {
+      const id = Number(m?.tmdb_id);
+      if (!Number.isInteger(id) || id <= 0 || have.has(`movie:${id}`)) continue;
+      const title = cleanText(m.title, 300);
+      if (!title) continue;
+      run("INSERT INTO search_recents(user_id, kind, key, tmdb_id, title, year, poster, seq) VALUES(?, 'movie', ?, ?, ?, ?, ?, ?)",
+        uid, String(id), id, title, Number(m.year) || null, tmdbImage(m.poster), seq++);
+    } else {
+      let f;
+      try { f = personFields(m); } catch { continue; }
+      if (have.has(`person:${f.id}`)) continue;
+      run("INSERT INTO search_recents(user_id, kind, key, tmdb_id, title, query, poster, seq) VALUES(?, 'person', ?, ?, ?, ?, ?, ?)",
+        uid, String(f.id), f.id, f.name, f.role, f.photo, seq++);
+    }
   }
   prune(uid);
   return listRecents();

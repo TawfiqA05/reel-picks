@@ -37,7 +37,7 @@ export function openSearch(ctx = null) {
     h('div', { class: 'filter-field search-field' }, icon('search', { size: 18, cls: 'filter-icon' }), input, clearBtn),
     wswBtn, statusLine, body, credit);
 
-  let recents = { queries: [], movies: [] };
+  let recents = { queries: [], movies: [], people: [] };
   let results = null; // { q, list } of the last finished search
   let timer = null;
   let dwell = null;
@@ -155,8 +155,10 @@ export function openSearch(ctx = null) {
     location.hash = `#/movie/${m.tmdb_id}`;
   }
 
+  // A person goes into Recently viewed the way a film does.
   function openPerson(p, q) {
     if (q) remember(q);
+    api.addRecentPerson({ id: p.id, name: p.name, role: p.role, photo: p.photo }).catch(() => {});
     results = null;
     modal.close();
     location.hash = `#/person/${p.id}`;
@@ -229,8 +231,13 @@ export function openSearch(ctx = null) {
     active = -1;
     input.removeAttribute('aria-activedescendant');
     statusLine.textContent = '';
-    const { queries, movies } = recents;
-    if (!queries.length && !movies.length) {
+    const { queries } = recents;
+    // Films and people opened from here, newest first.
+    const viewed = [
+      ...recents.movies.map((m, i) => ({ m, at: m.at ?? -i })),
+      ...(recents.people || []).map((p, i) => ({ p, at: p.at ?? -100 - i })),
+    ].sort((a, b) => b.at - a.at);
+    if (!queries.length && !viewed.length) {
       body.appendChild(h('p', { class: 'search-empty' }, 'Your recent searches and the films you open from here show up here.'));
       return;
     }
@@ -249,9 +256,19 @@ export function openSearch(ctx = null) {
           h('button', { class: 'recent-x', type: 'button', 'aria-label': `Remove "${r.query}" from recent searches`, onClick: () => removeOne('query', r.key) }, icon('x', { size: 16 }))));
       }
     }
-    if (movies.length) {
+    if (viewed.length) {
       body.appendChild(h('h4', { class: 'recents-label' }, 'Recently viewed'));
-      for (const m of movies) {
+      for (const { m, p } of viewed) {
+        if (p) {
+          body.appendChild(h('div', { class: 'recent-row' },
+            h('a', {
+              class: 'recent-main recent-person', href: `#/person/${p.id}`, role: 'option', id: `rc-${n++}`, tabindex: '-1',
+              'aria-label': p.role ? `${p.name}, ${p.role}` : p.name,
+              onClick: (e) => { e.preventDefault(); openPerson(p, null); },
+            }, face(p), h('span', { class: 'recent-text' }, p.name, p.role ? h('span', { class: 'sr-year' }, ` · ${p.role}`) : null)),
+            h('button', { class: 'recent-x', type: 'button', 'aria-label': `Remove ${p.name} from recently viewed`, onClick: () => removeOne('person', String(p.id)) }, icon('x', { size: 16 }))));
+          continue;
+        }
         body.appendChild(h('div', { class: 'recent-row' },
           h('a', {
             class: 'recent-main', href: `#/movie/${m.tmdb_id}`, role: 'option', id: `rc-${n++}`, tabindex: '-1',
@@ -264,9 +281,9 @@ export function openSearch(ctx = null) {
 
   async function removeOne(kind, key) {
     const before = recents;
-    recents = kind === 'query'
-      ? { ...recents, queries: recents.queries.filter((r) => r.key !== key) }
-      : { ...recents, movies: recents.movies.filter((m) => String(m.tmdb_id) !== key) };
+    recents = kind === 'query' ? { ...recents, queries: recents.queries.filter((r) => r.key !== key) }
+      : kind === 'person' ? { ...recents, people: (recents.people || []).filter((p) => String(p.id) !== key) }
+        : { ...recents, movies: recents.movies.filter((m) => String(m.tmdb_id) !== key) };
     showRecents();
     input.focus();
     try { recents = await api.removeRecent(kind, key); } catch (e) { recents = before; toast(e.message, 'error'); }
@@ -276,7 +293,7 @@ export function openSearch(ctx = null) {
   // No confirm popup: it clears at once, and the toast offers Undo.
   async function clearAll() {
     const before = recents;
-    recents = { queries: [], movies: [] };
+    recents = { queries: [], movies: [], people: [] };
     showRecents();
     input.focus();
     try {
