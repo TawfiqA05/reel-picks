@@ -78,9 +78,8 @@ export function openWhatToWatch(ctx) {
     for (const f of r.films) shown.add(f.tmdb_id);
     const heading = h('h3', { class: 'wsw-q', tabindex: '-1' }, r.films.length ? summary() : 'Nothing else fits');
     body.append(heading);
-    if (!r.films.length) {
-      body.append(h('p', { class: 'muted small' }, shown.size ? 'That\'s everything that fits these answers. Try another mood, or Either.' : 'Nothing fits these answers right now. Try another mood, or Either.'));
-    }
+    // Fewer than three cleared the bar, or none did: the server says so.
+    if (r.note) body.append(h('p', { class: `wsw-note${r.films.length ? '' : ' muted'}`, role: r.films.length ? null : 'status' }, r.note));
     const list = h('div', { class: 'wsw-list' });
     for (const f of r.films) list.appendChild(filmCard(f));
     body.append(list);
@@ -115,7 +114,8 @@ export function openWhatToWatch(ctx) {
       h('div', { class: 'wsw-body' },
         h('h4', { class: 'pick-head' },
           h('a', { class: 'pick-title', href: `#/movie/${f.tmdb_id}`, onClick: () => modal.close() }, f.title)),
-        matchBadge(f.final),
+        // The match pill, then the public score that cleared the bar.
+        h('p', { class: 'wsw-score' }, matchBadge(f.final), ...(f.publicLine ? [' ', h('span', { class: 'wsw-public' }, `· ${f.publicLine}`)] : [])),
         h('p', { class: 'pick-meta' }, [f.year, (f.genres || []).slice(0, 2).join(' · '), f.runtime ? `${Math.floor(f.runtime / 60)}h ${String(f.runtime % 60).padStart(2, '0')}m` : null].filter(Boolean).join(' · ')),
         whereLine(f),
         reasonLine(f, ctx))),

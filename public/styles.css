@@ -541,6 +541,12 @@ input[type="checkbox"] { accent-color: var(--accent); width: 20px; height: 20px;
 @media (max-width: 400px) { .wsw-tools > .btn { font-size: var(--fs-xs); } .wsw-tools > .btn svg { width: 14px; height: 14px; } }
 .wsw-rate { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); }
 .wsw-hidden-note { margin: 0; font-size: var(--fs-sm); }
+/* The match pill and the public score beside it; on a narrow card the score
+   moves under the pill instead of running past the edge. */
+.wsw-score { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; row-gap: 2px; }
+.wsw-public { white-space: nowrap; font-size: var(--fs-sm); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.wsw-note { margin: 0; font-size: var(--fs-sm); line-height: var(--lh-snug); color: var(--text); }
+.wsw-note.muted { color: var(--muted); }
 .wsw-foot { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); }
 
 /* ---- banners / alerts ---- */
