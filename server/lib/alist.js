@@ -5,6 +5,7 @@ import { run, all, getSettings } from '../db.js';
 import { weekStartFriday, localYMD, round2 } from './util.js';
 import { currentUserId } from './user.js';
 import { planOf } from '../../public/js/plans.js';
+import { filmDone } from './done.js';
 
 // Everything here is the current user's log (lib/user.js). Films brought in
 // from Letterboxd (source 'letterboxd', lib/letterboxd.js) are in the same
@@ -22,6 +23,21 @@ export function logWatched({ tmdb_id, title, in_weekly4 = false }) {
       VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
     currentUserId(), tmdb_id, title, new Date().toISOString(), weekStartFriday(), localYMD(), in_weekly4, Number(settings.avgTicketPrice) || 0,
   );
+  filmDone(currentUserId(), tmdb_id, 'seen');
+  return getWeek();
+}
+
+// "I'm going", then Yes the next morning (lib/plans.js): the film logged on
+// the day of the showing, at its start, and counted by the movie plan
+// exactly as Mark seen counts it. `date` is the showtime's listed day.
+export function logWatchedOn({ tmdb_id, title, date, at, in_weekly4 = false }) {
+  const settings = getSettings();
+  run(
+    `INSERT INTO watched(user_id, tmdb_id, title, watched_at, week_start, watched_date, in_weekly4, ticket_price)
+      VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
+    currentUserId(), tmdb_id, title, new Date(at).toISOString(), weekStartFriday(new Date(`${date}T12:00:00`)), date, in_weekly4, Number(settings.avgTicketPrice) || 0,
+  );
+  filmDone(currentUserId(), tmdb_id, 'seen');
   return getWeek();
 }
 
@@ -37,12 +53,14 @@ export function undoWatched(id) {
 export function restoreWatched({ tmdb_id, title, watched_at, in_weekly4 = false, price = null, source = null }) {
   const when = watched_at || new Date().toISOString();
   const settings = getSettings();
-  return run(
+  const added = run(
     `INSERT INTO watched(user_id, tmdb_id, title, watched_at, week_start, watched_date, in_weekly4, ticket_price, source)
       VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
     currentUserId(), tmdb_id, title, when, weekStartFriday(new Date(when)), localYMD(new Date(when)), in_weekly4,
     price ?? Number(settings.avgTicketPrice) ?? 0, source === 'letterboxd' ? 'letterboxd' : null,
   ).changes > 0;
+  if (added) filmDone(currentUserId(), tmdb_id, 'seen', when);
+  return added;
 }
 
 // Months are local calendar months (the server's TZ, America/Indianapolis

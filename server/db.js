@@ -333,6 +333,46 @@ CREATE TABLE IF NOT EXISTS push_sent (
   sent_at    TEXT,
   PRIMARY KEY (user_id, week_start)
 );
+
+-- "I'm going" (lib/plans.js): one plan per person per film. The showing's
+-- day, time and theater are copied in, so a refresh that drops the showtime
+-- can't lose the plan. Times in ms. reminded_at and asked_at are claimed
+-- before their push goes out, so a restart never sends one twice; a
+-- cancelled plan has no row left to send for.
+CREATE TABLE IF NOT EXISTS plans (
+  user_id      INTEGER NOT NULL,
+  tmdb_id      INTEGER NOT NULL,
+  showtime_id  TEXT NOT NULL,
+  theatre_id   TEXT,
+  theatre_name TEXT,
+  date         TEXT NOT NULL,     -- the showing's listed day (YYYY-MM-DD)
+  start_local  TEXT NOT NULL,
+  start_epoch  INTEGER NOT NULL,
+  title        TEXT,
+  created_at   TEXT NOT NULL,
+  remind_at    INTEGER,           -- 2 hours before; NULL when made with less left
+  reminded_at  TEXT,
+  ask_at       INTEGER NOT NULL,  -- 10am local the day after the showing
+  asked_at     TEXT,
+  expires_at   INTEGER NOT NULL,  -- 3 days after ask_at: the plan goes unanswered
+  PRIMARY KEY (user_id, tmdb_id)
+);
+
+-- Picks sent to someone (lib/sends.js), one row per send, kept after it's
+-- cleared so the 10-a-day limit counts every send of the sender's local day.
+CREATE TABLE IF NOT EXISTS sends (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  from_user   INTEGER NOT NULL,
+  to_user     INTEGER NOT NULL,
+  tmdb_id     INTEGER NOT NULL,
+  note        TEXT,
+  sent_at     TEXT NOT NULL,
+  sent_day    TEXT NOT NULL,      -- the sender's local YYYY-MM-DD
+  cleared_at  TEXT,
+  cleared_how TEXT                -- dismissed | watchlisted | seen | rated | replaced
+);
+CREATE INDEX IF NOT EXISTS idx_sends_to ON sends(to_user, cleared_at);
+CREATE INDEX IF NOT EXISTS idx_sends_from_day ON sends(from_user, sent_day);
 `;
 
 db.exec(SCHEMA);

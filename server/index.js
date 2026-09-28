@@ -26,9 +26,11 @@ import { afterNightlyBackup } from './lib/housekeeping.js';
 import { sendIndex } from './lib/version.js';
 import { backfillPosterColors } from './lib/posterColor.js';
 import { warmPeople } from './lib/people.js';
+import { runPlanJobs } from './lib/plans.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 const RETRY_CHECK_MS = 60 * 1000;
+const PLAN_CHECK_MS = 60 * 1000;
 
 const app = express();
 app.disable('x-powered-by');
@@ -247,6 +249,14 @@ app.listen(config.port, () => {
     if (shouldAutoRefresh()) autoRefresh('new day');
     else sendWeeklyIfDue().catch((e) => console.error('[push]', e.message));
   }, AUTO_REFRESH_CHECK_MS).unref();
+
+  // "I'm going" (lib/plans.js): the reminder two hours before a showing, the
+  // next morning's "Did you see it?", and plans left unanswered three days,
+  // every minute and once now. What's due lives in the database, so a
+  // restart picks up where the last run left off.
+  const plans = () => runPlanJobs().catch((e) => console.error('[plans]', e.message));
+  plans();
+  setInterval(plans, PLAN_CHECK_MS).unref();
 
   // A failed refresh is retried hourly, up to six times (lib/refresh.js).
   setInterval(() => {

@@ -4,6 +4,7 @@
 // whoever imported the row, passes userId explicitly.
 import { get, run, all } from '../db.js';
 import { currentUserId } from './user.js';
+import { filmDone } from './done.js';
 
 const y = (v) => (v ? Number(String(v).slice(0, 4)) || null : null);
 
@@ -17,6 +18,8 @@ export function upsertRating({ tmdb_id, title, year, rating, source = 'manual', 
        title = COALESCE(NULLIF(excluded.title, ''), ratings.title)`,
     userId, tmdb_id, title, y(year), rating, source, rated_at || now, now,
   );
+  // Rated: an "I'm going" plan or a pick sent for it made before now goes.
+  filmDone(userId, tmdb_id, 'rated', rated_at || now);
 }
 
 export function addUnmatched({ title, year, rating, source, rated_at }) {

@@ -23,6 +23,7 @@
 import { get, run, all } from '../db.js';
 import { runAs, OWNER_ID } from './user.js';
 import { upsertRating, getRating } from './ratings.js';
+import { filmDone } from './done.js';
 import { upsertLightMovie } from './movies.js';
 import { findTmdbMatch } from './match.js';
 import { startCreditsBackfill } from './backfill.js';
@@ -181,11 +182,14 @@ async function resolveFilm(e) {
 // The per-day unique index drops a film already logged here that day.
 function addWatch(userId, tmdbId, title, ymd) {
   const at = new Date(`${ymd}T12:00:00`);
-  return run(
+  const added = run(
     `INSERT INTO watched(user_id, tmdb_id, title, watched_at, week_start, watched_date, in_weekly4, ticket_price, source)
       VALUES(?,?,?,?,?,?,0,0,'letterboxd') ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
     userId, tmdbId, title, at.toISOString(), weekStartFriday(at), ymd,
   ).changes > 0;
+  // Seen: a plan or a sent pick made before the diary date goes (lib/done.js).
+  if (added) filmDone(userId, tmdbId, 'seen', at);
+  return added;
 }
 
 async function importEntries(userId, entries) {

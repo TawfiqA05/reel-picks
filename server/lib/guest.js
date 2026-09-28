@@ -84,6 +84,9 @@ const ALLOW = [
   /^(?:\/api)?\/movies\/\d+$/,
   /^(?:\/api)?\/person\/\d+$/,
   /^(?:\/api)?\/showtimes\/[^/]+\/calendar\.ics$/,
+  // Answered with nothing for the guest (routes.js): a page still signed in
+  // as a friend who was just revoked asks for it once, and gets no error.
+  /^(?:\/api)?\/social$/,
 ];
 
 export function guestAllowed(req) {
