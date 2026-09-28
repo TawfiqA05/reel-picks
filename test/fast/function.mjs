@@ -1341,6 +1341,8 @@ async function groupC() {
     await rows.nth(0).locator('.wl-btn').click();
     await until(async () => w.q1('SELECT 1 x FROM watchlist WHERE user_id = ? AND tmdb_id = ?', heavy.id, wid), 20000);
     check('person friend: Save puts the film on the friend\'s own watchlist only', Boolean(w.q1('SELECT 1 x FROM watchlist WHERE user_id = ? AND tmdb_id = ?', heavy.id, wid)) && w.q1('SELECT COUNT(*) n FROM watchlist WHERE user_id = 1').n === before && !w.q('SELECT 1 FROM watchlist WHERE user_id <> ? AND tmdb_id = ?', heavy.id, wid).length);
+    // The row is written before the page has the answer: wait for the button.
+    await rows.nth(0).locator('.wl-btn[aria-pressed="true"]').waitFor({ timeout: 5000 }).catch(() => {});
     check('person friend: the button says it is saved', await rows.nth(0).locator('.wl-btn').getAttribute('aria-pressed') === 'true');
     await rows.nth(0).locator('.wl-btn').click();
     await until(async () => !w.q1('SELECT 1 x FROM watchlist WHERE user_id = ? AND tmdb_id = ?', heavy.id, wid), 20000);
