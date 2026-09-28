@@ -33,12 +33,12 @@ const SELF = /\b(self|himself|herself|themselves|themself)\b/i;
 // What TMDB's credits call a feature film for this list: a dated theatrical
 // film. Direct-to-video extras ("video") and TV movies are left out, and so
 // are undated projects, which are announcements rather than films.
-function isFeature(c) {
+export function isFeature(c) {
   return !c.adult && !c.video && Boolean(c.release_date)
     && !(c.genre_ids || []).includes(TV_MOVIE);
 }
 
-const isActing = (c) => !SELF.test(c.character || '') && !/uncredited/i.test(c.character || '');
+export const isActing = (c) => !SELF.test(c.character || '') && !/uncredited/i.test(c.character || '');
 
 // The TMDB person id behind a name in the user's rated films: the id stored
 // with most of those films. Films whose ids aren't stored yet are asked of

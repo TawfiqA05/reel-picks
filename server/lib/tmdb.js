@@ -1,7 +1,7 @@
 // TMDB client — posters, metadata, credits, trailers, now-playing/upcoming.
 import { config } from '../env.js';
 import { cachedJson, fetchJson } from './cache.js';
-import { run } from '../db.js';
+import { get, run } from '../db.js';
 
 const BASE = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p';
@@ -129,11 +129,28 @@ export async function wellKnown(page = 1, { gate = null } = {}) {
 
 // A person's film credits (cast and crew), shared by everyone for 7 days.
 // Callers pass the backfill throttle as `gate`.
+const creditsKey = (personId) => `person:${personId}:movie_credits`;
 export async function personCredits(personId, { gate = null } = {}) {
-  return req(`person:${personId}:movie_credits`, 7 * DAY, `/person/${personId}/movie_credits`, {
+  return req(creditsKey(personId), 7 * DAY, `/person/${personId}/movie_credits`, {
     language: 'en-US',
   }, { gate });
 }
+
+// A person's name, photo and what they're known for (TMDB's department),
+// shared by everyone for 7 days. The person page's header; their films come
+// from personCredits.
+export async function person(personId, { gate = null } = {}) {
+  return req(`person:${personId}`, 7 * DAY, `/person/${personId}`, { language: 'en-US' }, { gate });
+}
+
+// Whether a TMDB answer is already cached and fresh, so asking for it costs
+// no live call.
+export function cachedFresh(key) {
+  const row = get('SELECT fetched_at, ttl FROM cache WHERE key = ?', `tmdb:${key}`);
+  return Boolean(row && Date.now() - Date.parse(row.fetched_at) < row.ttl * 1000);
+}
+export const creditsCached = (personId) => cachedFresh(creditsKey(personId));
+export const personCached = (personId) => cachedFresh(`person:${personId}`) && creditsCached(personId);
 
 // Where a film streams in the US (TMDB watch providers, data from JustWatch),
 // kept per film for 3 days. Only the US part is stored: Stream (subscription,

@@ -82,6 +82,7 @@ const ALLOW = [
   /^(?:\/api)?\/recommendations$/,
   /^(?:\/api)?\/coming-soon$/,
   /^(?:\/api)?\/movies\/\d+$/,
+  /^(?:\/api)?\/person\/\d+$/,
   /^(?:\/api)?\/showtimes\/[^/]+\/calendar\.ics$/,
 ];
 

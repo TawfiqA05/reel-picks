@@ -1027,6 +1027,25 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 /* Narrow: the controls take their own line under the title, lined up with it. */
 @media (max-width: 520px) { .more-tools { flex: 1 1 100%; padding-left: 58px; } }
 
+/* ---- a person's page (views/person.js): the Stats sheet's film rows, in
+   groups on the page ---- */
+.person-head { display: flex; align-items: center; gap: var(--sp-4); margin: var(--sp-2) 2px var(--sp-3); min-width: 0; }
+.person-photo { flex: 0 0 88px; width: 88px; height: 88px; border-radius: 50%; object-fit: cover; object-position: 50% 20%; background: var(--chip); }
+.person-nophoto { display: grid; place-items: center; color: var(--muted); }
+.person-who { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.person-name { font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: var(--display-tracking); font-size: var(--fs-xl); line-height: var(--lh-display); overflow-wrap: anywhere; }
+.person-role { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
+@media (min-width: 900px) { .person-name { font-size: var(--fs-2xl); } }
+.person-toggle { margin: 0; }
+.person-toggle .segment { border: 0; font-family: inherit; cursor: pointer; }
+.person-toggle .segment:not(.active) { background: none; }
+.group-body > .person-films { padding: var(--sp-2) 0; gap: 0; }
+.person-films > li + li { border-top: 1px solid var(--divider); }
+.person-films .more-film { padding: 6px 0; }
+.group-body > .person-more { padding: var(--sp-2) 0; }
+.group-body > .person-films[hidden] { display: none; }
+.person .stream-credit { margin: 0 2px; }
+
 /* ---- Settings: grouped lists ---- */
 .sub-label { font-size: var(--fs-sm); font-weight: 600; margin-bottom: var(--sp-2); }
 .field-block { display: flex; flex-direction: column; gap: var(--sp-2); }

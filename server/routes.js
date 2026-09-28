@@ -51,6 +51,7 @@ import { recentAlerts, failingNow } from './lib/alerts.js';
 import { offsiteStatus, offsiteEnabled, uploadNow as offsiteUpload } from './lib/offsite.js';
 import { syncStatus as letterboxdStatus, setUsername as setLetterboxdUser, syncUser as syncLetterboxd } from './lib/letterboxd.js';
 import { take as takeLimit, LIMIT_MESSAGE } from './lib/limits.js';
+import { getPerson, personCached } from './lib/personPage.js';
 
 const router = Router();
 const h = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -890,6 +891,24 @@ router.get('/together/:id', (req, res) => {
 // ---- stats / export ----------------------------------------------------
 
 router.get('/stats', (req, res) => res.json(getStats()));
+
+// ---- people ----------------------------------------------------------------
+// A person's page (lib/personPage.js). On the guest allowlist, read only: the
+// guest gets no one's ratings or watchlist. A person not cached yet counts as
+// one new-film lookup against the caller's hourly limit.
+router.get('/person/:id', h(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!/^\d{1,10}$/.test(req.params.id) || !Number.isSafeInteger(id) || id <= 0) return res.status(404).json({ error: 'Person not found' });
+  if (!tmdb.tmdbConfigured()) return res.status(503).json({ error: "TMDB isn't set up, so there's no one to show." });
+  if (!personCached(id) && limited(req, res, 'newFilm')) return;
+  try {
+    res.json(await getPerson(id, { guest: isGuest(req) }));
+  } catch (e) {
+    if (e.status === 404) return res.status(404).json({ error: 'Person not found' });
+    console.error('[person]', id, e.message);
+    res.status(502).json({ error: "Couldn't reach TMDB to load this person. Try again in a moment." });
+  }
+}));
 
 // The films behind one Stats row (genre / director / actor), the caller's own.
 // Not on the guest allowlist, like /stats.
