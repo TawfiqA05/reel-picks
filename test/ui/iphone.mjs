@@ -204,7 +204,10 @@ for (const c of configs) {
         await load(page, pg.hash);
         if (pg.prep) await pg.prep(page);
         await toEnd(page);
-        const m = await page.evaluate(measureEnd);
+        let m = await page.evaluate(measureEnd);
+        // Late content (a list filling in) can grow the page after the first
+        // scroll; scroll again until the height holds.
+        for (let i = 0; i < 3 && m.scrolls && !m.atEnd; i++) { await page.waitForTimeout(300); await toEnd(page); m = await page.evaluate(measureEnd); }
         if (pg.wantSave) S.check(`scroll end ${tag} ${pg.name}: the Save bar shows with an unsaved change`, m.chrome.includes('save bar'), m.chrome.join(','));
         if (m.scrolls) {
           S.check(`scroll end ${tag} ${pg.name}: reaches the end`, m.atEnd);
