@@ -373,6 +373,17 @@ CREATE TABLE IF NOT EXISTS sends (
 );
 CREATE INDEX IF NOT EXISTS idx_sends_to ON sends(to_user, cleared_at);
 CREATE INDEX IF NOT EXISTS idx_sends_from_day ON sends(from_user, sent_day);
+
+-- "What should I watch?" (lib/suggest.js): the films each person was shown
+-- and when, so a film shown once doesn't come back for 7 days. One row per
+-- person per film, the latest showing; rows older than 7 days are dropped
+-- whenever that person is shown more.
+CREATE TABLE IF NOT EXISTS wsw_shown (
+  user_id  INTEGER NOT NULL,
+  tmdb_id  INTEGER NOT NULL,
+  shown_at INTEGER NOT NULL,   -- ms
+  PRIMARY KEY (user_id, tmdb_id)
+);
 `;
 
 db.exec(SCHEMA);
