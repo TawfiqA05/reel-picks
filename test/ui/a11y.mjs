@@ -352,6 +352,18 @@ async function dialogCheck(p, name, trigger, { key = 'Enter', expectInput = fals
   const dlg = p.locator(sel).last();
   try { await dlg.waitFor({ state: 'visible', timeout: 5000 }); } catch { bad('no dialog opened'); return; }
   await p.waitForTimeout(350);
+  // Some sheets open at once and fill in on their own (Stats: the films you
+  // rated, then more films, stream lines and a filter box on top). The walk
+  // starts once nothing is loading and the sheet has stopped growing.
+  await p.waitForFunction((q) => {
+    const d = [...document.querySelectorAll(q)].pop();
+    if (!d) return true;
+    const loading = d.querySelector('.spinner') || [...d.querySelectorAll('.sheet-status')].some((s) => !s.hidden && /Loading|Checking/.test(s.textContent));
+    const hgt = d.scrollHeight;
+    const same = window.__dlgH === hgt;
+    window.__dlgH = hgt;
+    return !loading && same;
+  }, sel, { timeout: 8000, polling: 400 }).catch(() => {});
   const info = await p.evaluate((s) => {
     const d = [...document.querySelectorAll(s)].pop();
     const lab = d.getAttribute('aria-label') || document.getElementById(d.getAttribute('aria-labelledby') || '')?.textContent || '';
