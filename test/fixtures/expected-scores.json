@@ -1,0 +1,907 @@
+{
+ "owner": {
+  "weekly4": [
+   990001,
+   990007,
+   990010,
+   990002
+  ],
+  "lockWeek": "2026-09-18",
+  "worthSeeing": [
+   990004,
+   990003,
+   990012,
+   990009
+  ],
+  "lastChance": [
+   990007,
+   990010
+  ],
+  "alsoNearby": [
+   990005
+  ],
+  "films": {
+   "990001": {
+    "final": 94,
+    "beforeUrgency": 94,
+    "public": 85,
+    "critic": 90,
+    "audience": 80,
+    "taste": 83
+   },
+   "990002": {
+    "final": 91,
+    "beforeUrgency": 91,
+    "public": 80,
+    "critic": 84,
+    "audience": 77,
+    "taste": 73
+   },
+   "990003": {
+    "final": 78,
+    "beforeUrgency": 78,
+    "public": 73,
+    "critic": 76,
+    "audience": 71,
+    "taste": 70
+   },
+   "990004": {
+    "final": 88,
+    "beforeUrgency": 88,
+    "public": 80,
+    "critic": 86,
+    "audience": 75,
+    "taste": 84
+   },
+   "990005": {
+    "final": 83,
+    "beforeUrgency": 83,
+    "public": 77,
+    "critic": 80,
+    "audience": 74,
+    "taste": 76
+   },
+   "990006": {
+    "final": 68,
+    "beforeUrgency": 68,
+    "public": null,
+    "critic": null,
+    "audience": null,
+    "taste": 73
+   },
+   "990007": {
+    "final": 87,
+    "beforeUrgency": 82,
+    "public": 81,
+    "critic": 86,
+    "audience": 77,
+    "taste": 70
+   },
+   "990008": {
+    "final": 56,
+    "beforeUrgency": 56,
+    "public": 53,
+    "critic": 46,
+    "audience": 60,
+    "taste": 46
+   },
+   "990009": {
+    "final": 76,
+    "beforeUrgency": 76,
+    "public": 73,
+    "critic": 74,
+    "audience": 71,
+    "taste": 66
+   },
+   "990010": {
+    "final": 89,
+    "beforeUrgency": 86,
+    "public": 81,
+    "critic": 83,
+    "audience": 79,
+    "taste": 79
+   },
+   "990011": {
+    "final": 68,
+    "beforeUrgency": 66,
+    "public": null,
+    "critic": null,
+    "audience": null,
+    "taste": 70
+   },
+   "990012": {
+    "final": 77,
+    "beforeUrgency": 77,
+    "public": 74,
+    "critic": 78,
+    "audience": 71,
+    "taste": 67
+   }
+  },
+  "movies": {
+   "990001": {
+    "final": 94,
+    "public": 85,
+    "taste": 83
+   },
+   "990002": {
+    "final": 91,
+    "public": 80,
+    "taste": 73
+   },
+   "990003": {
+    "final": 78,
+    "public": 73,
+    "taste": 70
+   },
+   "990004": {
+    "final": 88,
+    "public": 80,
+    "taste": 84
+   },
+   "990005": {
+    "final": 83,
+    "public": 77,
+    "taste": 76
+   },
+   "990006": {
+    "final": 68,
+    "public": null,
+    "taste": 73
+   },
+   "990007": {
+    "final": 87,
+    "public": 81,
+    "taste": 70
+   },
+   "990008": {
+    "final": 56,
+    "public": 53,
+    "taste": 46
+   },
+   "990009": {
+    "final": 76,
+    "public": 73,
+    "taste": 66
+   },
+   "990010": {
+    "final": 89,
+    "public": 81,
+    "taste": 79
+   },
+   "990011": {
+    "final": 68,
+    "public": null,
+    "taste": 70
+   },
+   "990012": {
+    "final": 77,
+    "public": 74,
+    "taste": 67
+   }
+  },
+  "comingSoon": {
+   "970001": 86,
+   "970002": 69,
+   "970003": 77
+  }
+ },
+ "heavy": {
+  "weekly4": [
+   990012,
+   990001,
+   990002,
+   990004
+  ],
+  "lockWeek": "2026-09-18",
+  "worthSeeing": [],
+  "lastChance": [],
+  "alsoNearby": [],
+  "films": {
+   "990001": {
+    "final": 69,
+    "beforeUrgency": 69,
+    "public": 85,
+    "critic": 90,
+    "audience": 80,
+    "taste": 33
+   },
+   "990002": {
+    "final": 68,
+    "beforeUrgency": 68,
+    "public": 80,
+    "critic": 84,
+    "audience": 77,
+    "taste": 44
+   },
+   "990003": {
+    "final": 60,
+    "beforeUrgency": 60,
+    "public": 73,
+    "critic": 76,
+    "audience": 71,
+    "taste": 35
+   },
+   "990004": {
+    "final": 68,
+    "beforeUrgency": 68,
+    "public": 80,
+    "critic": 86,
+    "audience": 75,
+    "taste": 28
+   },
+   "990006": {
+    "final": 56,
+    "beforeUrgency": 56,
+    "public": null,
+    "critic": null,
+    "audience": null,
+    "taste": 49
+   },
+   "990007": {
+    "final": 64,
+    "beforeUrgency": 59,
+    "public": 81,
+    "critic": 86,
+    "audience": 77,
+    "taste": 24
+   },
+   "990008": {
+    "final": 55,
+    "beforeUrgency": 55,
+    "public": 53,
+    "critic": 46,
+    "audience": 60,
+    "taste": 44
+   },
+   "990009": {
+    "final": 56,
+    "beforeUrgency": 56,
+    "public": 73,
+    "critic": 74,
+    "audience": 71,
+    "taste": 27
+   },
+   "990010": {
+    "final": 64,
+    "beforeUrgency": 61,
+    "public": 81,
+    "critic": 83,
+    "audience": 79,
+    "taste": 29
+   },
+   "990011": {
+    "final": 65,
+    "beforeUrgency": 63,
+    "public": null,
+    "critic": null,
+    "audience": null,
+    "taste": 64
+   },
+   "990012": {
+    "final": 81,
+    "beforeUrgency": 81,
+    "public": 74,
+    "critic": 78,
+    "audience": 71,
+    "taste": 76
+   }
+  },
+  "movies": {
+   "990001": {
+    "final": 69,
+    "public": 85,
+    "taste": 33
+   },
+   "990002": {
+    "final": 68,
+    "public": 80,
+    "taste": 44
+   },
+   "990003": {
+    "final": 60,
+    "public": 73,
+    "taste": 35
+   },
+   "990004": {
+    "final": 68,
+    "public": 80,
+    "taste": 28
+   },
+   "990005": {
+    "final": 55,
+    "public": 77,
+    "taste": 32
+   },
+   "990006": {
+    "final": 56,
+    "public": null,
+    "taste": 49
+   },
+   "990007": {
+    "final": 64,
+    "public": 81,
+    "taste": 24
+   },
+   "990008": {
+    "final": 55,
+    "public": 53,
+    "taste": 44
+   },
+   "990009": {
+    "final": 56,
+    "public": 73,
+    "taste": 27
+   },
+   "990010": {
+    "final": 64,
+    "public": 81,
+    "taste": 29
+   },
+   "990011": {
+    "final": 65,
+    "public": null,
+    "taste": 64
+   },
+   "990012": {
+    "final": 81,
+    "public": 74,
+    "taste": 76
+   }
+  },
+  "comingSoon": {
+   "970001": 25,
+   "970002": 55,
+   "970003": 54
+  }
+ },
+ "empty": {
+  "weekly4": [
+   990001,
+   990002,
+   990005,
+   990012
+  ],
+  "lockWeek": "2026-09-18",
+  "worthSeeing": [],
+  "lastChance": [],
+  "alsoNearby": [
+   990007,
+   990010,
+   990004,
+   990003,
+   990009,
+   990011,
+   990006
+  ],
+  "films": {
+   "990001": {
+    "final": 91,
+    "beforeUrgency": 91,
+    "public": 85,
+    "critic": 90,
+    "audience": 80,
+    "taste": 60
+   },
+   "990002": {
+    "final": 86,
+    "beforeUrgency": 86,
+    "public": 80,
+    "critic": 84,
+    "audience": 77,
+    "taste": 60
+   },
+   "990003": {
+    "final": 79,
+    "beforeUrgency": 79,
+    "public": 73,
+    "critic": 76,
+    "audience": 71,
+    "taste": 60
+   },
+   "990004": {
+    "final": 86,
+    "beforeUrgency": 86,
+    "public": 80,
+    "critic": 86,
+    "audience": 75,
+    "taste": 60
+   },
+   "990005": {
+    "final": 83,
+    "beforeUrgency": 83,
+    "public": 77,
+    "critic": 80,
+    "audience": 74,
+    "taste": 60
+   },
+   "990006": {
+    "final": 56,
+    "beforeUrgency": 56,
+    "public": null,
+    "critic": null,
+    "audience": null,
+    "taste": 60
+   },
+   "990007": {
+    "final": 92,
+    "beforeUrgency": 87,
+    "public": 81,
+    "critic": 86,
+    "audience": 77,
+    "taste": 60
+   },
+   "990008": {
+    "final": 59,
+    "beforeUrgency": 59,
+    "public": 53,
+    "critic": 46,
+    "audience": 60,
+    "taste": 60
+   },
+   "990009": {
+    "final": 79,
+    "beforeUrgency": 79,
+    "public": 73,
+    "critic": 74,
+    "audience": 71,
+    "taste": 60
+   },
+   "990010": {
+    "final": 90,
+    "beforeUrgency": 87,
+    "public": 81,
+    "critic": 83,
+    "audience": 79,
+    "taste": 60
+   },
+   "990011": {
+    "final": 58,
+    "beforeUrgency": 56,
+    "public": null,
+    "critic": null,
+    "audience": null,
+    "taste": 60
+   },
+   "990012": {
+    "final": 80,
+    "beforeUrgency": 80,
+    "public": 74,
+    "critic": 78,
+    "audience": 71,
+    "taste": 60
+   }
+  },
+  "movies": {
+   "990001": {
+    "final": 91,
+    "public": 85,
+    "taste": 60
+   },
+   "990002": {
+    "final": 86,
+    "public": 80,
+    "taste": 60
+   },
+   "990003": {
+    "final": 79,
+    "public": 73,
+    "taste": 60
+   },
+   "990004": {
+    "final": 86,
+    "public": 80,
+    "taste": 60
+   },
+   "990005": {
+    "final": 83,
+    "public": 77,
+    "taste": 60
+   },
+   "990006": {
+    "final": 56,
+    "public": null,
+    "taste": 60
+   },
+   "990007": {
+    "final": 92,
+    "public": 81,
+    "taste": 60
+   },
+   "990008": {
+    "final": 59,
+    "public": 53,
+    "taste": 60
+   },
+   "990009": {
+    "final": 79,
+    "public": 73,
+    "taste": 60
+   },
+   "990010": {
+    "final": 90,
+    "public": 81,
+    "taste": 60
+   },
+   "990011": {
+    "final": 58,
+    "public": null,
+    "taste": 60
+   },
+   "990012": {
+    "final": 80,
+    "public": 74,
+    "taste": 60
+   }
+  },
+  "comingSoon": {
+   "970001": 60,
+   "970002": 60,
+   "970003": 60
+  }
+ },
+ "fresh": {
+  "weekly4": [
+   990001,
+   990007,
+   990010,
+   990002
+  ],
+  "lockWeek": "2026-09-18",
+  "worthSeeing": [
+   990004,
+   990012,
+   990003,
+   990009
+  ],
+  "lastChance": [
+   990007,
+   990010
+  ],
+  "alsoNearby": [],
+  "films": {
+   "990001": {
+    "final": 95,
+    "beforeUrgency": 95,
+    "public": 85,
+    "critic": 90,
+    "audience": 80,
+    "taste": 60
+   },
+   "990002": {
+    "final": 86,
+    "beforeUrgency": 86,
+    "public": 80,
+    "critic": 84,
+    "audience": 77,
+    "taste": 60
+   },
+   "990003": {
+    "final": 79,
+    "beforeUrgency": 79,
+    "public": 73,
+    "critic": 76,
+    "audience": 71,
+    "taste": 60
+   },
+   "990004": {
+    "final": 86,
+    "beforeUrgency": 86,
+    "public": 80,
+    "critic": 86,
+    "audience": 75,
+    "taste": 60
+   },
+   "990006": {
+    "final": 56,
+    "beforeUrgency": 56,
+    "public": null,
+    "critic": null,
+    "audience": null,
+    "taste": 60
+   },
+   "990007": {
+    "final": 92,
+    "beforeUrgency": 87,
+    "public": 81,
+    "critic": 86,
+    "audience": 77,
+    "taste": 60
+   },
+   "990008": {
+    "final": 59,
+    "beforeUrgency": 59,
+    "public": 53,
+    "critic": 46,
+    "audience": 60,
+    "taste": 60
+   },
+   "990009": {
+    "final": 79,
+    "beforeUrgency": 79,
+    "public": 73,
+    "critic": 74,
+    "audience": 71,
+    "taste": 60
+   },
+   "990010": {
+    "final": 90,
+    "beforeUrgency": 87,
+    "public": 81,
+    "critic": 83,
+    "audience": 79,
+    "taste": 60
+   },
+   "990011": {
+    "final": 58,
+    "beforeUrgency": 56,
+    "public": null,
+    "critic": null,
+    "audience": null,
+    "taste": 60
+   },
+   "990012": {
+    "final": 80,
+    "beforeUrgency": 80,
+    "public": 74,
+    "critic": 78,
+    "audience": 71,
+    "taste": 60
+   }
+  },
+  "movies": {
+   "990001": {
+    "final": 95,
+    "public": 85,
+    "taste": 60
+   },
+   "990002": {
+    "final": 86,
+    "public": 80,
+    "taste": 60
+   },
+   "990003": {
+    "final": 79,
+    "public": 73,
+    "taste": 60
+   },
+   "990004": {
+    "final": 86,
+    "public": 80,
+    "taste": 60
+   },
+   "990005": {
+    "final": 77,
+    "public": 77,
+    "taste": 60
+   },
+   "990006": {
+    "final": 56,
+    "public": null,
+    "taste": 60
+   },
+   "990007": {
+    "final": 92,
+    "public": 81,
+    "taste": 60
+   },
+   "990008": {
+    "final": 59,
+    "public": 53,
+    "taste": 60
+   },
+   "990009": {
+    "final": 79,
+    "public": 73,
+    "taste": 60
+   },
+   "990010": {
+    "final": 90,
+    "public": 81,
+    "taste": 60
+   },
+   "990011": {
+    "final": 58,
+    "public": null,
+    "taste": 60
+   },
+   "990012": {
+    "final": 80,
+    "public": 74,
+    "taste": 60
+   }
+  },
+  "comingSoon": {
+   "970001": 60,
+   "970002": 60,
+   "970003": 60
+  }
+ },
+ "guest": {
+  "weekly4": [
+   990001,
+   990007,
+   990010,
+   990002
+  ],
+  "lockWeek": "2026-09-18",
+  "worthSeeing": [
+   990004,
+   990003,
+   990012,
+   990009
+  ],
+  "lastChance": [
+   990007,
+   990010
+  ],
+  "alsoNearby": [
+   990005
+  ],
+  "films": {
+   "990001": {
+    "final": 94,
+    "beforeUrgency": 94,
+    "public": 85,
+    "critic": 90,
+    "audience": 80,
+    "taste": 83
+   },
+   "990002": {
+    "final": 91,
+    "beforeUrgency": 91,
+    "public": 80,
+    "critic": 84,
+    "audience": 77,
+    "taste": 73
+   },
+   "990003": {
+    "final": 78,
+    "beforeUrgency": 78,
+    "public": 73,
+    "critic": 76,
+    "audience": 71,
+    "taste": 70
+   },
+   "990004": {
+    "final": 88,
+    "beforeUrgency": 88,
+    "public": 80,
+    "critic": 86,
+    "audience": 75,
+    "taste": 84
+   },
+   "990005": {
+    "final": 83,
+    "beforeUrgency": 83,
+    "public": 77,
+    "critic": 80,
+    "audience": 74,
+    "taste": 76
+   },
+   "990006": {
+    "final": 68,
+    "beforeUrgency": 68,
+    "public": null,
+    "critic": null,
+    "audience": null,
+    "taste": 73
+   },
+   "990007": {
+    "final": 87,
+    "beforeUrgency": 82,
+    "public": 81,
+    "critic": 86,
+    "audience": 77,
+    "taste": 70
+   },
+   "990008": {
+    "final": 56,
+    "beforeUrgency": 56,
+    "public": 53,
+    "critic": 46,
+    "audience": 60,
+    "taste": 46
+   },
+   "990009": {
+    "final": 76,
+    "beforeUrgency": 76,
+    "public": 73,
+    "critic": 74,
+    "audience": 71,
+    "taste": 66
+   },
+   "990010": {
+    "final": 89,
+    "beforeUrgency": 86,
+    "public": 81,
+    "critic": 83,
+    "audience": 79,
+    "taste": 79
+   },
+   "990011": {
+    "final": 68,
+    "beforeUrgency": 66,
+    "public": null,
+    "critic": null,
+    "audience": null,
+    "taste": 70
+   },
+   "990012": {
+    "final": 77,
+    "beforeUrgency": 77,
+    "public": 74,
+    "critic": 78,
+    "audience": 71,
+    "taste": 67
+   }
+  },
+  "movies": {
+   "990001": {
+    "final": 94,
+    "public": 85,
+    "taste": 83
+   },
+   "990002": {
+    "final": 91,
+    "public": 80,
+    "taste": 73
+   },
+   "990003": {
+    "final": 78,
+    "public": 73,
+    "taste": 70
+   },
+   "990004": {
+    "final": 88,
+    "public": 80,
+    "taste": 84
+   },
+   "990005": {
+    "final": 83,
+    "public": 77,
+    "taste": 76
+   },
+   "990006": {
+    "final": 68,
+    "public": null,
+    "taste": 73
+   },
+   "990007": {
+    "final": 87,
+    "public": 81,
+    "taste": 70
+   },
+   "990008": {
+    "final": 56,
+    "public": 53,
+    "taste": 46
+   },
+   "990009": {
+    "final": 76,
+    "public": 73,
+    "taste": 66
+   },
+   "990010": {
+    "final": 89,
+    "public": 81,
+    "taste": 79
+   },
+   "990011": {
+    "final": 68,
+    "public": null,
+    "taste": 70
+   },
+   "990012": {
+    "final": 77,
+    "public": 74,
+    "taste": 67
+   }
+  },
+  "comingSoon": {
+   "970001": 86,
+   "970002": 69,
+   "970003": 77
+  }
+ }
+}
