@@ -60,9 +60,11 @@ function runSuite(name) {
   });
 }
 
-// The installed-app update checks time real page loads in WebKit; they run on
-// their own after the others, so a busy machine can't slow them past their limits.
-const SOLO = new Set(['sw']);
+// These run on their own after the others: the installed-app update checks
+// time real page loads in WebKit, and the accessibility walks follow focus
+// through sheets that fill in as they load. On a machine busy with the other
+// suites both have failed now and then; alone they haven't.
+const SOLO = new Set(['a11y', 'sw']);
 const results = [];
 const report = (r) => {
   results.push(r);
