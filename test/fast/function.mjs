@@ -1238,7 +1238,14 @@ async function groupC() {
       for (const dir of ['Tab', 'Shift+Tab']) {
         for (let k = 0; k < 6; k++) {
           await page.keyboard.press(dir);
-          if (await page.evaluate(() => document.activeElement?.tagName === 'IFRAME')) await page.waitForTimeout(150);
+          // The app rings the player a moment after focus lands in it; wait for it.
+          // Leaving the player, focus passes through the dialog's wrap-around
+          // stop (or the page) before the app moves it on: wait until it settles.
+          await page.waitForFunction(() => {
+            const a = document.activeElement;
+            if (!a || a === document.body || a.classList.contains('focus-wrap')) return false;
+            return a.tagName !== 'IFRAME' || a.classList.contains('kb-focus');
+          }, null, { timeout: 2000 }).catch(() => {});
           const s = await page.evaluate(() => { const a = document.activeElement; return { inside: Boolean(document.querySelector('.trailer-overlay [role=dialog]')?.contains(a)), frame: a?.tagName === 'IFRAME', ring: a?.classList.contains('kb-focus'), what: `${a?.tagName}.${a?.className}` }; });
           if (!s.inside) left.push(`${dir} #${k + 1} to ${s.what}`);
           if (s.frame && !s.ring) noRing.push(`${dir} #${k + 1}`);
@@ -1248,7 +1255,7 @@ async function groupC() {
       check(`trailer ${label}: the player shows a focus ring when tabbed into`, !noRing.length, noRing.join('; '));
       if (await page.evaluate(() => document.activeElement?.tagName === 'IFRAME')) await page.evaluate(() => document.querySelector('.trailer-overlay .modal-x')?.focus());
       await page.keyboard.press('Escape');
-      await page.waitForTimeout(400);
+      await page.waitForFunction(() => !document.querySelector('.trailer-overlay') && document.activeElement === window.__trig, null, { timeout: 3000 }).catch(() => {});
       const after = await page.evaluate(() => ({ open: Boolean(document.querySelector('.trailer-overlay')), back: document.activeElement === window.__trig }));
       check(`trailer ${label}: Escape closes it and focus returns to the Trailer button`, !after.open && after.back, JSON.stringify(after));
       await ctx.close();

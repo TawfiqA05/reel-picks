@@ -54,6 +54,28 @@ const buckets = new Map();
 const want = (name) => { if (!buckets.has(name)) buckets.set(name, []); return buckets.get(name); };
 const fail = (name, msg) => want(name).push(msg);
 
+// Waits (up to 2s) for focus to settle after a key: off the page body and the
+// dialog's wrap-around stop, the player ringed, and the element scrolled into
+// view in the window and in its scroller. A stop that never gets there is
+// still sampled and reported.
+async function settleFocus(p) {
+  await p.waitForFunction(() => {
+    const a = document.activeElement;
+    if (!a || a === document.body || a.classList.contains('focus-wrap')) return false;
+    if (a.tagName === 'IFRAME' && !a.classList.contains('kb-focus')) return false;
+    const r = a.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) return false;
+    for (let e = a.parentElement; e && e !== document.body; e = e.parentElement) {
+      const cs = getComputedStyle(e);
+      if (/(auto|scroll)/.test(cs.overflowY + cs.overflowX) && (e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth)) {
+        const b = e.getBoundingClientRect();
+        if (r.bottom <= b.top || r.top >= b.bottom) return false;
+      }
+    }
+    return true;
+  }, null, { timeout: 2000 }).catch(() => {});
+}
+
 // ---------------------------------------------------------------- pages
 async function page(browser, role, opts = {}) {
   const p = await open(browser, w, { role: ROLES[role], ...opts, allow403: role === 'guest' });
@@ -83,6 +105,7 @@ async function tabWalk(p, { max = 700 } = {}) {
   let ended = 'max';
   for (let i = 0; i < max; i++) {
     await p.keyboard.press('Tab');
+    await settleFocus(p);
     const s = await p.evaluate(() => window.__a11y.stop());
     if (s.body) {
       if (stops.length) { ended = 'left the page'; break; }
@@ -340,7 +363,9 @@ async function dialogCheck(p, name, trigger, { key = 'Enter', expectInput = fals
   for (const dir of ['Tab', 'Shift+Tab']) {
     for (let i = 0; i < tabs; i++) {
       await p.keyboard.press(dir);
-      if (await p.evaluate(() => document.activeElement?.tagName === 'IFRAME')) await p.waitForTimeout(150);
+      // The app rings the player a moment after focus lands in it; wait for
+      // that rather than sampling once (a busy machine can be slow).
+      await settleFocus(p);
       const s = await p.evaluate((q) => {
         const d = [...document.querySelectorAll(q)].pop();
         return { ...window.__a11y.stop(), inside: Boolean(d && d.contains(document.activeElement)) };
@@ -355,6 +380,7 @@ async function dialogCheck(p, name, trigger, { key = 'Enter', expectInput = fals
   await p.keyboard.press('Escape');
   await p.waitForTimeout(400);
   if (sameAs) await p.waitForTimeout(1200);
+  await p.waitForFunction((q) => ![...document.querySelectorAll(q)].some((d) => d.isConnected && window.__a11y.visible(d)) && (document.activeElement === window.__trig || !window.__trig?.isConnected), sel, { timeout: 3000 }).catch(() => {});
   const after = await p.evaluate(([q, same]) => ({
     open: [...document.querySelectorAll(q)].some((d) => d.isConnected && window.__a11y.visible(d)),
     back: document.activeElement === window.__trig || Boolean(same && !window.__trig?.isConnected && document.activeElement?.matches(same)),
@@ -419,6 +445,7 @@ async function dialogs(browser, { role, theme, width }) {
     for (const g of axr.glyphs) fail(wswName, `results: ${g} reads out star glyphs with no value`);
     for (let i = 0; i < 25; i++) {
       await p.keyboard.press('Tab');
+      await settleFocus(p);
       const s = await p.evaluate(() => ({ ...window.__a11y.stop(), inside: Boolean(document.activeElement.closest('[role=dialog]')) }));
       if (!s.inside) { fail(wswName, `results: Tab left the dialog (${s.desc})`); break; }
       for (const iss of s.issues || []) if (!/behind/.test(iss)) fail(wswName, `results: ${s.desc}: ${iss}`);
