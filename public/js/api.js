@@ -115,6 +115,7 @@ export const api = {
   offsiteUpload: () => req('POST', '/offsite/upload'),
   homePicks: () => req('GET', '/home-picks'),
   suggest: (ask) => req('POST', '/suggest', ask),
+  suggestState: (ids) => req('POST', '/suggest/state', { ids }),
   pushCheck: (endpoint) => req('POST', '/push/check', { endpoint }),
   pushSubscribe: (subscription) => req('POST', '/push/subscribe', { subscription }),
   pushUnsubscribe: (endpoint) => req('POST', '/push/unsubscribe', { endpoint }),

@@ -329,3 +329,13 @@ export async function suggest(body) {
   else if (relaxed) note = relaxedNote(ask);
   return { films, more, relaxed, note };
 }
+
+// Where the person stands with films the sheet showed them (it asks when it
+// opens again on kept results): saved, rated (the stars), hidden.
+export function suggestState(body = {}) {
+  const ids = Array.isArray(body.ids) ? body.ids : [];
+  if (ids.length > 30 || ids.some((x) => !Number.isInteger(x) || x <= 0)) throw Object.assign(new Error('ids must be a list of film ids.'), { status: 400 });
+  const p = personal();
+  const stars = new Map(all(`SELECT tmdb_id, rating FROM ratings WHERE user_id = ? AND tmdb_id IN (${ids.map(() => '?').join(',') || 'NULL'})`, p.uid, ...ids).map((r) => [r.tmdb_id, r.rating]));
+  return { films: ids.map((id) => ({ tmdb_id: id, watchlisted: p.watch.has(id), rating: stars.get(id) ?? null, hidden: p.hidden.has(id) })) };
+}

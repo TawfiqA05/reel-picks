@@ -41,7 +41,7 @@ import { settingsProblems } from '../public/js/settingsRules.js';
 import { planProblems } from '../public/js/plans.js';
 import { servicesProblems, cleanServices } from '../public/js/services.js';
 import { homePicks } from './lib/home.js';
-import { suggest } from './lib/suggest.js';
+import { suggest, suggestState } from './lib/suggest.js';
 import { search, playingIds, listRecents, addRecent, removeRecent, clearRecents, restoreRecents } from './lib/search.js';
 import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, userName } from './lib/accounts.js';
 import {
@@ -1140,6 +1140,16 @@ router.post('/suggest', h(async (req, res) => {
     throw e;
   }
 }));
+// The caller's own saved / rated / hidden state for films the sheet showed
+// them, when it opens again on kept results. Not on the guest allowlist.
+router.post('/suggest/state', (req, res) => {
+  try {
+    res.json(suggestState(req.body || {}));
+  } catch (e) {
+    if (e.status === 400) return res.status(400).json({ error: e.message });
+    throw e;
+  }
+});
 
 // ---- off-site backup (lib/offsite.js) ---------------------------------------
 // Owner only. With BACKUP_S3_* unset: { enabled: false }, and nothing to press.

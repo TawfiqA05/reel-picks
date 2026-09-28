@@ -4,6 +4,7 @@ import { h, clear, toast, spinner, emptyState, icon, ensureToastHost } from './u
 import { watchForUpdates } from './update.js';
 import { openSearch } from './search.js';
 import { startTour, shouldAutoTour, tourActive } from './tour.js';
+import { resumeWhatToWatch } from './wsw.js';
 import * as home from './views/home.js';
 import * as detail from './views/detail.js';
 import * as person from './views/person.js';
@@ -224,6 +225,9 @@ async function route() {
   // welcome setup for someone new).
   if (name === 'home' && location.hash.startsWith('#/home') && shouldAutoTour(status) && !welcome.needsSetup(status) && !tourActive()) startTour(ctx);
   else youNote();
+  // Back from a film opened in "What should I watch?": the sheet opens again
+  // where it was (js/wsw.js).
+  if (!tourActive()) resumeWhatToWatch(ctx);
 }
 
 // Once, for everyone who knew the old six tabs: where three of them went.
