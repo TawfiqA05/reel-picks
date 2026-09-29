@@ -637,7 +637,8 @@ the run breaks) is tried again every hour, up to six times, and stops as soon as
 works. Only one refresh ever runs at a time, and the retries carry on across a restart. I
 only get the alert if all six retries fail too. If that happens on a Friday before the
 week's four has locked, the four locks from the lineup it already had. The last 10 alerts, and anything failing right now, are in
-my Alerts card in Settings, which also works with push turned off.
+my Alerts card in Settings, which also works with push turned off. Alerts older than 90 days
+are cleared after the nightly backup, so that night's backup still has them.
 
 ## The guest link
 
@@ -770,8 +771,9 @@ US region fixed it.
 To make a fresh deployment an exact duplicate of a local instance, use **Settings →
 Export full setup** locally and **Import full setup** on the deployment: one JSON file
 carrying my settings, theaters, home base, ratings, watchlist, watch history, hidden
-films, and AMC match decisions. The import is additive and kicks off a refresh, so the new
-instance pulls its own showtimes. Caches and schedule history deliberately don't travel.
+films, and AMC match decisions. The import is additive and all or nothing (a file that
+fails partway changes nothing), and kicks off a refresh, so the new instance pulls its own
+showtimes. Caches and schedule history deliberately don't travel.
 Each instance builds its own. Friends don't travel either; I invite them on the instance
 they'll use.
 
