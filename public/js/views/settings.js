@@ -56,17 +56,53 @@ async function currentSubscription() {
   return { reg, sub: await reg.pushManager.getSubscription() };
 }
 
-function notificationsCard(publicKey) {
+// ---- Watchlist alerts -------------------------------------------------------
+// Per person, saved on the server (watchlistAlerts, lib/watchalerts.js), so it
+// holds on every device. The pushes only reach devices with notifications on,
+// so when this one isn't, the row says to turn them on first.
+function watchlistAlertsRows(on) {
+  const toggle = h('input', { type: 'checkbox', ...(on ? { checked: true } : {}) });
+  const note = h('p', { class: 'muted small notify-note watch-alerts-note', hidden: true });
+  toggle.addEventListener('change', async () => {
+    const want = toggle.checked;
+    toggle.disabled = true;
+    try {
+      await api.saveSettings({ watchlistAlerts: want });
+      toast(want ? 'You\'ll get a notification when a film on your watchlist starts showing or has its last week.' : 'Watchlist alerts are off.', want ? 'success' : undefined);
+    } catch (e) {
+      toggle.checked = !want;
+      toast(e.message, 'error');
+    } finally { toggle.disabled = false; }
+  });
+  const rows = [
+    h('label', { class: 'switch-row watch-alerts' }, toggle, h('span', {}, 'Watchlist alerts')),
+    h('p', { class: 'muted small' }, 'A notification when a film on your watchlist starts showing at your theaters, and when it has its last week. Never between 9\u00a0PM and 9\u00a0AM.'),
+    note,
+  ];
+  // pushOn: whether this device has notifications on for this person.
+  const setPush = (pushOn) => {
+    setStatus(note, 'warn', 'Turn on notifications first. Watchlist alerts only reach devices with notifications on.');
+    note.hidden = Boolean(pushOn);
+  };
+  return { rows, setPush };
+}
+
+function notificationsCard(publicKey, settings) {
   const label = 'Notify me when my weekly picks are ready';
   const hint = h('p', { class: 'muted small' }, 'One notification on Friday with your #1 pick, on this device. Nothing about your ratings is in it.');
+  const watch = watchlistAlertsRows(settings?.watchlistAlerts === true);
   if (isIOS() && !isStandalone()) {
+    watch.setPush(false);
     return card('Notifications', h('div', { class: 'notify-static' },
       h('p', {}, label),
-      setStatus(h('p', { class: 'muted small notify-note' }), 'warn', 'On iPhone, notifications need Reel Picks on your Home Screen first. In Safari, tap Share, then Add to Home Screen, and open it from there.')));
+      setStatus(h('p', { class: 'muted small notify-note' }), 'warn', 'On iPhone, notifications need Reel Picks on your Home Screen first. In Safari, tap Share, then Add to Home Screen, and open it from there.')),
+    ...watch.rows);
   }
   if (!pushSupported()) {
+    watch.setPush(false);
     return card('Notifications', h('div', { class: 'notify-static' },
-      h('p', {}, label), setStatus(h('p', { class: 'muted small notify-note' }), 'warn', 'This browser can\'t show notifications.')));
+      h('p', {}, label), setStatus(h('p', { class: 'muted small notify-note' }), 'warn', 'This browser can\'t show notifications.')),
+    ...watch.rows);
   }
 
   const toggle = h('input', { type: 'checkbox', disabled: true });
@@ -84,6 +120,7 @@ function notificationsCard(publicKey) {
       toggle.checked = Boolean(sub && Notification.permission === 'granted' && (await api.pushCheck(sub.endpoint)).subscribed);
     } catch { toggle.checked = false; }
     toggle.disabled = false;
+    watch.setPush(toggle.checked);
     if (toggle.checked) showNote(onText, 'ok');
     else if (blocked()) showNote(blockedText, 'bad');
   })();
@@ -127,12 +164,15 @@ function notificationsCard(publicKey) {
     } catch (e) {
       toggle.checked = !on;
       toast(on ? `Couldn't turn notifications on: ${e.message}` : e.message, 'error');
-    } finally { toggle.disabled = false; }
+    } finally {
+      toggle.disabled = false;
+      watch.setPush(toggle.checked);
+    }
   });
 
   return card('Notifications',
     h('label', { class: 'switch-row' }, toggle, h('span', {}, label)),
-    hint, note);
+    hint, note, ...watch.rows);
 }
 
 export async function render(root, params, ctx) {
@@ -523,8 +563,9 @@ export async function render(root, params, ctx) {
     ));
   }
 
-  // ---- Weekly picks notifications: only when the server has VAPID keys.
-  if (pushCfg?.enabled && !status?.guest) page.appendChild(notificationsCard(pushCfg.publicKey));
+  // ---- Weekly picks notifications and Watchlist alerts: only when the server
+  // has VAPID keys.
+  if (pushCfg?.enabled && !status?.guest) page.appendChild(notificationsCard(pushCfg.publicKey, s));
 
   // ---- Streaming services, for "At home" on Picks (js/views/athome.js).
   // Each tap saves; the week's home picks are worked out again for the new set.

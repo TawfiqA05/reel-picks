@@ -8,6 +8,7 @@ const GUIDE = [
   ['Showtimes', 'Book opens that showtime on AMC. Seat by is when the film itself starts after the previews, and out around is when it lets out. A check means the time is inside your preferred showtimes.'],
   ['Rating', 'Rate the films you\'ve seen on the Rate tab or on any film\'s page. Every rating sharpens next week\'s four.'],
   ['Save and Not for me', 'Save puts a film on your watchlist and gives it a boost. Not for me hides it from your picks. Hidden films are listed in Settings, where you can bring them back.'],
+  ['Watchlist alerts', 'Turn on Watchlist alerts in Settings for a notification when a film on your watchlist starts showing at your theaters, and again in its last week. Late at night they wait until 9\u00a0AM. Films you\'ve rated, seen, hidden or planned to go to don\'t get one.'],
   ['I\'m going', 'Tap I\'m going on a showing to plan it. You get a reminder two hours before, and the next morning Picks asks whether you saw it. Yes logs it seen on that day. Pick another showing to move the plan, or cancel it any time.'],
   ['Send a pick', 'Send shares a film, with a short note if you like. It waits at the top of their Picks until they save it, see it, rate it or dismiss it. You can send ten a day.'],
   ['At home', 'At home on Picks shows your best matches on the streaming services you choose in Settings, scored the same way.'],
