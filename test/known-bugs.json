@@ -41,6 +41,5 @@
   "layout: owner light 320 movie: no layout, contrast, tap or error findings": "App bug: at 320 the Taste match row \"Director: <name>\" is cut with an ellipsis and the full name is nowhere on the row (no title or label).",
   "layout: owner light 320 together: no layout, contrast, tap or error findings": "App bug: at 320 the Together tag \"On your/their watchlist · great match for …\" does not wrap and pushes the page sideways (329 to 336px).",
   "layout: owner light 390 schedule-leaving-bottom: no layout, contrast, tap or error findings": "App bug: on Leaving soon a showtime row with Fits and Book is wider than the screen, so the calendar button runs off the right edge and the page scrolls sideways (408px at 390, 245px at 200% zoom).",
-  "layout: owner light 390 schedule-leaving: no layout, contrast, tap or error findings": "App bug: on Leaving soon a showtime row with Fits and Book is wider than the screen, so the calendar button runs off the right edge and the page scrolls sideways (408px at 390, 245px at 200% zoom).",
-  "security: GET /api/theatres?query[]=x is not a 5xx": "App bug: GET /api/theatres with an array query (query[]=x) answers 500; server/routes.js passes req.query.query to searchTheatres, which calls toLowerCase on it. It should answer 400."
+  "layout: owner light 390 schedule-leaving: no layout, contrast, tap or error findings": "App bug: on Leaving soon a showtime row with Fits and Book is wider than the screen, so the calendar button runs off the right edge and the page scrolls sideways (408px at 390, 245px at 200% zoom)."
 }

@@ -422,7 +422,9 @@ router.delete('/home', h(async (req, res) => {
 
 router.get('/theatres', h(async (req, res) => {
   if (!amc.amcConfigured()) return res.status(400).json({ error: 'AMC_API_KEY is not set. Add it to .env to search theaters.' });
-  res.json({ theatres: await amc.searchTheatres(req.query.query || '') });
+  const q = req.query.query ?? '';
+  if (typeof q !== 'string') return res.status(400).json({ error: 'Type a theater name, city or ZIP.' });
+  res.json({ theatres: await amc.searchTheatres(q) });
 }));
 
 // Make a theatre the primary. The old primary stays followed (demoted), so no
