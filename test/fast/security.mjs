@@ -57,6 +57,8 @@ export const ROUTES = [
   ['GET', '/api/ratings', 'user'],
   ['POST', '/api/ratings', 'user', {}],
   ['DELETE', '/api/ratings/0', 'user'],
+  ['PUT', '/api/ratings/0/note', 'user', { note: 'x' }],
+  ['DELETE', '/api/ratings/0/note', 'user'],
   ['POST', '/api/ratings/import', 'user', {}],
   ['GET', '/api/letterboxd', 'user'],
   ['PUT', '/api/letterboxd', 'user', { username: '' }],

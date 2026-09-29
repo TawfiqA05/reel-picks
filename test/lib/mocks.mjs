@@ -122,10 +122,21 @@ export async function letterboxdMock(feeds = {}) {
   return srv;
 }
 
+// An entry's description, the way Letterboxd writes it: the poster, then the
+// review (e.review, HTML; e.spoiler adds Letterboxd's warning line) or, with
+// no review, "Watched on <date>."
+function lbDescription(e) {
+  const img = '<p><img src="https://a.ltrbxd.com/resized/film-poster/x.jpg"/></p>';
+  const body = e.review
+    ? `${e.spoiler ? '<p><em>This review may contain spoilers.</em></p> ' : ''}${e.review}`
+    : '<p>Watched on Sunday September 20, 2026.</p>';
+  return `<description><![CDATA[ ${img} ${body} ]]></description>`;
+}
+
 export function rssFeed(entries) {
-  const items = entries.map((e, i) => `<item><title>${e.title}, ${e.year}${e.rating ? ` - ${'★'.repeat(Math.floor(e.rating))}` : ''}</title>
+  const items = entries.map((e, i) => `<item><title>${e.title}, ${e.year}${e.rating ? ` - ${'★'.repeat(Math.floor(e.rating))}` : ''}${e.spoiler ? ' (contains spoilers)' : ''}</title>
 <guid isPermaLink="false">letterboxd-review-${e.guid || i}</guid><pubDate>${new Date(C.T0_MS - (entries.length - i) * 3600e3).toUTCString()}</pubDate>
 <letterboxd:watchedDate>${e.watched || '2026-09-20'}</letterboxd:watchedDate><letterboxd:filmTitle>${e.title}</letterboxd:filmTitle>
-<letterboxd:filmYear>${e.year}</letterboxd:filmYear>${e.rating ? `<letterboxd:memberRating>${e.rating}</letterboxd:memberRating>` : ''}<tmdb:movieId>${e.id}</tmdb:movieId></item>`).join('\n');
+<letterboxd:filmYear>${e.year}</letterboxd:filmYear>${e.rating ? `<letterboxd:memberRating>${e.rating}</letterboxd:memberRating>` : ''}<tmdb:movieId>${e.id}</tmdb:movieId>${lbDescription(e)}</item>`).join('\n');
   return `<?xml version="1.0" encoding="utf-8"?><rss version="2.0" xmlns:letterboxd="https://letterboxd.com" xmlns:tmdb="https://themoviedb.org"><channel><title>Letterboxd</title>${items}</channel></rss>`;
 }

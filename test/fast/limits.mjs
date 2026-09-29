@@ -107,7 +107,8 @@ await S.step('the guest link is held to stricter limits', async () => {
   const caps = (role) => Object.fromEntries([...(src.match(new RegExp(`${role}:\\s*\\{([^}]*)\\}`))?.[1] || '').matchAll(/(\w+):\s*(\d+)/g)].map((m) => [m[1], Number(m[2])]));
   const friend = caps('friend'); const guest = caps('guest');
   S.check('friend caps are 200 new films, 300 searches and 30 place lookups', friend.newFilm === 200 && friend.search === 300 && friend.place === 30, JSON.stringify(friend));
-  S.check('guests have stricter caps than friends for every kind', Object.keys(friend).length === 3 && Object.keys(friend).every((k) => guest[k] < friend[k]), JSON.stringify(guest));
+  // The fourth kind, note writes (notes on ratings), is checked in notes.mjs.
+  S.check('guests have stricter caps than friends for every kind', Object.keys(friend).length === 4 && friend.note === 300 && Object.keys(friend).every((k) => guest[k] < friend[k]), JSON.stringify(guest));
   const G = { 'cf-ray': 'test', 'cf-connecting-ip': '203.0.113.77' };
   const g = await burst(guest.newFilm, (i) => person(G, 7600000 + i));
   const gOver = await person(G, 7600999);
