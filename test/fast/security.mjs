@@ -95,6 +95,8 @@ export const ROUTES = [
   ['GET', '/api/person/{person}', 'guest'],
   ['GET', '/api/stats/group?kind=genre&name=Drama', 'user'],
   ['GET', '/api/stats/more?kind=genre&name=Drama', 'user'],
+  ['GET', '/api/year', 'user'],
+  ['GET', '/api/year/poster/0', 'user'],
   ['GET', '/api/export', 'user'],
   ['GET', '/api/matches/unmatched', 'owner'],
   ['POST', '/api/match/keep', 'owner', {}],
