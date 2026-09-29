@@ -1,5 +1,7 @@
 # Reel Picks
 
+[![Tests](https://github.com/TawfiqA05/reel-picks/actions/workflows/tests.yml/badge.svg)](https://github.com/TawfiqA05/reel-picks/actions/workflows/tests.yml)
+
 I have an AMC A-List membership and a recurring problem: four movies a week is a lot of
 decisions, and I kept either wasting a slot on something mediocre or finding out too late
 that the one I actually wanted to see had left the theater on Wednesday. Reel Picks is my
