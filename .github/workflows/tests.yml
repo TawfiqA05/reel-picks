@@ -1,0 +1,45 @@
+# The offline test suites (see Tests in the README). They need no key, token
+# or secret: every outside service is a local stand-in or a saved answer.
+name: Tests
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+env:
+  # The dev machine's zone, so every date the tests work out matches it.
+  TZ: America/Indianapolis
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: npm test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # The function suite drives the app in Chromium.
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+
+  test-ui:
+    name: npm run test:ui
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:ui
