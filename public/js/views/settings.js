@@ -823,7 +823,7 @@ export async function render(root, params, ctx) {
       const doc = JSON.parse(await f.text());
       const r = await api.importState(doc);
       const c = r.imported || {};
-      toast(`Setup imported: ${c.ratings || 0} ratings, ${c.watchlist || 0} watchlist, ${c.watched || 0} watched, ${c.matches || 0} match decisions, ${c.hidden || 0} hidden, ${c.settings || 0} settings. Refreshing showtimes…`, 'success');
+      toast(`Setup imported: ${c.ratings || 0} ratings, ${c.watchlist || 0} watchlist, ${c.watched || 0} watched, ${c.matches || 0} match decisions, ${c.hidden || 0} hidden, ${c.notes || 0} notes, ${c.settings || 0} settings. Refreshing showtimes…`, 'success');
       ctx.triggerRefresh?.();
       ctx.refreshStatus();
     } catch (e) {

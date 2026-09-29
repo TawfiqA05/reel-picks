@@ -865,6 +865,32 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 .seen-state { display: inline-flex; align-items: center; gap: 6px; color: var(--good); font-weight: 600; }
 .rater { display: inline-flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 .rater-clear { font-size: var(--fs-xs); }
+/* ---- notes on ratings (js/notes.js): a line of your own under the stars ---- */
+.note-slot { flex: 1 1 100%; min-width: 0; }
+.note-add { justify-content: flex-start; padding: 0 2px; }
+.note-block { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.note-full .note-block { margin-top: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-left: 3px solid var(--accent); border-radius: 0 var(--r-btn) var(--r-btn) 0; background: var(--accent-soft); }
+.note-label { margin: 0; font-size: var(--fs-sm); font-weight: 700; color: var(--muted); }
+.note-from { font-weight: 400; }
+.note-text { margin: 0; color: var(--text); font-size: var(--fs-base); line-height: var(--lh-body); overflow-wrap: anywhere; max-width: 65ch; }
+.note-text.whole { white-space: pre-line; }
+.note-after .note-text { font-size: var(--fs-sm); }
+.note-acts { display: flex; flex-wrap: wrap; gap: 0 var(--sp-2); margin-left: -4px; }
+.note-acts .link-btn, .note-more { justify-content: flex-start; }
+.note-more { align-self: flex-start; }
+.note-form { display: flex; flex-direction: column; gap: var(--sp-1); margin-top: var(--sp-1); min-width: 0; max-width: 560px; }
+.note-input { width: 100%; min-height: 44px; font-size: 16px; }
+.note-form-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); flex-wrap: wrap; }
+.note-count { color: var(--muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.note-buttons { display: inline-flex; align-items: center; gap: var(--sp-2); margin-left: auto; }
+.note-error { margin: 0; color: var(--bad); font-size: var(--fs-sm); }
+/* The short second line on a list row (Rate, Stats sheets, a person page):
+   cut short in js/notes.js; the whole note is on the film's page. */
+.note-line { display: block; color: var(--muted); font-size: var(--fs-xs); font-style: italic; line-height: var(--lh-snug); overflow-wrap: anywhere; }
+.sheet-film .note-slot, .more-film .note-slot { padding-left: 58px; }
+.rating-item { flex-wrap: wrap; }
+.rating-item .note-slot { padding-left: 46px; }
+.rate-sheet .note-slot { text-align: left; }
 .score-groups { display: grid; gap: var(--sp-4); }
 @media (min-width: 720px) { .score-groups { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } .score-groups .group + .group { margin-top: 0; } }
 .source-row { display: grid; grid-template-columns: 9em minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3); font-size: var(--fs-sm); }
@@ -922,7 +948,8 @@ a.person-link:hover { background: color-mix(in srgb, var(--chip) 82%, var(--text
 
 /* ---- rate view ---- */
 .search-results { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
-.search-row { display: flex; align-items: center; gap: 12px; padding: var(--sp-2) 0; }
+.search-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: var(--sp-2) 0; }
+.search-row .note-slot { padding-left: 58px; }
 .search-results > .search-row + .search-row { border-top: 1px solid var(--divider); }
 .search-poster { width: 42px; height: 63px; object-fit: cover; border-radius: 6px; }
 .search-poster.ph { background: var(--chip); }
@@ -948,6 +975,7 @@ a.person-link:hover { background: color-mix(in srgb, var(--chip) 82%, var(--text
   .rating-item > .ri-info { grid-column: 2; }
   .rating-item > .stars { grid-column: 2; grid-row: 2; justify-self: start; }
   .rating-item > .ri-remove { grid-column: 3; grid-row: 1 / span 2; }
+  .rating-item > .note-slot { grid-column: 2 / -1; padding-left: 0; }
 }
 
 /* ---- onboarding ---- */

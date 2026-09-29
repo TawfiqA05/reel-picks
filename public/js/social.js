@@ -7,6 +7,7 @@
 import { api } from './api.js';
 import { h, clear, icon, toast, openModal, poster } from './ui.js';
 import { dayLabel, formatBadge, formatName, starRater, watchlistButton } from './views/components.js';
+import { noteSlot } from './notes.js';
 
 let state = null;
 const live = new Set();
@@ -315,14 +316,27 @@ export function goingLine(id) {
 
 // ---- the morning question -----------------------------------------------------
 
-// After Yes: the star rating, once, in a sheet.
+// After Yes: the star rating, once, in a sheet. "Add a note" sits after the
+// stars (js/notes.js): a quick tap on the stars still closes the sheet, unless
+// the note field is open or in use, when Done closes it instead.
 function openRateSheet(film, ctx, onDone) {
   let modal;
-  const rater = starRater(film, ctx, { value: 0, size: 36, onRated: (v) => { if (v) setTimeout(() => modal.close(), 500); } });
+  const note = noteSlot(film, { alwaysAdd: true });
+  const later = h('button', { class: 'btn soft', type: 'button', onClick: () => modal.close() }, 'Not now');
+  const rater = starRater(film, ctx, {
+    value: 0, size: 36,
+    onRated: (v) => {
+      note.rated(v);
+      if (!v) return;
+      later.textContent = 'Done';
+      setTimeout(() => { if (!note.busy()) modal.close(); }, 500);
+    },
+  });
   const body = h('div', { class: 'rate-sheet' },
     h('p', {}, 'Logged as seen. How was it?'),
     rater,
-    h('button', { class: 'btn soft', type: 'button', onClick: () => modal.close() }, 'Not now'));
+    note.el,
+    later);
   modal = openModal(body, { title: `Rate ${film.title}`, onClose: () => { onDone?.(); keepFocus(document.querySelector('.inbox')); } });
   rater.querySelector('.stars')?.focus();
 }

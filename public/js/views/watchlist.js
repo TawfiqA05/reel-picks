@@ -52,7 +52,8 @@ export async function render(root, params, ctx) {
         watchlistButton({ tmdb_id: mv.tmdb_id, title: mv.title, watchlisted: true }, ctx, { compact: true, onToggle: (on) => { if (!on) removed(tile); } })),
     });
     grid.appendChild(tile);
-    rows.push({ el: tile, fields: [mv.title] });
+    // Your own note (a film you rated and kept saved) is searched too.
+    rows.push({ el: tile, fields: [mv.title, mv.note || ''] });
   }
   // A long watchlist gets a filter box.
   if (movies.length > 8) {

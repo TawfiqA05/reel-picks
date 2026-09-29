@@ -7,6 +7,7 @@ import { api } from '../api.js';
 import { h, clear, spinner, icon, emptyState } from '../ui.js';
 import { starRater, watchlistButton, opensBadge } from './components.js';
 import { streamLine, CREDIT } from '../stream.js';
+import { noteSlot, noteLine } from '../notes.js';
 
 const thumb = (url) => (url ? url.replace(/\/w\d+\//, '/w92/') : null);
 const count = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -35,8 +36,10 @@ export async function render(root, params, ctx) {
   const credit = h('p', { class: 'stream-credit group-foot', hidden: true }, CREDIT);
   const lists = {}; // section key -> its <ul>, for moving a rated film up
 
-  // One film: poster, title and year, TMDB's rating, and the controls.
-  const row = (f, where) => {
+  // One film: poster, title and year, TMDB's rating, and the controls. A film
+  // rated here gets "Add a note" after its stars; in You rated, your note is a
+  // short second line under the title.
+  const row = (f, where, { fresh = false } = {}) => {
     const li = h('li', { class: 'sheet-film more-film' });
     const tmdbLine = f.tmdb_rating > 0
       ? h('span', { class: 'more-tmdb', 'aria-label': `TMDB ${f.tmdb_rating.toFixed(1)} out of 10` }, `TMDB ${f.tmdb_rating.toFixed(1)}`)
@@ -50,15 +53,25 @@ export async function render(root, params, ctx) {
       h('span', { class: 'more-text' },
         h('span', { class: 'sheet-title' }, f.title, f.year ? h('span', { class: 'sheet-year' }, ` ${f.year}`) : null),
         h('span', { class: 'more-meta' }, tmdbLine, opensBadge(f)),
+        where === 'rated' ? noteLine(f.myNote) : null,
         stream),
     ];
     // The guest link opens only films the app already has; any other would
     // be a dead end for it.
     li.append(!guest || f.stored ? h('a', { class: 'more-link', href: `#/movie/${f.tmdb_id}` }, ...inner) : h('div', { class: 'more-link' }, ...inner));
     if (!guest) {
+      const note = noteSlot(f, { rated: Boolean(f.myRating) });
+      if (fresh && !f.myNote) note.rated(f.myRating);
+      // A rating changed where the film stays: Add a note, unless it has one.
+      // Cleared: the note went with the rating.
+      const rerated = (v) => {
+        if (!v) { f.myNote = null; li.querySelector('.note-line')?.remove(); note.rated(0); } else if ((where === 'playing' || where === 'rated') && !f.myNote) note.rated(v);
+        onRated(f, li, where, v);
+      };
       li.append(h('div', { class: 'more-tools' },
-        starRater(f, ctx, { value: f.myRating || 0, size: 18, awaitDetails: true, onRated: (v) => onRated(f, li, where, v) }),
-        watchlistButton(f, ctx)));
+        starRater(f, ctx, { value: f.myRating || 0, size: 18, awaitDetails: true, onRated: (v) => rerated(v) }),
+        watchlistButton(f, ctx)), note.el);
+      li.addEventListener('note-change', (e) => { f.myNote = e.detail?.note || null; });
     }
     return li;
   };
@@ -157,7 +170,7 @@ export async function render(root, params, ctx) {
     const from = li.parentElement;
     li.remove();
     ensureRated();
-    lists.rated.prepend(row(f, 'rated'));
+    lists.rated.prepend(row(f, 'rated', { fresh: true }));
     paintRatedSub();
     const k = kinds.find((x) => x.smallerList === from);
     if (k?.more) paintMore(k);

@@ -67,6 +67,9 @@ export const api = {
   ratings: () => req('GET', '/ratings'),
   rate: (payload) => req('POST', '/ratings', payload),
   unrate: (id) => req('DELETE', '/ratings/' + id),
+  // The caller's own note on a film they rated (server/lib/notes.js).
+  saveNote: (id, note) => req('PUT', `/ratings/${id}/note`, { note }),
+  deleteNote: (id) => req('DELETE', `/ratings/${id}/note`),
   importCsv: (csv) => req('POST', '/ratings/import', { csv }),
   letterboxd: () => req('GET', '/letterboxd'),
   letterboxdSave: (username) => req('PUT', '/letterboxd', { username }),

@@ -5,6 +5,7 @@ import { planOf, planWords, loggedLine } from '../plans.js';
 import { streamSection } from '../stream.js';
 import { dayLabel, showtimeRow, watchlistButton, starRater, runwayLine, handoffLine, heroMedia, filmTags, reasonLine, metaLine } from './components.js';
 import { loadSocial, sentBy, sendButton, detailPlan } from '../social.js';
+import { noteSlot } from '../notes.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -85,7 +86,10 @@ function creditLine(label, people) {
 }
 
 function ratingRow(d, m, ctx, week) {
-  const stars = starRater(m, ctx, { value: d.myRating || 0, size: 30 });
+  // Your note under the stars (js/notes.js): Edit and Delete, or Add a note
+  // once the film is rated.
+  const note = noteSlot(m, { ...(d.myNote || {}), rated: d.myRating > 0, mode: 'full' });
+  const stars = starRater(m, ctx, { value: d.myRating || 0, size: 30, onRated: (v) => note.rated(v) });
   const seenSlot = h('div', { class: 'seen-slot' });
 
   // Marked seen: "Seen · Undo", with the watch-log entry it undoes. Otherwise
@@ -125,7 +129,7 @@ function ratingRow(d, m, ctx, week) {
 
   return h('section', { class: 'group', 'aria-labelledby': 'rating-title' },
     h('h2', { class: 'group-title', id: 'rating-title' }, 'Your rating'),
-    h('div', { class: 'group-body' }, h('div', { class: 'row-line rating-row' }, stars, seenSlot)));
+    h('div', { class: 'group-body' }, h('div', { class: 'row-line rating-row' }, stars, seenSlot), note.el));
 }
 
 function publicCard(d) {

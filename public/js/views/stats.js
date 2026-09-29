@@ -2,6 +2,7 @@
 import { api } from '../api.js';
 import { h, clear, spinner, money, pct, makeStars, toast, openModal, icon, withStars, emptyState } from '../ui.js';
 import { starRater, watchlistButton, opensBadge } from './components.js';
+import { noteSlot, noteLine } from '../notes.js';
 import { filterBox } from '../filter.js';
 import { streamLine, CREDIT } from '../stream.js';
 import { planOf, planWords } from '../plans.js';
@@ -219,6 +220,13 @@ function openGroup(kind, it, ctx) {
 
   let ratedIds = new Set();
   let ratedRows = [];
+  // Films rated in this sheet: their row in "You rated" offers "Add a note".
+  const justRated = new Map(); // tmdb_id -> stars
+  rated.addEventListener('note-change', (e) => {
+    const li = e.target.closest?.('.sheet-film');
+    const row = ratedRows.find((r) => r.el === li);
+    if (row) { row.fields = [...row.base, e.detail?.note || '']; refreshFilter(); }
+  });
   const refreshFilter = () => {
     const moreRows = [...more.querySelectorAll('.more-film')].map((el) => ({ el, fields: el._fields }));
     const all = [...ratedRows, ...moreRows];
@@ -243,14 +251,21 @@ function openGroup(kind, it, ctx) {
     const frag = document.createDocumentFragment();
     ratedRows = [];
     for (const f of g.films) {
+      // Your note is a short second line under the title, and the filter finds it.
+      const slot = justRated.has(f.tmdb_id) && !f.note ? noteSlot(f, { rated: true }) : null;
+      slot?.rated(justRated.get(f.tmdb_id));
       const li = frag.appendChild(h('li', { class: 'sheet-film' },
         h('a', { href: `#/movie/${f.tmdb_id}`, onClick: close },
           thumbOf(f),
-          h('span', { class: 'sheet-title' }, f.title, f.year ? h('span', { class: 'sheet-year' }, ` ${f.year}`) : null),
+          h('span', { class: 'more-text' },
+            h('span', { class: 'sheet-title' }, f.title, f.year ? h('span', { class: 'sheet-year' }, ` ${f.year}`) : null),
+            noteLine(f.note)),
           h('span', { class: 'sheet-rating', 'aria-label': `your rating ${f.rating} stars` },
             makeStars({ value: f.rating, size: 13 }), h('span', { 'aria-hidden': 'true' }, withStars(`${f.rating}★`))),
-        )));
-      ratedRows.push({ el: li, fields: [f.title, f.director, ...(f.cast || [])] });
+        ),
+        slot?.el));
+      const base = [f.title, f.director, ...(f.cast || [])];
+      ratedRows.push({ el: li, base, fields: [...base, f.note || ''] });
     }
     list.appendChild(frag);
     rated.appendChild(list);
@@ -272,6 +287,7 @@ function openGroup(kind, it, ctx) {
   const onRated = async (f, row, v) => {
     changed = true;
     if (!v) return;
+    justRated.set(f.tmdb_id, v);
     await loadRated();
     if (!ratedIds.has(f.tmdb_id)) return; // rated, but not counted under this row (e.g. a small role)
     const list = row.parentElement;

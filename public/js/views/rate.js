@@ -3,6 +3,7 @@
 import { api } from '../api.js';
 import { h, clear, makeStars, toast, sectionTitle, chip, icon, withStars, tmdbSized } from '../ui.js';
 import { filterBox } from '../filter.js';
+import { noteSlot, noteLine } from '../notes.js';
 
 // Where a rating came from, as the list names it.
 const SOURCES = { letterboxd: 'Letterboxd', imdb: 'IMDb', manual: 'Rated here', onboarding: 'Quick rate', reelpicks: 'Backup' };
@@ -31,6 +32,9 @@ export async function render(root, params, ctx) {
     clear(results);
     if (!found.length) { results.appendChild(h('div', { class: 'muted pad' }, 'No matches.')); return; }
     for (const r of found.slice(0, 12)) {
+      // Rated from here: "Add a note" comes up after the stars (js/notes.js).
+      const note = noteSlot(r, { rated: Boolean(r.myRating) });
+      r.noteSlot = note;
       results.appendChild(h('div', { class: 'search-row' },
         r.poster ? h('img', { class: 'search-poster', loading: 'lazy', src: tmdbSized(r.poster, 'w92'), alt: '' }) : h('div', { class: 'search-poster ph' }),
         h('div', { class: 'search-info' },
@@ -38,6 +42,7 @@ export async function render(root, params, ctx) {
           h('div', { class: 'muted small' }, (r.genres || []).slice(0, 3).join(' · ')),
         ),
         makeStars({ value: r.myRating || 0, interactive: true, size: 22, allowClear: true, onChange: (v) => rateMovie(r, v), label: `Your rating of ${r.title}` }),
+        note.el,
       ));
     }
   }
@@ -53,10 +58,21 @@ export async function render(root, params, ctx) {
         await api.unrate(r.tmdb_id);
         toast(`Cleared rating for ${r.title}`);
       }
+      r.noteSlot?.rated(v);
+      justRated = v ? r.tmdb_id : null;
       ctx.refreshStatus();
       loadRecent();
     } catch (e) { toast(e.message, 'error'); }
   }
+  // The film just rated in the list keeps its "Add a note" through the re-load.
+  let justRated = null;
+  // A note saved or deleted in the list changes what the filter finds.
+  page.addEventListener('note-change', (e) => {
+    const row = rows.find((x) => x.el.contains(e.target));
+    if (!row) return;
+    row.fields = [row.title, e.detail?.note || ''];
+    filter.set(rows);
+  });
 
   // ---- Bring your ratings from Letterboxd or IMDb -------------------------
   // Deliberately not called "link" or "connect": it is a one-time file upload
@@ -66,7 +82,8 @@ export async function render(root, params, ctx) {
   // is not offered inside its apps; IMDb queues "Export ratings" from Your
   // Ratings onto imdb.com/exports, where it must be downloaded once Ready.
 
-  const fileInput = h('input', { type: 'file', accept: '.csv,text/csv', style: { display: 'none' } });
+  // Several files at once: Letterboxd's ratings.csv and reviews.csv together.
+  const fileInput = h('input', { type: 'file', accept: '.csv,text/csv', multiple: true, style: { display: 'none' } });
   const resultPanel = h('div', { class: 'import-result', hidden: true });
   const showResult = (tone, ...kids) => {
     resultPanel.hidden = false;
@@ -79,9 +96,10 @@ export async function render(root, params, ctx) {
   // messages into the same panel and muddle the summary.
   let importBusy = false;
   fileInput.addEventListener('change', async () => {
-    const f = fileInput.files[0];
+    // ratings.csv before reviews.csv, so a review finds its rating.
+    const files = [...fileInput.files].sort((a, b) => /review/i.test(a.name) - /review/i.test(b.name));
     fileInput.value = '';
-    if (!f) return;
+    if (!files.length) return;
     if (importBusy) { toast('An import is already running. Wait for it to finish.', 'error'); return; }
     importBusy = true;
     try {
@@ -89,28 +107,41 @@ export async function render(root, params, ctx) {
       // ZIP is judged by its name — everything else is judged by its CONTENT on
       // the server, so a rating-bearing file that happens to be called
       // watched.csv still imports.
-      if (/\.zip$/i.test(f.name)) {
+      const zip = files.find((f) => /\.zip$/i.test(f.name));
+      if (zip) {
         showResult('err',
-          h('strong', {}, `"${f.name}" is the whole ZIP file.`),
-          h('div', {}, 'Unzip it first, then upload the ratings.csv file from inside it. Nothing was imported.'));
+          h('strong', {}, `"${zip.name}" is the whole ZIP file.`),
+          h('div', {}, 'Unzip it first, then upload the ratings.csv file from inside it (and reviews.csv, for your reviews as notes). Nothing was imported.'));
         return;
       }
-      const text = await f.text();
-      showResult('warn', 'Reading the file…');
-      const r = await api.importCsv(text);
-      if (r.format === 'reelpicks') {
-        showResult(r.skipped ? 'warn' : 'ok',
-          h('strong', {}, `Restored ${r.ratingsRestored} rating${r.ratingsRestored === 1 ? '' : 's'}${r.watchedRestored ? ` and ${r.watchedRestored} watched entr${r.watchedRestored === 1 ? 'y' : 'ies'}` : ''} from your backup.`),
-          r.skipped ? h('div', {}, `${r.skipped} row${r.skipped > 1 ? 's' : ''} skipped: ${(r.skippedSamples || []).join(' · ')}`) : null);
-        ctx.refreshStatus(); loadRecent();
-        return;
+      // Each file queued for matching is followed until it's matched, and the
+      // summary adds them up (ratings.csv, then reviews.csv).
+      let carry = null;
+      for (const f of files) {
+        const text = await f.text();
+        showResult('warn', files.length > 1 ? `Reading ${f.name}…` : 'Reading the file…');
+        let r;
+        try {
+          r = await api.importCsv(text);
+        } catch (e) {
+          if (files.length === 1) throw e;
+          showResult('err', h('strong', {}, `${f.name}: ${e.message}`), h('div', {}, carry ? 'The files before it were imported.' : 'Your existing ratings were not changed.'));
+          return;
+        }
+        if (r.format === 'reelpicks') {
+          showResult(r.skipped ? 'warn' : 'ok',
+            h('strong', {}, `Restored ${r.ratingsRestored} rating${r.ratingsRestored === 1 ? '' : 's'}${r.watchedRestored ? ` and ${r.watchedRestored} watched entr${r.watchedRestored === 1 ? 'y' : 'ies'}` : ''} from your backup.`),
+            r.skipped ? h('div', {}, `${r.skipped} row${r.skipped > 1 ? 's' : ''} skipped: ${(r.skippedSamples || []).join(' · ')}`) : null);
+          ctx.refreshStatus(); loadRecent();
+          continue;
+        }
+        if (r.emptyExport) {
+          // Valid export, zero ratings — the misleading "could not detect" case, named.
+          if (files.length === 1) { showResult('warn', h('strong', {}, 'This is a valid ratings file, but it has no ratings in it.'), h('div', {}, r.note)); return; }
+          continue;
+        }
+        carry = await pollAndSummarize(r, carry);
       }
-      if (r.emptyExport) {
-        // Valid export, zero ratings — the misleading "could not detect" case, named.
-        showResult('warn', h('strong', {}, 'This is a valid ratings file, but it has no ratings in it.'), h('div', {}, r.note));
-        return;
-      }
-      await pollAndSummarize(r);
     } catch (e) {
       showResult('err', h('strong', {}, e.message), h('div', {}, 'Your existing ratings were not changed.'));
     } finally {
@@ -123,37 +154,55 @@ export async function render(root, params, ctx) {
   // "Matching finished" is detected by the server's lastDrain timestamp moving
   // past the baseline the import response carried (lastDrainAt) — two server
   // clocks, so browser/server clock skew can't wedge the loop.
-  async function pollAndSummarize(r) {
+  // `carry`: what earlier files in the same upload brought, added in.
+  // Returns the running totals.
+  async function pollAndSummarize(res, carry = null) {
+    const r = {
+      ...res,
+      received: (carry?.received || 0) + (res.reviews ? 0 : res.received),
+      reviews: (carry?.reviews || 0) + (res.reviews ? res.received : 0),
+      skipped: (carry?.skipped || 0) + (res.skipped || 0),
+      skippedSamples: [...(carry?.skippedSamples || []), ...(res.skippedSamples || [])].slice(0, 5),
+      ratingsBefore: carry?.ratingsBefore ?? res.ratingsBefore,
+      pendingBefore: carry?.pendingBefore ?? res.pendingBefore,
+      matched: carry?.matched || 0,
+      notes: carry?.notes || 0,
+    };
     if (!r.matching) {
       // No TMDB key: nothing will match now, so don't pretend to watch it.
       showResult('warn',
-        h('strong', {}, `${r.received} rating${r.received === 1 ? '' : 's'} saved to the matching queue.`),
+        h('strong', {}, `${r.received + r.reviews} row${r.received + r.reviews === 1 ? '' : 's'} saved to the matching queue.`),
         h('div', {}, 'No TMDB key is connected, so titles can\'t be matched yet. Add TMDB_API_KEY to .env and they\'ll match on their own.'),
         r.skipped ? h('div', {}, `${r.skipped} row${r.skipped > 1 ? 's' : ''} skipped: ${r.skippedWhy}.`) : null);
-      return;
+      return r;
     }
     const src = r.format === 'letterboxd' ? 'Letterboxd' : 'IMDb';
-    const drainMoved = (s) => Boolean(s?.lastDrain && s.lastDrain.finishedAt !== (r.lastDrainAt || null));
+    // What was found: ratings, reviews (reviews.csv), or both.
+    const found = [r.received ? `${r.received} ${src} rating${r.received === 1 ? '' : 's'}` : null, r.reviews ? `${r.reviews} review${r.reviews === 1 ? '' : 's'}` : null].filter(Boolean).join(' and ') || `0 ${src} ratings`;
+    const drainMoved = (s) => Boolean(s?.lastDrain && s.lastDrain.finishedAt !== (res.lastDrainAt || null));
     let s = null;
     for (let i = 0; i < 120; i++) {
       s = await api.status().catch(() => null);
       const pending = s?.counts?.unmatched ?? 0;
       if (s && !s.matching && (drainMoved(s) || !pending)) break;
       showResult('warn',
-        h('strong', {}, `Found ${r.received} ${src} rating${r.received === 1 ? '' : 's'}. Matching titles to TMDB…`),
+        h('strong', {}, `Found ${found}. Matching titles to TMDB…`),
         h('div', {}, r.pendingBefore
           ? `${pending} in the matching queue (includes ${r.pendingBefore} queued earlier)`
           : `${pending} left to match`),
         r.skipped ? h('div', { class: 'muted small' }, `${r.skipped} row${r.skipped > 1 ? 's' : ''} will be skipped (${r.skippedWhy}).`) : null);
-      await new Promise((res) => setTimeout(res, 2000));
+      await new Promise((ok) => setTimeout(ok, 2000));
       ctx.refreshStatus();
     }
     const ratingsNow = s?.counts?.ratings;
     const leftover = s?.counts?.unmatched ?? 0;
-    const matched = drainMoved(s) ? s.lastDrain.matched : null;
-    const importedLine = matched != null
-      ? `${matched} rating${matched === 1 ? '' : 's'} imported${r.pendingBefore ? ' (including some queued earlier)' : ''}`
-      : `${r.received} rating${r.received === 1 ? '' : 's'} queued`;
+    const moved = drainMoved(s);
+    if (moved) { r.matched += s.lastDrain.matched || 0; r.notes += s.lastDrain.notes || 0; }
+    const { matched, notes } = r;
+    const importedLine = moved || carry
+      ? [r.received || matched ? `${matched} rating${matched === 1 ? '' : 's'} imported${r.pendingBefore ? ' (including some queued earlier)' : ''}` : null,
+        r.reviews ? `${notes} review${notes === 1 ? '' : 's'} brought in as notes` : null].filter(Boolean).join(', ')
+      : `${r.received + r.reviews} row${r.received + r.reviews === 1 ? '' : 's'} queued`;
     showResult('ok',
       h('strong', { class: 'import-done' }, icon('check', { size: 16 }), importedLine),
       ratingsNow != null ? h('div', {}, `Your ratings went from ${r.ratingsBefore} to ${ratingsNow}.`) : null,
@@ -164,6 +213,7 @@ export async function render(root, params, ctx) {
     );
     ctx.refreshStatus();
     loadRecent();
+    return r;
   }
 
   // ---- The guide itself ----------------------------------------------------
@@ -175,14 +225,14 @@ export async function render(root, params, ctx) {
           ['On ', h('strong', {}, 'letterboxd.com'), ' (signed in), open your account menu › ', h('strong', {}, 'Settings'), ' › the ', h('strong', {}, 'Data'), ' tab.'],
           ['Click ', h('strong', {}, 'Export your data'), '. You get a ', h('strong', {}, 'ZIP file containing several CSVs'), '. The export is free, no Pro needed.'],
           ['Unzip it. The file you want is ', h('strong', {}, 'ratings.csv'), '. Not watched.csv, and not the ZIP itself.'],
-          ['Upload ratings.csv here.'],
+          ['Upload ratings.csv here. Pick ', h('strong', {}, 'reviews.csv'), ' with it too, and your reviews become private notes on those films.'],
         ],
         warn: ['On Letterboxd, marking a film watched (the eye icon) is ', h('strong', {}, 'not'), ' the same as rating it. Only films you gave a star rating appear in ratings.csv. If you\'ve starred nothing, the export has no ratings to bring.'],
       },
       phone: {
         steps: [
           ['The Letterboxd ', h('strong', {}, 'app has no export'), '. It lives on the letterboxd.com website, and the download is a ZIP you\'d have to unzip on the phone. In practice, do it on a computer.'],
-          ['Easiest: run the export on a computer (steps under "On a computer"), unzip it there, then ', h('strong', {}, 'AirDrop or email yourself just ratings.csv'), ' and upload it here from the phone.'],
+          ['Easiest: run the export on a computer (steps under "On a computer"), unzip it there, then ', h('strong', {}, 'AirDrop or email yourself ratings.csv'), ' (and reviews.csv, for your reviews as private notes) and upload them here from the phone.'],
           ['No computer handy? Rate films right here instead, with the search box above or the quick 20-film rater.'],
         ],
         warn: ['Watched ≠ rated on Letterboxd: only star ratings export. Films you only marked with the eye icon won\'t come across.'],
@@ -299,11 +349,16 @@ export async function render(root, params, ctx) {
 
   const ratingRow = (r) => {
     const title = r.title || 'Untitled';
+    // Your note as a second line; the film just rated gets "Add a note".
+    const fresh = justRated === r.tmdb_id && !r.note;
+    const slot = fresh ? noteSlot(r, { rated: true }) : null;
+    if (fresh) slot.rated(r.rating);
     return h('div', { class: 'rating-item', 'data-rating-id': String(r.tmdb_id) },
       r.poster ? h('img', { class: 'ri-poster', loading: 'lazy', src: tmdbSized(r.poster, 'w92'), alt: '' }) : h('div', { class: 'ri-poster ph' }),
       h('div', { class: 'ri-info' },
         h('a', { class: 'ri-title', href: `#/movie/${r.tmdb_id}` }, `${title}${r.year ? ` (${r.year})` : ''}`),
         h('div', { class: 'muted small' }, SOURCES[r.source] || r.source),
+        noteLine(r.note),
       ),
       makeStars({ value: r.rating, interactive: true, size: 18, allowClear: true, onChange: (v) => rateMovie(r, v), label: `Your rating of ${title}` }),
       h('button', {
@@ -317,6 +372,7 @@ export async function render(root, params, ctx) {
           } catch (e) { toast(e.message, 'error'); }
         },
       }, icon('x', { size: 18 })),
+      slot?.el,
     );
   };
 
@@ -336,7 +392,8 @@ export async function render(root, params, ctx) {
       return;
     }
     const list = h('div', { class: 'rating-list', id: 'rating-list' });
-    rows = ratings.map((r) => ({ el: list.appendChild(ratingRow(r)), fields: [r.title || 'Untitled'] }));
+    // The filter matches your own note as well as the title.
+    rows = ratings.map((r) => ({ el: list.appendChild(ratingRow(r)), title: r.title || 'Untitled', fields: [r.title || 'Untitled', r.note || ''] }));
     // Swapped in whole, so the page never drops to empty and loses its place.
     recentWrap.replaceChildren(...[head, ratings.length > 8 ? filter.el : null, list, moreBtn].filter(Boolean));
     filter.set(rows); // applies whatever is typed, then paintRows folds the rest away
