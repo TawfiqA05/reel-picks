@@ -1,14 +1,28 @@
 // Nightly housekeeping, run right after the 3am backup succeeds (index.js),
 // so whatever it removes is still in that night's copy.
 //
-// The cache table is the only thing it touches. A row more than three times
-// past its lifetime goes: cachedJson (lib/cache.js) serves an expired row only
-// when a live call fails, and three lifetimes is ample for that. Rows with no
-// lifetime are left. Once, after the first such cleanup, a VACUUM gives the
-// freed space back to the disk; it never runs again on its own.
+// The cache: a row more than three times past its lifetime goes: cachedJson
+// (lib/cache.js) serves an expired row only when a live call fails, and three
+// lifetimes is ample for that. Rows with no lifetime are left. Once, after the
+// first such cleanup, a VACUUM gives the freed space back to the disk; it
+// never runs again on its own.
+//
+// Owner alerts (lib/alerts.js): the log of alerts sent is kept for 90 days.
+// Each problem's current state (alert_state) is never touched.
 import { db, run, getSetting, setSetting } from '../db.js';
 
+export const ALERTS_KEEP_DAYS = 90;
+
 export function afterNightlyBackup(now = new Date()) {
+  try {
+    const gone = run(
+      'DELETE FROM owner_alerts WHERE julianday(?) - julianday(at) > ?',
+      now.toISOString(), ALERTS_KEEP_DAYS,
+    ).changes;
+    console.log(`[housekeeping] owner alerts: removed ${gone} older than ${ALERTS_KEEP_DAYS} days`);
+  } catch (e) {
+    console.error('[housekeeping] owner alerts cleanup failed:', e.message);
+  }
   try {
     const gone = run(
       `DELETE FROM cache WHERE ttl > 0 AND fetched_at IS NOT NULL

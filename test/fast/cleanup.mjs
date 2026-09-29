@@ -163,4 +163,45 @@ await step('letterboxd: an oversized feed is cut off while it is read', async ()
   } finally { await w.close(); await feedSrv.shut(); }
 });
 
+await step('alerts: owner alerts older than 90 days go after a good nightly backup', async () => {
+  const at = (local) => `${local}-04:00`;
+  // Ages on the night that cleans (Oct 3); the night before, the backup fails.
+  const night = at('2026-10-03T03:01:00');
+  const ages = { old200: 200, old91: 91, keep89: 89, keep10: 10 };
+  const w = S.world(await openWorld('cleanup-alerts', {
+    env: { RP_FAKE_NOW: at('2026-10-02T01:00:00') },
+    prepare: (d) => {
+      const ins = d.prepare("INSERT INTO owner_alerts(problem, kind, message, at, pushed) VALUES('refresh', 'problem', ?, ?, 0)");
+      for (const [k, days] of Object.entries(ages)) ins.run(k, new Date(Date.parse(night) - days * 864e5).toISOString());
+      d.prepare("INSERT OR REPLACE INTO alert_state(problem, failing, alerted, since, last_alert_day, last_reason) VALUES('refresh', 1, 1, ?, '2026-06-01', 'old trouble')").run(new Date(Date.parse(night) - 150 * 864e5).toISOString());
+    },
+  }));
+  const BK = path.join(w.dataDir, 'backups');
+  const left = () => w.q("SELECT message FROM owner_alerts WHERE message IN ('old200', 'old91', 'keep89', 'keep10') ORDER BY message").map((r) => r.message).join(',');
+  try {
+    await sleep(800);
+    check('alerts: nothing goes before the nightly backup', left() === 'keep10,keep89,old200,old91', left());
+    await w.srv.stop();
+    // A failed backup deletes nothing.
+    fs.mkdirSync(BK, { recursive: true });
+    fs.chmodSync(BK, 0o555);
+    try {
+      await w.restart({ fakeNow: at('2026-10-02T03:01:00') });
+      await until(() => /\[backup\] ✗/.test(w.srv.log()), 20000);
+      await sleep(1000);
+      check('alerts: a failed backup deletes no alert', left() === 'keep10,keep89,old200,old91' && !/owner alerts: removed/.test(w.srv.log()), left());
+      await w.srv.stop();
+    } finally { fs.chmodSync(BK, 0o755); }
+    await w.restart({ fakeNow: night });
+    await until(() => fs.existsSync(path.join(BK, 'reelpicks-2026-10-03.db')) && /\[housekeeping\]/.test(w.srv.log()), 30000);
+    await sleep(800);
+    check('alerts: after a good backup only alerts more than 90 days old are gone', left() === 'keep10,keep89', left());
+    const bk = new DatabaseSync(path.join(BK, 'reelpicks-2026-10-03.db'), { readOnly: true });
+    const inBackup = bk.prepare("SELECT COUNT(*) n FROM owner_alerts WHERE message IN ('old200', 'old91')").get().n;
+    bk.close();
+    check('alerts: that night\'s backup still holds them', inBackup === 2);
+    check('alerts: each problem\'s current state is untouched', w.q1("SELECT last_reason FROM alert_state WHERE problem = 'refresh'")?.last_reason === 'old trouble');
+  } finally { await w.close(); }
+});
+
 S.finish();
