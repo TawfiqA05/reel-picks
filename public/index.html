@@ -25,6 +25,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#F2EADB" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0f1526" media="(prefers-color-scheme: dark)" />
+  <script id="rp-theme">
+    // The Theme switch (You > Settings): Match system, Light or Dark, kept on
+    // this device only. Applied here, before anything is drawn, so the app
+    // never opens in the other theme first. Match system leaves <html> without
+    // data-theme, and styles.css follows the device's setting live as before.
+    // A chosen theme also sets both browser-bar colours to its own, which the
+    // installed iPhone app's status bar follows.
+    (function () {
+      var KEY = 'rp.theme';
+      var metas = [].slice.call(document.querySelectorAll('meta[name="theme-color"]'));
+      var own = {};
+      metas.forEach(function (m) { m.setAttribute('data-own', m.content); own[/dark/.test(m.media) ? 'dark' : 'light'] = m.content; });
+      var valid = function (c) { return c === 'light' || c === 'dark'; };
+      function apply(choice) {
+        var root = document.documentElement;
+        if (valid(choice)) root.setAttribute('data-theme', choice); else root.removeAttribute('data-theme');
+        metas.forEach(function (m) { m.setAttribute('content', valid(choice) ? own[choice] : m.getAttribute('data-own')); });
+      }
+      function get() {
+        try { var c = localStorage.getItem(KEY); return valid(c) ? c : 'system'; } catch (e) { return 'system'; }
+      }
+      window.rpTheme = {
+        get: get,
+        set: function (choice) {
+          try { if (valid(choice)) localStorage.setItem(KEY, choice); else localStorage.removeItem(KEY); } catch (e) { /* storage off: this visit only */ }
+          apply(choice);
+        },
+      };
+      apply(get());
+      // Changed in another tab or window of the app.
+      window.addEventListener('storage', function (e) { if (e.key === KEY || e.key === null) apply(get()); });
+    })();
+  </script>
   <title>Reel Picks</title>
   <meta name="rp-version" content="__RP_VERSION__" />
   <meta name="description" content="Your 4 movies to see this week at your AMC." />

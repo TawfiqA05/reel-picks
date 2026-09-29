@@ -72,8 +72,8 @@
 
 /* ---- palettes ----
    Ticket stub (light) is the default: cream paper, ink, one teal accent.
-   Midnight marquee (dark) follows the device's dark mode: night navy, warm
-   paper text, marquee amber. The two share one set of roles:
+   Midnight marquee (dark) follows the device's dark mode, or the Theme
+   switch: night navy, warm paper text, marquee amber. The two share one set of roles:
 
    accent       the one main action on a screen (filled), the selected day
                 and choice, the active tab, focus
@@ -104,6 +104,7 @@
   --warn: #9A4800;
   --bad: #A8261A;
   --bad-soft: rgba(168, 38, 26, .10);
+  --bad-hover: 22%;
   --field-edge: #7A6E60;
   --focus: var(--accent-text);
   --blue: #1E4E9E;
@@ -116,10 +117,14 @@
   --amber-soft: rgba(162, 77, 0, .12);
   --shadow: 0 10px 30px rgba(60, 40, 20, .16);
   --glow: transparent;
+  --glow-display: none;
 }
 
+/* Dark: the device's dark mode, unless the Theme switch (You > Settings,
+   index.html) says Light; or always, when it says Dark. The two blocks hold
+   the same values (the theme suite checks they match). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --bg: #0f1526;
     --raised: #18203a;
@@ -137,6 +142,7 @@
     --warn: #f2a93b;
     --bad: #ff7b72;
     --bad-soft: rgba(255, 123, 114, .13);
+    --bad-hover: 17%;
     --field-edge: #7883a1;
     --blue: #8fb8ff;
     --blue-soft: rgba(143, 184, 255, .14);
@@ -147,7 +153,41 @@
     --amber: #f2a93b;
     --amber-soft: rgba(242, 169, 59, .14);
     --shadow: 0 12px 34px rgba(0, 0, 0, .5);
+    /* The poster glow behind the top of the page, dark only (see .page-glow). */
+    --glow-display: block;
   }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1526;
+  --raised: #18203a;
+  --chip: #1c2540;
+  --tabbar: #121a2e;
+  --divider: #232d48;
+  --text: #f4efe6;
+  --muted: #9aa4bd;
+  --accent: #f2a93b;
+  --on-accent: #1a1206;
+  --accent-text: #f2a93b;
+  --accent-soft: rgba(242, 169, 59, .14);
+  --gold: #f5c04e;
+  --good: #5fd3a4;
+  --warn: #f2a93b;
+  --bad: #ff7b72;
+  --bad-soft: rgba(255, 123, 114, .13);
+  --bad-hover: 17%;
+  --field-edge: #7883a1;
+  --blue: #8fb8ff;
+  --blue-soft: rgba(143, 184, 255, .14);
+  --purple: #c9a8ff;
+  --purple-soft: rgba(201, 168, 255, .14);
+  --teal: #5fd3c4;
+  --teal-soft: rgba(95, 211, 196, .13);
+  --amber: #f2a93b;
+  --amber-soft: rgba(242, 169, 59, .14);
+  --shadow: 0 12px 34px rgba(0, 0, 0, .5);
+  /* The poster glow behind the top of the page, dark only (see .page-glow). */
+  --glow-display: block;
 }
 
 
@@ -269,19 +309,18 @@ body.has-save main { padding-bottom: calc(var(--chrome-bottom) + var(--savebar-h
 .page { display: flex; flex-direction: column; gap: var(--sp-1); }
 /* One page's box inside main (app.js); it takes no part in the layout. */
 .view { display: contents; }
-/* The glow behind the top of the page, dark theme only (app.js setGlow):
-   the film's poster colour, or a faint amber for a film without one, fading
-   into the page by about 700px. The server keeps the colour at a middle
-   brightness, and it's mixed in at under a third, so text over it keeps AA. */
+/* The glow behind the top of the page, dark theme only (app.js setGlow;
+   --glow-display is block only in the dark palette): the film's poster
+   colour, or a faint amber for a film without one, fading into the page by
+   about 700px. The server keeps the colour at a middle brightness, and it's
+   mixed in at under a third, so text over it keeps AA. */
 .page-glow { display: none; }
-@media (prefers-color-scheme: dark) {
-  .shell.has-glow .page-glow {
-    display: block; position: absolute; top: 0; left: 0; right: 0; height: 760px; pointer-events: none;
-    background: radial-gradient(ellipse 110% 700px at 50% 0, color-mix(in srgb, var(--glow-color, var(--accent)) 30%, transparent) 0%, color-mix(in srgb, var(--glow-color, var(--accent)) 12%, transparent) 55%, transparent 100%);
-  }
-  .shell.has-glow.glow-faint .page-glow {
-    background: radial-gradient(ellipse 110% 700px at 50% 0, color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 100%);
-  }
+.shell.has-glow .page-glow {
+  display: var(--glow-display); position: absolute; top: 0; left: 0; right: 0; height: 760px; pointer-events: none;
+  background: radial-gradient(ellipse 110% 700px at 50% 0, color-mix(in srgb, var(--glow-color, var(--accent)) 30%, transparent) 0%, color-mix(in srgb, var(--glow-color, var(--accent)) 12%, transparent) 55%, transparent 100%);
+}
+.shell.has-glow.glow-faint .page-glow {
+  background: radial-gradient(ellipse 110% 700px at 50% 0, color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 100%);
 }
 
 /* ---- the tab bar: five tabs, the active one in the accent ---- */
@@ -448,9 +487,8 @@ body.has-save main { padding-bottom: calc(var(--chrome-bottom) + var(--savebar-h
 .btn.soft, .icon-btn.soft { background: var(--accent-soft); color: var(--accent-text); }
 .btn.soft:hover, .icon-btn.soft:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
 .btn.danger, .icon-btn.danger { background: var(--bad-soft); color: var(--bad); }
-.btn.danger:hover, .icon-btn.danger:hover { background: color-mix(in srgb, var(--bad) 22%, transparent); }
-/* Dark: a lighter wash, so the red label keeps 4.5:1 on a chip (4.6:1; 22% gave 4.2:1). */
-@media (prefers-color-scheme: dark) { .btn.danger:hover, .icon-btn.danger:hover { background: color-mix(in srgb, var(--bad) 17%, transparent); } }
+/* --bad-hover is lighter in dark, so the red label keeps 4.5:1 on a chip (4.6:1; 22% gave 4.2:1). */
+.btn.danger:hover, .icon-btn.danger:hover { background: color-mix(in srgb, var(--bad) var(--bad-hover), transparent); }
 .btn.small { padding: 0 12px; font-size: var(--fs-sm); }
 .btn.wide { width: 100%; }
 /* Disabled looks disabled: no colour, a dashed edge, not just fainter text. */

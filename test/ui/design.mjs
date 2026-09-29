@@ -25,7 +25,7 @@ const MOVIE = C.PLAYING[0].id;
 await S.step('tokens: Midnight marquee dark, Ticket stub light, AA pairs', async () => {
   const block = (re) => { const m = css.match(re); const out = {}; if (m) for (const [, k, v] of m[1].matchAll(/--([\w-]+):\s*([^;]+);/g)) out[k] = v.trim(); return out; };
   const light = block(/\/\* ---- palettes ----[\s\S]*?:root \{([\s\S]*?)\n\}/);
-  const dark = block(/@media \(prefers-color-scheme: dark\) \{\s*:root \{([\s\S]*?)\n {2}\}/);
+  const dark = block(/@media \(prefers-color-scheme: dark\) \{\s*:root:not\(\[data-theme="light"\]\) \{([\s\S]*?)\n {2}\}/);
   const BRIEF = {
     bg: '#0f1526', raised: '#18203a', chip: '#1c2540', tabbar: '#121a2e', text: '#f4efe6', muted: '#9aa4bd', divider: '#232d48',
     accent: '#f2a93b', 'on-accent': '#1a1206', 'accent-soft': 'rgba(242, 169, 59, .14)', gold: '#f5c04e', good: '#5fd3a4',

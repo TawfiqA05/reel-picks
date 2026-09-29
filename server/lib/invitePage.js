@@ -7,11 +7,13 @@
 
 import fs from 'node:fs';
 
-// The fonts and the browser-bar colours come from the app's own page, so the
-// Join page can't fall behind a palette change again.
+// The fonts, the browser-bar colours and the Theme switch's script come from
+// the app's own page, so the Join page can't fall behind a palette change
+// again, and it opens in the theme chosen on this device.
 const INDEX = fs.readFileSync(new URL('../../public/index.html', import.meta.url), 'utf8');
 const APP_HEAD = [
   ...INDEX.match(/<meta name="theme-color"[^>]*>/g) || [],
+  ...INDEX.match(/<script id="rp-theme">[\s\S]*?<\/script>/g) || [],
   ...INDEX.match(/<link rel="preconnect"[^>]*>/g) || [],
   ...INDEX.match(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com[^>]*>/g) || [],
 ].join('\n  ');
