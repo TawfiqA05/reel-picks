@@ -1,7 +1,5 @@
 {
-  "a11y: zoom 200% heavy 390 #/person/<id>: no sideways scroll, clipped or overlapping text": "App bug: at 200% zoom on a 390 phone the person page star rater (div.rater) is wider than the screen, so the last stars and Save are cut off.",
   "a11y: zoom 200% heavy 390: every tab bar item is on screen with its whole label": "App bug: at 200% zoom on a 390 phone the five tabs do not fit; Watchlist and You are off screen.",
-  "a11y: zoom 200% owner 390 #/person/<id>: no sideways scroll, clipped or overlapping text": "App bug: at 200% zoom on a 390 phone the person page star rater (div.rater) is wider than the screen, so the last stars and Save are cut off.",
   "a11y: zoom 200% owner 390: every tab bar item is on screen with its whole label": "App bug: at 200% zoom on a 390 phone the five tabs do not fit; Watchlist and You are off screen.",
   "design: type dark 320 home: font-swap layout shift under 0.01": "App bug: at 320 a hero title that fits one line in Big Shoulders Display wraps to two in its fallback face, so the page jumps about 45px when the web font arrives (layout shift about 0.03, limit 0.01).",
   "design: type dark 320 movie: font-swap layout shift under 0.01": "App bug: at 320 a hero title that fits one line in Big Shoulders Display wraps to two in its fallback face, so the page jumps about 45px when the web font arrives (layout shift about 0.03, limit 0.01).",

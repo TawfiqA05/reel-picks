@@ -1681,4 +1681,6 @@ a.tg-time:hover { border-color: var(--text); }
   .match, .runway { white-space: normal; }
   .row-gap:has(> .input) > .btn { flex-shrink: 1; min-width: 0; }
   .ti-actions { flex-wrap: wrap; }
+  /* A person page's or Stats sheet's stars and Save under the whole row, not indented past the edge. */
+  .more-tools { padding-left: 0; flex-wrap: wrap; }
 }
