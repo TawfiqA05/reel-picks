@@ -942,7 +942,15 @@ async function groupB() {
     // for this device's subscription, which can take a few seconds on a slow
     // machine; read it once that's done.
     await page.waitForFunction(() => { const c = [...document.querySelectorAll('.settings-group')].find((x) => x.querySelector('.group-title')?.textContent === 'Notifications'); return c && !c.querySelector('input').disabled; }, null, { timeout: 12000 }).catch(() => {});
-    check('notify: switch is on after a reload', await card(page, 'Notifications').getByRole('checkbox', { name: 'Notify me when my weekly picks are ready' }).isChecked());
+    // On failure, what the page saw: permission, service worker, subscription, note.
+    const why = () => page.evaluate(async () => {
+      const reg = await navigator.serviceWorker.getRegistration().catch((e) => `getRegistration: ${e.message}`);
+      const sub = reg?.pushManager ? await reg.pushManager.getSubscription().then((x) => x?.endpoint || null, (e) => `getSubscription: ${e.message}`) : null;
+      const c = [...document.querySelectorAll('.settings-group')].find((x) => x.querySelector('.group-title')?.textContent === 'Notifications');
+      return JSON.stringify({ permission: Notification.permission, controller: Boolean(navigator.serviceWorker.controller), active: reg?.active?.state ?? String(reg), sub, fake: localStorage.getItem('fake-sub'), note: c?.querySelector('.notify-note')?.textContent || '' });
+    }).catch((e) => e.message);
+    const onAfter = await card(page, 'Notifications').getByRole('checkbox', { name: 'Notify me when my weekly picks are ready' }).isChecked();
+    check('notify: switch is on after a reload', onAfter, onAfter ? '' : await why());
     check('notify: Alerts card counts the device', /Alerts also go to the device/.test(await card(page, 'Alerts').textContent()));
     await card(page, 'Notifications').getByRole('checkbox', { name: 'Notify me when my weekly picks are ready' }).uncheck();
     check('notify: turning off confirms', /off on this device/.test(await toastText(page, /off on this device/)));
