@@ -140,8 +140,9 @@ await step('letterboxd: an oversized feed is cut off while it is read', async ()
     check('letterboxd: reading stopped near the 5 MB limit instead of taking all 40 MB', big.sent < 12 * 1024 * 1024, `${(big.sent / 1048576).toFixed(1)} MB sent`);
     check('letterboxd: nothing was imported from it', !w.q1("SELECT 1 x FROM letterboxd_seen WHERE user_id = 1"));
 
-    // An uploaded file is held to its limit (20 MB) while it arrives too:
-    // express.json stops reading, and the rest is never taken in.
+    // An uploaded file is held to its limit (20 MB) while it arrives:
+    // express.json keeps nothing past it and answers 413 once the rest has
+    // drained (closing mid-upload would make the browser see a reset instead).
     const up = await new Promise((resolve) => {
       let sent = 0; let answered = null;
       const req = http.request(`${w.base}/api/ratings/import`, { method: 'POST', headers: { 'content-type': 'application/json' } }, (res) => { answered = res.statusCode; res.resume(); res.on('end', () => resolve({ status: answered, sent })); });
@@ -159,7 +160,7 @@ await step('letterboxd: an oversized feed is cut off while it is read', async ()
       more();
     });
     check('letterboxd: an oversized upload is refused with 413', up.status === 413, String(up.status));
-    check('letterboxd: the upload was cut off well before all 60 MB arrived', up.sent < 40 * 1024 * 1024, `${(up.sent / 1048576).toFixed(1)} MB sent`);
+    check('letterboxd: nothing from the oversized upload was stored', !w.q1("SELECT 1 x FROM unmatched_ratings WHERE title LIKE 'aaaa%'"));
   } finally { await w.close(); await feedSrv.shut(); }
 });
 
