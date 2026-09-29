@@ -12,7 +12,7 @@
 // call count is written to the refresh log.
 import { run, all, get, getSettings, getSharedSettings, setSetting, getSetting } from '../db.js';
 import { runSystem, OWNER_ID } from './user.js';
-import { startCreditsBackfill } from './backfill.js';
+import { startCreditsBackfill, tmdbThrottle } from './backfill.js';
 import { backfillPosterColors } from './posterColor.js';
 import { sendWeeklyIfDue } from './push.js';
 import { scan as scanWatchlist, sendDueLater as sendWatchlistLater } from './watchalerts.js';
@@ -742,7 +742,9 @@ export async function ingestOne(tmdbId, opts = {}) {
 // Background-resolve imported ratings that couldn't be matched at import
 // time, then reviews (reviews.csv). Rows queued while a run is going (a
 // second file picked right after the first) are picked up by the same run,
-// which goes round again before it reports.
+// which goes round again before it reports. Every live TMDB search waits
+// for the shared throttle (lib/backfill.js), so a big import keeps to the
+// same budget as the rest of the background work.
 let drainAgain = false;
 export async function drainUnmatched({ max = 800 } = {}) {
   if (state.draining) { drainAgain = true; return { tried: 0, matched: 0, busy: true }; }
@@ -766,7 +768,7 @@ export async function drainUnmatched({ max = 800 } = {}) {
     do {
       drainAgain = false;
       await inParallel(all('SELECT * FROM unmatched_ratings ORDER BY id LIMIT ?', max), async (r) => {
-        const found = await findTmdbMatch(r.title, r.year);
+        const found = await findTmdbMatch(r.title, r.year, { gate: tmdbThrottle });
         if (!found) return;
         upsertLightMovie(found.result);
         upsertRating({
@@ -777,7 +779,7 @@ export async function drainUnmatched({ max = 800 } = {}) {
         matched++;
       });
       await inParallel(all('SELECT * FROM unmatched_notes ORDER BY id LIMIT ?', max), async (r) => {
-        const found = await findTmdbMatch(r.title, r.year);
+        const found = await findTmdbMatch(r.title, r.year, { gate: tmdbThrottle });
         if (found && applyReview(r, found)) notes++;
       });
     } while (drainAgain);

@@ -64,12 +64,13 @@ function req(key, ttl, path, params, { force = false, gate = null, more = null }
   }, { force });
 }
 
-export async function search(title, year) {
+export async function search(title, year, { gate = null } = {}) {
   const data = await req(
     `search:${title.toLowerCase()}:${year || ''}`,
     7 * DAY,
     '/search/movie',
     { query: title, year: year || undefined, include_adult: 'false', language: 'en-US' },
+    { gate },
   );
   return data?.results || [];
 }

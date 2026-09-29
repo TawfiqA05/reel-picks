@@ -56,7 +56,8 @@ if (tScale > 0) {
 
 // ---------------------------------------------------------------- network log
 const LOG = process.env.RP_NET_LOG;
-const note = (entry) => { if (LOG) try { fs.appendFileSync(LOG, `${JSON.stringify(entry)}\n`); } catch { /* best effort */ } };
+// `at` is the real time in ms, for suites that measure call rates.
+const note = (entry) => { if (LOG) try { fs.appendFileSync(LOG, `${JSON.stringify({ ...entry, at: RealDate.now() })}\n`); } catch { /* best effort */ } };
 
 // ---------------------------------------------------------------- saved TMDB answers
 const HERE = path.dirname(new URL(import.meta.url).pathname);

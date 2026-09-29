@@ -82,8 +82,10 @@ function dice(a, b) {
 }
 
 // Find the best TMDB match for a (title, year). Returns
-// { tmdb_id, confidence, result(lightMovie), auto } or null.
-export async function findTmdbMatch(title, year) {
+// { tmdb_id, confidence, result(lightMovie), auto } or null. `gate` is
+// awaited before each live search (the import matcher passes the shared
+// TMDB throttle).
+export async function findTmdbMatch(title, year, { gate = null } = {}) {
   if (!tmdb.tmdbConfigured()) return null;
   const amcYear = year ? Number(String(year).slice(0, 4)) || null : null;
 
@@ -110,7 +112,7 @@ export async function findTmdbMatch(title, year) {
     const key = `${lc(q)}|${y || ''}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    pool = await tmdb.search(q, y);
+    pool = await tmdb.search(q, y, { gate });
     if (pool.length) { used = { q, y }; break; }
   }
   if (!pool.length) return null;
