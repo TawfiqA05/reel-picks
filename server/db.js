@@ -56,7 +56,9 @@ CREATE TABLE IF NOT EXISTS movies (
   playing       INTEGER DEFAULT 0,   -- in this week's theatre lineup
   playing_source TEXT,           -- 'amc' | 'tmdb' (fallback)
   upcoming      INTEGER DEFAULT 0,   -- coming soon
-  updated_at    TEXT
+  updated_at    TEXT,
+  poster_color  TEXT,            -- the poster's main colour (lib/posterColor.js)
+  poster_color_src TEXT          -- the poster it was worked out from
 );
 
 -- One row per AMC movie -> TMDB match (supports manual override / fixing bad matches).
@@ -67,7 +69,8 @@ CREATE TABLE IF NOT EXISTS matches (
   tmdb_id       INTEGER,
   confidence    REAL,
   manual        INTEGER DEFAULT 0,
-  updated_at    TEXT
+  updated_at    TEXT,
+  review        TEXT            -- set when an automatic match looks suspect
 );
 
 -- Individual showtimes pulled from AMC (or fallback source).
@@ -170,7 +173,8 @@ CREATE TABLE IF NOT EXISTS watched (
   watched_date  TEXT NOT NULL,   -- local YYYY-MM-DD of watched_at
   week_start    TEXT,      -- Friday that begins the A-List week (YYYY-MM-DD)
   in_weekly4    INTEGER DEFAULT 0,
-  ticket_price  REAL
+  ticket_price  REAL,
+  source        TEXT       -- NULL, or 'letterboxd' for diary entries the sync brought in
 );
 
 -- The weekly 4 as it was actually offered: one row per pick per A-List week,
@@ -461,6 +465,9 @@ CREATE INDEX IF NOT EXISTS idx_watch_alerts_due ON watch_alerts(done_at, due_at)
 db.exec(SCHEMA);
 
 // ---- migrations --------------------------------------------------------
+// Each step below brings an older database up to SCHEMA, after writing a
+// copy of it to data/backups. SCHEMA already has every column, so a new
+// database has nothing to migrate and no backup is written for it.
 
 function hasColumn(table, column) {
   return db.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === column);
