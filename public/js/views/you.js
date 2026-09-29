@@ -3,6 +3,7 @@
 // so #/stats, #/together, #/settings and #/help open here; #/you on its own
 // opens the segment last used on this device. The guest link has no You.
 import { h, clear } from '../ui.js';
+import { stateWith } from '../place.js';
 import * as stats from './stats.js';
 import * as together from './together.js';
 import * as settings from './settings.js';
@@ -22,7 +23,7 @@ function lastSegment() {
 
 export async function render(root, params, ctx) {
   const seg = SEGMENTS.find((s) => s.key === params[0]) || SEGMENTS.find((s) => s.key === lastSegment());
-  if (!params[0]) history.replaceState(null, '', `#/${seg.key}`);
+  if (!params[0]) history.replaceState(stateWith(), '', `#/${seg.key}`);
   try { localStorage.setItem(KEY, seg.key); } catch { /* private mode: just not remembered */ }
   const status = ctx.getStatus();
   const name = status?.user?.name || (status?.user?.isOwner !== false ? status?.ownerName : '') || '';

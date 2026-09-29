@@ -4,7 +4,9 @@ import { h, clear, toast, spinner, emptyState, icon, ensureToastHost } from './u
 import { watchForUpdates } from './update.js';
 import { openSearch } from './search.js';
 import { startTour, shouldAutoTour, tourActive } from './tour.js';
-import { resumeWhatToWatch } from './wsw.js';
+import './wsw.js';
+import { resumeSheets } from './keep.js';
+import * as place from './place.js';
 import * as home from './views/home.js';
 import * as detail from './views/detail.js';
 import * as person from './views/person.js';
@@ -57,6 +59,8 @@ const ctx = {
   refreshStatus,
   navigate: (hash) => { location.hash = hash; },
   rerender: () => route(),
+  // This visit's kept state (js/place.js): { back, saved, keep(key, get) }.
+  place: { back: false, saved: {}, keep: () => {} },
   triggerRefresh: doRefresh,
   startTour: () => startTour(ctx),
   setGlow,
@@ -97,6 +101,16 @@ function parseHash() {
   const [name, ...rest] = raw.split('/');
   return { name: name || 'home', params: rest };
 }
+
+// The Back button on a film or person page: what the back gesture does, or
+// Picks when nothing in the app came before (opened from a link or a fresh
+// start), so it never leaves the app.
+function goBack() {
+  if (place.depth() > 0) { history.back(); return; }
+  place.willReplace();
+  location.replace('#/home');
+}
+const BACK_ROUTES = new Set(['movie', 'person']);
 
 function chromeEls() {
   return {
@@ -194,14 +208,21 @@ async function doRefresh() {
 let routeSeq = 0;
 
 async function route() {
+  // Where the page on screen was, before anything else is drawn (js/place.js).
+  place.leave();
   const { name, params } = parseHash();
-  if (MOVED[name]) { location.replace(MOVED[name]); return; }
+  if (MOVED[name]) { place.willReplace(); location.replace(MOVED[name]); return; }
   // Guests are confined to picks / schedule / movie detail / a person page.
   if (Boolean(status?.guest) && !GUEST_ROUTES.has(name)) {
     if (location.hash !== '#/home') { location.hash = '#/home'; return; }
   }
   const view = routes[name] || notFound;
   const seq = ++routeSeq;
+  // A page come back to gets its kept state; a new one starts fresh.
+  const visit = place.arrive();
+  ctx.place = { back: visit.back, saved: visit.back ? visit.parts : {}, keep: place.keep };
+  const backBtn = document.querySelector('#back-btn');
+  if (backBtn) backBtn.hidden = !BACK_ROUTES.has(name);
   // Each visit draws into a box of its own: a page still loading when the
   // reader moves on finishes into a box that's gone, never under the new page.
   const root = h('div', { class: 'view' });
@@ -220,14 +241,15 @@ async function route() {
     root.appendChild(errorState(e));
   }
   if (seq !== routeSeq) return;
-  window.scrollTo(0, 0);
+  // The same spot on a page come back to; the top of a new one.
+  place.finish(visit);
   // Anyone who hasn't seen the tour gets it once, on Picks (right after the
   // welcome setup for someone new).
   if (name === 'home' && location.hash.startsWith('#/home') && shouldAutoTour(status) && !welcome.needsSetup(status) && !tourActive()) startTour(ctx);
   else youNote();
-  // Back from a film opened in "What should I watch?": the sheet opens again
-  // where it was (js/wsw.js).
-  if (!tourActive()) resumeWhatToWatch(ctx);
+  // Back from a film opened in "What should I watch?" or the header search:
+  // that sheet opens again where it was (js/keep.js).
+  if (!tourActive()) resumeSheets(ctx);
 }
 
 // Once, for everyone who knew the old six tabs: where three of them went.
@@ -273,6 +295,7 @@ function buildShell() {
     h('div', { class: 'shell' },
       h('div', { class: 'page-glow', 'aria-hidden': 'true' }),
       h('header', { class: 'app-header' },
+        h('button', { id: 'back-btn', class: 'icon-btn header-back', type: 'button', hidden: true, 'aria-label': 'Back', title: 'Back', onClick: goBack }, icon('chevronLeft', { size: 22 })),
         h('a', { class: 'brand', href: '#/home', 'aria-label': 'Reel Picks, home' },
           icon('reel', { size: 22, cls: 'brand-mark' }),
           h('span', { class: 'brand-name' }, 'Reel Picks'),
@@ -305,6 +328,13 @@ async function boot() {
   if (welcome.needsSetup(status)) history.replaceState(null, '', '#/welcome');
   if (!location.hash) location.hash = '#/home';
   window.addEventListener('hashchange', route);
+  // A tab tapped while on it: back to the top of it, not a new visit.
+  document.addEventListener('click', (e) => {
+    const tab = e.target.closest?.('.nav-item, .seg-item');
+    if (!tab || !tab.classList.contains('active') || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  });
   // "/" opens search from anywhere that isn't a text field.
   document.addEventListener('keydown', (e) => {
     if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;

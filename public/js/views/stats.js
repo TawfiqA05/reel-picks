@@ -408,6 +408,10 @@ function topList(title, sub, items, key, ctx) {
     paint();
   });
   paint();
+  // Come back to (js/place.js): the text in this list's filter.
+  const keptText = ctx?.place?.saved?.[`filter-${key}`];
+  if (open && keptText) filter.setQuery(keptText);
+  ctx?.place?.keep(`filter-${key}`, () => (open ? filter.text : ''));
   wrap.appendChild(btn);
   return wrap;
 }

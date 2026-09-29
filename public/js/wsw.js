@@ -6,17 +6,18 @@
 // so nothing repeats. Seen it (a rating), Watchlist and Not for me all work
 // right on the card and teach the model the usual way.
 //
-// Keeping the place. The answers, the results and what was done to them are
-// kept in this device's storage, per person (KEY + user id), for 30 minutes
-// from the last change. Opening a film from the sheet (its page, then maybe
-// the trailer or a person) and coming back to the page the sheet was opened
-// on (Back, the back gesture, or tapping that tab) opens it again on the same
-// results: resumeWhatToWatch() runs after every page is drawn. Start over,
-// the close button, Escape or a tap outside the sheet end it.
+// Keeping the place (js/keep.js, shared with the header search). The
+// answers, the results and what was done to them are kept in this device's
+// storage, per person (KEY + user id), for 30 minutes from the last change.
+// Opening a film from the sheet (its page, then maybe the trailer or a
+// person) and coming back to the page the sheet was opened on (Back, the back
+// gesture, or tapping that tab) opens it again on the same results. Start
+// over, the close button, Escape or a tap outside the sheet end it.
 import { api } from './api.js';
 import { h, clear, toast, icon, openModal, spinner, poster, matchBadge, withStars } from './ui.js';
 import { starRater, watchlistButton, dayLabel, reasonLine } from './views/components.js';
 import { serviceTag, openServicesSheet } from './views/athome.js';
+import { keeper, resumable, uidOf, here } from './keep.js';
 
 const QUESTIONS = [
   { key: 'where', q: 'Where are you watching?', answers: [['theater', 'Theater'], ['home', 'At home'], ['either', 'Either']] },
@@ -25,45 +26,13 @@ const QUESTIONS = [
 ];
 
 const KEY = 'rp-wsw:';
-const KEEP_MS = 30 * 60 * 1000;
-// Pages a film trip passes through on the way back to the sheet.
-const TRIP = /^#\/(movie|person)\//;
-
-const uidOf = (ctx) => ctx.getStatus?.()?.user?.id ?? null;
-const here = () => (location.hash && location.hash !== '#' ? location.hash : '#/home');
-
-function load(uid) {
-  if (uid == null) return null;
-  try {
-    const s = JSON.parse(localStorage.getItem(KEY + uid) || 'null');
-    if (s && s.v === 1 && Date.now() - s.at < KEEP_MS) return s;
-    localStorage.removeItem(KEY + uid);
-  } catch { /* storage off: nothing kept */ }
-  return null;
-}
-function save(uid, s) {
-  if (uid == null) return;
-  try { localStorage.setItem(KEY + uid, JSON.stringify({ ...s, v: 1, at: Date.now() })); } catch { /* storage off or full */ }
-}
-function forget(uid) {
-  try { localStorage.removeItem(KEY + uid); } catch { /* storage off */ }
-}
+const store = keeper(KEY);
+const load = store.load;
+const save = store.save;
+const forget = store.forget;
 
 let openNow = null;
-
-// After each page is drawn: back from a film opened in the sheet, on the page
-// the sheet was opened on, it opens again where it was.
-export function resumeWhatToWatch(ctx) {
-  if (openNow || ctx.isGuest?.()) return;
-  const uid = uidOf(ctx);
-  const s = load(uid);
-  if (!s?.returnTo) return;
-  const at = here();
-  const back = at === s.returnTo;
-  if (!back && TRIP.test(at)) return;
-  save(uid, { ...s, returnTo: null });
-  if (back) openWhatToWatch(ctx);
-}
+resumable(store, { open: (ctx) => openWhatToWatch(ctx), isOpen: () => Boolean(openNow) });
 
 export function openWhatToWatch(ctx) {
   if (openNow) return openNow;

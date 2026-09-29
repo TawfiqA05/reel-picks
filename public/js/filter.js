@@ -49,6 +49,9 @@ export function filterBox({ label, placeholder = 'Filter', onChange = null } = {
     input,
     set(list) { items = list.map(({ el: row, fields }) => ({ el: row, p: prepare(fields) })); apply(); },
     reset() { if (input.value) { input.value = ''; apply(); } },
+    // Text put back when a page is come back to (js/place.js).
+    setQuery(text) { if (typeof text === 'string' && text !== input.value) { input.value = text; apply(); } },
+    get text() { return input.value; },
     get active() { return Boolean(query(input.value).n); },
   };
 }

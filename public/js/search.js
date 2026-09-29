@@ -2,11 +2,18 @@
 // and the films already around, with up to two people (directors and actors)
 // above the films, and this person's recents while the box is empty. Recents live on the server, per person, so they follow them across
 // devices; the guest link never gets the button (and the API refuses it).
+//
+// Keeping the place (js/keep.js, the way "What should I watch?" does it):
+// opening a film, a person or a recent from here and coming back (Back, the
+// back gesture, the Back button) opens the sheet again with the same text,
+// the same results and the same scroll, per person on this device, for 30
+// minutes. Clearing the box, the close button, Escape or a tap outside end it.
 import { api } from './api.js';
 import { h, clear, toast, icon, openModal, star } from './ui.js';
 import { query as prepQuery } from './fuzzy.js';
 import { streamLine, CREDIT } from './stream.js';
 import { openWhatToWatch } from './wsw.js';
+import { keeper, resumable, uidOf, here } from './keep.js';
 
 const DEBOUNCE_MS = 300;
 const DWELL_MS = 2000; // results looked at this long count as a search, even if typed over later
@@ -17,8 +24,12 @@ const faceUrl = (url) => (url && window.devicePixelRatio > 1 ? url : url?.replac
 const yearOf = (y) => (y ? ` ${y}` : '');
 
 let open = null; // one sheet at a time
+const store = keeper('rp-search:');
+resumable(store, { open: (ctx) => openSearch(ctx, { resume: true }), isOpen: () => Boolean(open) });
 
-export function openSearch(ctx = null) {
+// `resume`: coming back from a trip (js/keep.js), the kept place is shown.
+// Opened any other way, the search starts fresh and anything kept goes.
+export function openSearch(ctx = null, { resume = false } = {}) {
   if (open) { open.input.focus(); return; }
 
   const listId = 'search-list';
@@ -45,6 +56,11 @@ export function openSearch(ctx = null) {
   let controller = null;
   let active = -1;
   let savedQuery = '';
+  const uid = uidOf(ctx);
+  const kept = ctx && resume ? store.load(uid) : null;
+  if (!resume) store.forget(uid);
+  const origin = here();
+  let leaving = null; // what to keep when the sheet closes to open something
 
   const modal = openModal(content, {
     title: 'Search', cls: 'search-overlay',
@@ -56,6 +72,8 @@ export function openSearch(ctx = null) {
       stopViewport();
       // A search that found something counts as a recent even if nothing was opened.
       if (results?.list.length || results?.people?.length) remember(results.q);
+      if (leaving) store.save(uid, { ...leaving, returnTo: origin });
+      else store.forget(uid);
     },
   });
   open = { input };
@@ -106,12 +124,17 @@ export function openSearch(ctx = null) {
     clearTimeout(timer);
     clearTimeout(dwell);
     const q = input.value;
-    if (!prepQuery(q).n) { cancel(); showRecents(); return; }
+    if (!prepQuery(q).n) { cancel(); showRecents(); store.forget(uid); return; }
     if (prepQuery(q).c.length < MIN_CHARS) { cancel(); clear(body); credit.hidden = true; statusLine.textContent = 'Keep typing…'; setExpanded(false); return; }
     statusLine.textContent = 'Searching…';
     timer = setTimeout(() => run(q), DEBOUNCE_MS);
   });
-  clearBtn.addEventListener('click', () => { input.value = ''; clearBtn.hidden = true; cancel(); showRecents(); input.focus(); });
+  clearBtn.addEventListener('click', () => { input.value = ''; clearBtn.hidden = true; cancel(); showRecents(); store.forget(uid); input.focus(); });
+
+  // Leaving for a film or a person: what's on screen now is what comes back.
+  const keepPlace = () => {
+    leaving = { q: input.value, results: results && results.q === input.value ? results : null, scroll: Math.round(body.scrollTop) };
+  };
 
   const cancel = () => { ticket++; controller?.abort(); controller = null; results = null; };
   const setExpanded = (on) => input.setAttribute('aria-expanded', String(on));
@@ -148,6 +171,7 @@ export function openSearch(ctx = null) {
     : h('span', { class: 'sr-thumb sr-noposter', 'aria-hidden': 'true' }, icon('film', { size: 18 })));
 
   function openMovie(m, q) {
+    keepPlace();
     if (q) remember(q);
     api.addRecentMovie({ tmdb_id: m.tmdb_id, title: m.title, year: m.year, poster: m.poster }).catch(() => {});
     results = null; // already remembered
@@ -157,6 +181,7 @@ export function openSearch(ctx = null) {
 
   // A person goes into Recently viewed the way a film does.
   function openPerson(p, q) {
+    keepPlace();
     if (q) remember(q);
     api.addRecentPerson({ id: p.id, name: p.name, role: p.role, photo: p.photo }).catch(() => {});
     results = null;
@@ -317,6 +342,21 @@ export function openSearch(ctx = null) {
     }
   }
 
-  showRecents();
-  api.searchRecents().then((r) => { recents = r; if (!input.value) showRecents(); }).catch(() => {});
+  // Back from a trip: the same text, results and scroll. With no results
+  // kept (the recents were showing), the recents come back once loaded.
+  const restoreScroll = (y) => { if (y) requestAnimationFrame(() => { body.scrollTop = y; }); };
+  if (kept && (kept.q || kept.results)) {
+    input.value = kept.q || '';
+    clearBtn.hidden = !input.value;
+    if (kept.results) {
+      results = kept.results;
+      savedQuery = kept.results.q.trim();
+      paintResults(kept.results.q, kept.results.list || [], kept.results.people || []);
+      restoreScroll(kept.scroll);
+    } else if (prepQuery(input.value).c.length >= MIN_CHARS) run(input.value).then(() => restoreScroll(kept.scroll));
+  } else showRecents();
+  api.searchRecents().then((r) => {
+    recents = r;
+    if (!input.value) { showRecents(); if (kept && !kept.q) restoreScroll(kept.scroll); }
+  }).catch(() => {});
 }

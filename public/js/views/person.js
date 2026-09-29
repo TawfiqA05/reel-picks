@@ -108,7 +108,9 @@ export async function render(root, params, ctx) {
     { key: 'directed', label: 'Directed', films: d.directed, smaller: [] },
     { key: 'acted', label: 'Acted', films: d.acted, smaller: d.actedSmaller },
   ].filter((k) => k.films.length || k.smaller.length);
-  let shown = kinds.find((k) => k.key === (p.department === 'Directing' ? 'directed' : 'acted')) || kinds[0];
+  // Come back to (js/place.js): Directed or Acted, and smaller films opened.
+  const kept = ctx.place?.saved || {};
+  let shown = kinds.find((k) => k.key === kept.kind) || kinds.find((k) => k.key === (p.department === 'Directing' ? 'directed' : 'acted')) || kinds[0];
   const filmsBody = h('div', { class: 'group-body' });
   const toggle = kinds.length > 1 ? h('div', { class: 'segmented person-toggle', role: 'group', 'aria-label': `${p.name}'s films` }) : null;
   const filmsPart = part('person-films', 'Films', 'Most popular first',
@@ -119,7 +121,7 @@ export async function render(root, params, ctx) {
     k.list = filmList(k.films, k.key, `${p.name}: films ${k.label.toLowerCase()}`);
     if (k.smaller.length) {
       k.smallerList = filmList(k.smaller, k.key, `${p.name}: smaller films ${k.label.toLowerCase()}`);
-      k.smallerList.hidden = true;
+      k.smallerList.hidden = !(kept.smaller || []).includes(k.key);
       k.smallerList.id = `person-smaller-${k.key}`;
       k.moreBtn = h('button', { class: 'btn soft small show-all', type: 'button', 'aria-controls': k.smallerList.id });
       k.moreBtn.addEventListener('click', () => { k.smallerList.hidden = !k.smallerList.hidden; paintMore(k); });
@@ -151,6 +153,8 @@ export async function render(root, params, ctx) {
     filmsBody.append(...(any ? [shown.list, shown.more, shown.smallerList].filter(Boolean) : [emptyLine()]));
   }
   paintFilms();
+  ctx.place?.keep('kind', () => shown?.key);
+  ctx.place?.keep('smaller', () => kinds.filter((k) => k.smallerList && !k.smallerList.hidden).map((k) => k.key));
 
   if (!guest && d.rated.length) {
     ensureRated();

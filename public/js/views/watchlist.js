@@ -58,6 +58,9 @@ export async function render(root, params, ctx) {
   // A long watchlist gets a filter box.
   if (movies.length > 8) {
     const filter = filterBox({ label: 'Filter your watchlist', placeholder: `Filter ${movies.length} films` });
+    // Come back to (js/place.js): the same text in the box.
+    filter.input.value = ctx.place?.saved?.filter || '';
+    ctx.place?.keep('filter', () => filter.text);
     filter.set(rows);
     page.appendChild(filter.el);
   }

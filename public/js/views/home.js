@@ -28,8 +28,11 @@ export async function render(root, params, ctx) {
   let [data] = await Promise.all([api.recommendations(), loadSocial(ctx)]);
   // Page state that has to survive a re-render after a hide: the chosen day,
   // the collapse toggle, and which films just moved into the four.
+  // Come back to (js/place.js): the day picked and the filter's text.
+  const kept = ctx.place?.saved || {};
   const state = {
-    day: data.days?.[0]?.date || null,
+    day: (kept.day && data.days?.some((d) => d.date === kept.day) ? kept.day : null) || data.days?.[0]?.date || null,
+    filter: kept.filter || '',
     collapsed: Boolean(status?.everythingPlayingCollapsed),
     movedUp: new Set(),
   };
@@ -94,6 +97,11 @@ export async function render(root, params, ctx) {
   };
 
   draw();
+  // The day strip scrolls sideways at phone width: a later day stays in view.
+  if (kept.dayScroll) { const bar = root.querySelector('.day-picker'); if (bar) bar.scrollLeft = kept.dayScroll; }
+  ctx.place?.keep('dayScroll', () => root.querySelector('.day-picker')?.scrollLeft || 0);
+  ctx.place?.keep('day', () => state.day);
+  ctx.place?.keep('filter', () => state.filterBox?.text || '');
   // Pull down at the top of Picks: the owner's real refresh (showtimes and
   // scores, then the page again); for friends and the guest, the page's data
   // fetched again (their showtimes come with the owner's daily refresh).
@@ -213,6 +221,9 @@ function buildPage(data, status, ctx, state, actions) {
   // the choice is remembered server-side (guests just toggle locally).
   const listWrap = h('div', { class: 'list playing-list' });
   const listFilter = filterBox({ label: 'Filter everything playing', placeholder: `Filter ${data.list.length} movies` });
+  // The text typed survives a redraw (a hide, a new day) and a return.
+  if (state.filterBox) listFilter.input.value = state.filterBox.text; else listFilter.input.value = state.filter;
+  state.filterBox = listFilter;
   const collapseBtn = h('button', { class: 'btn soft section-toggle', type: 'button' });
   const paintCollapse = () => {
     listWrap.hidden = state.collapsed;

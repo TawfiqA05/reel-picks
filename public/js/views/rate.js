@@ -329,9 +329,14 @@ export async function render(root, params, ctx) {
   const SHOWN = 60;
   const recentWrap = h('div', {});
   page.appendChild(recentWrap);
-  let showAll = false;
+  // Come back to (js/place.js): the filter's text and Show all as they were.
+  const kept = ctx.place?.saved || {};
+  let showAll = Boolean(kept.showAll);
   let rows = [];
   const filter = filterBox({ label: 'Filter your ratings', placeholder: 'Filter your ratings', onChange: ({ query }) => paintRows(query) });
+  filter.input.value = kept.filter || '';
+  ctx.place?.keep('filter', () => filter.text);
+  ctx.place?.keep('showAll', () => showAll);
   const moreBtn = h('button', { class: 'btn soft small show-all', type: 'button', 'aria-controls': 'rating-list' });
   moreBtn.addEventListener('click', () => {
     showAll = !showAll;
