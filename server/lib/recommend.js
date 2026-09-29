@@ -504,6 +504,18 @@ export function scoredLineup() {
   ];
 }
 
+// Watchlist alerts (lib/watchalerts.js): the films in the user's Last chance
+// right now, flagged exactly as the Picks page flags them (getLastChance on
+// the primary theater, before the section's score bar and cap, the list the
+// Watchlist page warns from), and the primary theater. Read only: nothing is
+// recorded, no lock is made.
+export function lastChanceNow() {
+  const ctx = buildCtx();
+  const { main } = splitLineup(ctx, all('SELECT * FROM movies WHERE playing = 1').map(hydrate));
+  const { all: flagged } = getLastChance(main.map((m) => evaluate(m, ctx)).sort(byScore), ctx);
+  return { theatre: ctx.theatres[0], ids: new Set(flagged.map((e) => e.tmdb_id)) };
+}
+
 // Does the film still have a showing this week (the next 7 days, not yet
 // started) at any of the user's theaters? A film with no showtimes there at
 // all is a TMDB-fallback film, playing on the lineup's word.

@@ -27,6 +27,7 @@ import { sendIndex } from './lib/version.js';
 import { backfillPosterColors } from './lib/posterColor.js';
 import { warmPeople } from './lib/people.js';
 import { runPlanJobs } from './lib/plans.js';
+import { sendDueLater as sendWatchlistAlerts } from './lib/watchalerts.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 const RETRY_CHECK_MS = 60 * 1000;
@@ -257,6 +258,11 @@ app.listen(config.port, () => {
   const plans = () => runPlanJobs().catch((e) => console.error('[plans]', e.message));
   plans();
   setInterval(plans, PLAN_CHECK_MS).unref();
+  // Watchlist alerts (lib/watchalerts.js) the last refresh found: whatever is
+  // due, every minute and once now, so ones held overnight go at 9am and a
+  // restart sends what it missed.
+  sendWatchlistAlerts();
+  setInterval(sendWatchlistAlerts, PLAN_CHECK_MS).unref();
 
   // A failed refresh is retried hourly, up to six times (lib/refresh.js).
   setInterval(() => {

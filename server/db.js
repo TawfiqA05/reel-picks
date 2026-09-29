@@ -412,6 +412,46 @@ CREATE TABLE IF NOT EXISTS wsw_shown (
   shown_at INTEGER NOT NULL,   -- ms
   PRIMARY KEY (user_id, tmdb_id)
 );
+
+-- Watchlist alerts (lib/watchalerts.js). watch_presence: every film showing
+-- at each person's theaters, as the refreshes found it. since is when its
+-- current run there began (a film away from all of them for 14 days starts a
+-- new run when it comes back); in_last is whether it was in their Last chance
+-- at the last look. Rows gone for 14 days are dropped. watch_scan: the
+-- theaters each person followed at the last look, so films at a theater
+-- they've just added don't count as new.
+CREATE TABLE IF NOT EXISTS watch_presence (
+  user_id    INTEGER NOT NULL,
+  tmdb_id    INTEGER NOT NULL,
+  since      TEXT NOT NULL,
+  last_seen  TEXT NOT NULL,
+  gone_since TEXT,               -- the first refresh it was missing from all of them
+  in_last    INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, tmdb_id)
+);
+CREATE TABLE IF NOT EXISTS watch_scan (
+  user_id  INTEGER PRIMARY KEY,
+  theatres TEXT NOT NULL,        -- JSON list of theater ids
+  at       TEXT NOT NULL
+);
+-- Each alert, queued when a refresh finds it and claimed (done_at) before
+-- its push goes out, so a restart never sends one twice. One per person, film,
+-- kind and run. due_at is 9am when it was found between 9pm and 9am.
+CREATE TABLE IF NOT EXISTS watch_alerts (
+  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id   INTEGER NOT NULL,
+  tmdb_id   INTEGER NOT NULL,
+  kind      TEXT NOT NULL,       -- now | last
+  run_since TEXT NOT NULL,       -- watch_presence.since of the run
+  title     TEXT,
+  theatre   TEXT,                -- the theater's short name
+  found_at  TEXT NOT NULL,
+  due_at    INTEGER NOT NULL,    -- ms
+  done_at   TEXT,
+  outcome   TEXT,                -- sent | failed | no device | dropped: <why>
+  UNIQUE (user_id, tmdb_id, kind, run_since)
+);
+CREATE INDEX IF NOT EXISTS idx_watch_alerts_due ON watch_alerts(done_at, due_at);
 `;
 
 db.exec(SCHEMA);
@@ -594,7 +634,7 @@ export const USER_SETTING_KEYS = new Set([
   'excludedGenres', 'excludedMpaa',
   'weightPublic', 'weightTaste', 'preferImax',
   'watchlistBoost', 'imaxBoost', 'windowFitBoost', 'urgencyBoost', 'urgencyWatchlistMultiplier',
-  'onboardingDone', 'everythingPlayingCollapsed', 'watchTogether',
+  'onboardingDone', 'everythingPlayingCollapsed', 'watchTogether', 'watchlistAlerts',
   'setupDone', 'tourDone', 'youNoteSeen',
   'moviePlan', 'planPeriod', 'streamingServices',
 ]);
@@ -889,6 +929,9 @@ export const DEFAULT_SETTINGS = {
   // A friend's "Let <owner> plan movies with me" switch (lib/together.js).
   // Off until they turn it on; the owner has no switch and is always available.
   watchTogether: false,
+  // "Watchlist alerts" in Settings (lib/watchalerts.js): a push when a film on
+  // their watchlist starts showing or enters Last chance. Off until turned on.
+  watchlistAlerts: false,
   lastRefresh: null,        // ISO timestamp
   lastRefreshLog: null,     // JSON summary of last refresh
 };

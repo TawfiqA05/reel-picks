@@ -15,6 +15,7 @@ import { runSystem, OWNER_ID } from './user.js';
 import { startCreditsBackfill } from './backfill.js';
 import { backfillPosterColors } from './posterColor.js';
 import { sendWeeklyIfDue } from './push.js';
+import { scan as scanWatchlist, sendDueLater as sendWatchlistLater } from './watchalerts.js';
 import { raiseLater, resolveLater } from './alerts.js';
 import * as amc from './amc.js';
 import * as tmdb from './tmdb.js';
@@ -621,6 +622,10 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
     startCreditsBackfill('refresh');
     backfillPosterColors().catch(() => {});
     reportHealth(log);
+    // Watchlist alerts (lib/watchalerts.js): films newly showing at someone's
+    // theaters or entering their Last chance, sent now or held until 9am.
+    try { scanWatchlist(); } catch (e) { console.error('[watchlist alerts]', e.message); }
+    sendWatchlistLater();
     afterRun(start, log, null);
     return log;
   } catch (e) {
