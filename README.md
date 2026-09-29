@@ -118,7 +118,8 @@ There are five, along the bottom on a phone and across the top on a computer.
   Anyone who used the app before You existed gets a one-time note saying Stats, Together
   and Settings moved there. The guest link has no You tab.
 
-The header holds only the logo and Search. Search opens a sheet that searches TMDB and the
+The header holds the logo and Search, and on a film or person page a Back button (see
+Keeping my place below). Search opens a sheet that searches TMDB and the
 films I already have around (playing, coming soon, rated, saved, hidden) as I type.
 It forgives typos, ranks well-known films first, and badges what's playing, rated,
 saved or hidden. It finds people too: type a director's or an actor's full name, just the
@@ -314,6 +315,37 @@ have been a ticket. Settings shows the last sync time and how many films it adde
 plain message for a username with no public profile. Imports start the credits backfill
 like any other import. For a whole history, the ratings.csv import is still the way.
 
+## Notes on ratings
+
+Any rating can carry a note: one line of plain text, up to 280 characters, for whatever I
+want to remember about the film. It's never required and never slows a quick star tap.
+After the stars there's only a small "Add a note", and tapping it opens a one-line field
+right there, not a popup, with Save and Cancel. Enter saves and Escape cancels. It's there
+wherever I rate: the movie page, Rate (the search and my ratings list), the Stats sheets,
+a person page and the "Did you see it?" card on Picks. That card's rating sheet still
+closes on its own after a star tap, unless I've opened the note field.
+
+The note shows on the film's page under my stars, with Edit and Delete (Delete has an
+Undo). In the Stats sheets, in You rated on a person page and in my ratings list on Rate
+it's a short second line under the title. The filter boxes in Watchlist, the Stats sheets
+and Rate find a film by the words in my note too.
+
+Letterboxd reviews come in as notes. The daily sync brings in a diary entry's review
+along with its rating, and the ratings importer reads `reviews.csv` from the Letterboxd
+export as well as `ratings.csv` (I pick both files at once, or one after the other). The
+review arrives as plain text with the HTML taken out. A review longer than 280 characters
+is cut there with an ellipsis, and the film's page has "Show the whole review" for the
+rest. A note I wrote or edited here is never overwritten by Letterboxd, and one I deleted
+here stays deleted; Letterboxd's text only shows where I have no note of my own. A review
+in `reviews.csv` sets a rating only for a film I haven't rated yet.
+
+Notes are private. Nobody else sees mine, not a friend, not the guest link, not the owner:
+they aren't in any page, API answer, export or notification anyone else gets. My own notes
+travel with Export full setup and Import full setup. Saving or deleting notes counts
+against a friend's hourly limit like other writes (300 an hour), and the text is checked
+on the server too: plain text, one line, no HTML. Notes change no score, no pick and not
+the weekly four.
+
 ## Friends
 
 One instance holds me and up to nine friends. I add a friend in **Settings → Friends**
@@ -413,6 +445,30 @@ on its card. The place is kept on that device only, separately for each person w
 it, and ends when I tap Start over, close the sheet, or leave it for 30 minutes. The guest
 link has no way in.
 
+## Keeping my place
+
+Going back puts me where I was. The browser's back button, the back swipe in the installed
+app and the Back button on a film or person page all do the same thing.
+
+- **Search.** If I open a film, a person or a recent from the header search and come back,
+  the search opens again with the same text, the same results and the same scroll, even
+  after going from the film to a person page or the trailer and back. It works the way
+  What should I watch? keeps its place, on this device, separately for each person, and it
+  ends when I clear the box, close the search (its close button, Escape or a tap outside),
+  or leave it for 30 minutes. Opening search with its button always starts fresh. The
+  guest link has no search.
+- **The Back button.** A film page and a person page have a Back button at the top left,
+  in the header. It goes wherever the back gesture would: back to the search results, What
+  should I watch?, or the page I came from. When there's nothing in the app to go back to
+  (I opened the film from a link or a fresh start) it goes to Picks instead, so it never
+  leaves the app.
+- **Lists.** Coming back to Picks, Schedule, Watchlist, Rate, Stats, You or a person page
+  lands on the same scroll spot, with the same filter text, the day I picked on Picks, and
+  any Show all or smaller films I had open. A page that fills in after it loads is held at
+  that spot until it's done, unless I scroll first. Opening a page fresh by tapping its tab
+  starts at the top, and tapping the tab I'm already on scrolls it back to the top. This is
+  kept per device, for the browser tab or the installed app it happened in.
+
 ## I'm going
 
 When I've decided on a showing, I tap I'm going. On the Picks hero it's the showing the
@@ -457,7 +513,8 @@ kilometre, and Nominatim gets whatever gets typed into the home-base lookup box.
 about location ever goes to TMDB, OMDb, or AMC. Each friend's drive times are measured
 from their own home base, and nobody else sees it. The read-only guest link never carries
 home coordinates, drive times, or distances. Settings has a plain "where your location
-data goes" note and a one-click way to clear it all.
+data goes" note and a one-click way to clear it all. Notes on ratings are only ever shown
+to the person who wrote them (see Notes on ratings).
 
 ## Notifications
 
@@ -702,7 +759,7 @@ server/
   lib/                scoring, taste, ranking, runway, geocoding, accounts,
                       AMC/TMDB/OMDb clients, refresh pipeline, backups,
                       push, Letterboxd, At home, Together, search, people,
-                      I'm going plans and sent picks
+                      I'm going plans and sent picks, notes on ratings
 public/               buildless frontend (vanilla ESM + CSS, PWA)
 scripts/              share tunnel, icon generation
 test/                 the fast and browser test suites and their made-up sample data
