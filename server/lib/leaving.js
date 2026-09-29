@@ -160,21 +160,13 @@ export function snapshotLineup({
   }
 
   // Present last refresh, absent now → it actually left. No inference needed.
+  // Only the refresh log reads this (lib/refresh.js "Left …" lines).
   const nowIds = new Set(rows.map((r) => r.tmdb_id));
   const departed = [];
   for (const [id, was] of prev) {
     if (nowIds.has(id)) continue;
-    const title = getMovie(id)?.title || null;
-    run(
-      `INSERT INTO departures(tmdb_id, theatre_id, title, last_date, departed_at) VALUES(?,?,?,?,?)
-       ON CONFLICT(tmdb_id, theatre_id) DO UPDATE SET
-         title = excluded.title, last_date = excluded.last_date, departed_at = excluded.departed_at`,
-      id, tid, title, was.last_date || null, at,
-    );
-    departed.push({ tmdb_id: id, title, last_date: was.last_date || null });
+    departed.push({ tmdb_id: id, title: getMovie(id)?.title || null, last_date: was.last_date || null });
   }
-  // A title that came back (re-release, extended run) is no longer departed.
-  for (const id of nowIds) run('DELETE FROM departures WHERE tmdb_id = ? AND theatre_id = ?', id, tid);
 
   run(
     `DELETE FROM lineup_snapshots WHERE refresh_at NOT IN
@@ -210,11 +202,6 @@ export function movieTrend(tmdbId, theatreId = null) {
     countDrop: round2(countDrop),
     refreshes: snaps.length,
   };
-}
-
-export function departures(theatreId = null) {
-  if (theatreId == null) return all('SELECT * FROM departures ORDER BY departed_at DESC');
-  return all('SELECT * FROM departures WHERE theatre_id = ? ORDER BY departed_at DESC', theatreId || '');
 }
 
 function labels(lastDate, today) {

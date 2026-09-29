@@ -204,4 +204,22 @@ await step('alerts: owner alerts older than 90 days go after a good nightly back
   } finally { await w.close(); }
 });
 
+await step('departures: a film that leaves is logged but not written to departures', async () => {
+  const w = S.world(await openWorld('cleanup-departures', { refresh: true, prepare: (d) => d.exec('DELETE FROM departures') }));
+  try {
+    const film = C.PLAYING.find((f) => f.k === 3);
+    w.amc.gone.add(film.amcId);
+    w.q("DELETE FROM cache WHERE key LIKE 'amc:showtimes%'");
+    const before = (await status(w))?.lastRefresh;
+    const r = await w.api('POST', '/api/refresh');
+    check('departures: a forced refresh starts', r.status === 200, `${r.status} ${r.text.slice(0, 120)}`);
+    const done = await until(async () => { const s = await status(w); return s && !s.refreshing && s.lastRefresh !== before && s; }, 60000, 150);
+    check('departures: the refresh finished', Boolean(done));
+    const log = JSON.parse(w.q1("SELECT value FROM settings WHERE key = 'lastRefreshLog'")?.value || '{}');
+    check('departures: the refresh log still says the film left', (log.errors || []).some((e) => e.startsWith('Left ') && e.includes(film.title)), (log.errors || []).filter((e) => e.startsWith('Left')).join(' | '));
+    check('departures: nothing was written to departures', w.q('SELECT COUNT(*) n FROM departures')[0].n === 0, String(w.q('SELECT COUNT(*) n FROM departures')[0].n));
+    check('departures: the table is still there', Boolean(w.q1("SELECT 1 x FROM sqlite_master WHERE type = 'table' AND name = 'departures'")));
+  } finally { await w.close(); }
+});
+
 S.finish();

@@ -220,7 +220,11 @@ CREATE INDEX IF NOT EXISTS idx_snap_movie ON lineup_snapshots(tmdb_id, refresh_a
 CREATE INDEX IF NOT EXISTS idx_snap_at ON lineup_snapshots(refresh_at);
 
 -- Movies that were in a theatre's lineup last refresh and vanished on this one:
--- ground truth that they left, as opposed to a prediction that they will.
+-- ground truth that they left, as opposed to a prediction that they will. Meant
+-- for checking Last chance's predictions against what really happened, but
+-- nothing ever read it, so since the 2026-09 cleanup nothing writes it either
+-- (the refresh log still names films that left, from lineup_snapshots). Kept
+-- so older databases and backups keep their rows.
 CREATE TABLE IF NOT EXISTS departures (
   tmdb_id     INTEGER,
   theatre_id  TEXT,
