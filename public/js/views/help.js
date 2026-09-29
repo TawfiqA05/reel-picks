@@ -13,6 +13,7 @@ const GUIDE = [
   ['Send a pick', 'Send shares a film, with a short note if you like. It waits at the top of their Picks until they save it, see it, rate it or dismiss it. You can send ten a day.'],
   ['At home', 'At home on Picks shows your best matches on the streaming services you choose in Settings, scored the same way.'],
   ['Together', 'Together lists films you and a friend would both enjoy at a theater you both follow. It only shows people who turned it on.'],
+  ['Theme', 'Theme in Settings sets Reel Picks to Light or Dark, or to Match system, which follows your phone or computer. It\'s saved on this device only. The screen an iPhone shows while the Home Screen app opens always follows the phone\'s own setting, since the app can\'t change it.'],
 ];
 
 // Who sees your plans depends on who you are: said in the I'm going line.

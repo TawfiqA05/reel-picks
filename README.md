@@ -151,7 +151,11 @@ the wrong TMDB film.
 
 ## How it looks
 
-It follows the device's light or dark setting. Dark is "Midnight marquee": deep navy with
+It follows the device's light or dark setting unless I pick Light or Dark under Theme in
+Settings (Appearance). That choice is kept on each device only, applies at once, and is
+set before the page draws, so the app never opens in the other theme first. The screen
+the installed iPhone app shows while it opens still follows the phone's own setting,
+because iOS shows it before the app can run. Dark is "Midnight marquee": deep navy with
 warm amber for the things I tap, gold for saved films and stars, and a soft glow behind
 the top of the Picks hero and a movie page in the main color of that film's poster. The
 server works that color out once per film and stores it; a film without one gets a faint
@@ -703,6 +707,7 @@ Bump `CACHE` in `public/sw.js` with every frontend change, and add any new file 
 Settings is under You. Every group, top to bottom. Groups marked "mine" are only on my
 Settings page. A Save bar slides up above the tab bar only when something has changed.
 
+- **Appearance**: Theme, with Match system, Light or Dark, kept on this device only.
 - **API keys** (mine): which keys are connected. On Railway it says to change them in
   Railway's variables and redeploy; locally it points at `.env`.
 - **Theaters**: the primary plus up to four followed ones, with drive times; search AMC
@@ -902,8 +907,10 @@ light and dark for every role with no sideways scroll, clipped text, contrast pr
 console error, the design itself (tokens, fonts, buttons, cards, showtime rows), the
 installed iPhone app, service worker updates and offline, size budgets, I'm going and
 Send a pick for every role, width and theme, every Your year in movies card for every
-person, width and theme, with tap, swipe, keys and the saved image, and the Watchlist
-alerts switch for every person, width and theme.
+person, width and theme, with tap, swipe, keys and the saved image, the Watchlist
+alerts switch for every person, width and theme, and the Theme switch in each of its
+three choices with the system set either way (no flash, nothing different from the
+system's own light or dark down to the pixel).
 
 The first time, I install the browsers with `npx playwright install chromium webkit`.
 Real app bugs the tests have found but I haven't fixed yet are listed in
