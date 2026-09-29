@@ -271,9 +271,11 @@ export function showtimeId(theatreId, ymd, amcId, block, slot) {
   return Number(`${theatreId}${ymd.slice(3, 4)}${String(day).padStart(3, '0')}${pad(amcId % 100)}${block}${slot}`);
 }
 
-// AMC showtimes for one theater on one local date (YYYY-MM-DD).
-export function amcShowtimes(theatreId, ymd) {
-  const off = dayOffset(ymd);
+// AMC showtimes for one theater on one local date (YYYY-MM-DD). shift: serve
+// the schedule of that many days earlier, so a suite that jumps weeks ahead
+// still has a lineup.
+export function amcShowtimes(theatreId, ymd, { shift = 0 } = {}) {
+  const off = dayOffset(ymd) - shift;
   const out = [];
   for (const f of [...PLAYING, UNMATCHED]) {
     const blocks = f.at?.[theatreId] || [];

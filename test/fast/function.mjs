@@ -930,7 +930,8 @@ async function groupB() {
     await go(page, w, '#/settings', 800, { fresh: true });
     const nc = card(page, 'Notifications');
     check('notify: card shows with VAPID keys set', await nc.count() === 1);
-    const sw = nc.locator('input[type=checkbox]');
+    // The weekly picks switch (the card also has Watchlist alerts).
+    const sw = nc.getByRole('checkbox', { name: 'Notify me when my weekly picks are ready' });
     await page.waitForFunction(() => { const c = [...document.querySelectorAll('.settings-group')].find((x) => x.querySelector('.group-title')?.textContent === 'Notifications'); return c && !c.querySelector('input').disabled; }, null, { timeout: 12000 }).catch(() => {});
     check('notify: switch starts off', !(await sw.isChecked()));
     await sw.check();
@@ -938,9 +939,9 @@ async function groupB() {
     check('notify: the subscription is stored for the owner', w.q1('SELECT COUNT(*) n FROM push_subs WHERE user_id = 1').n === 1);
     await page.reload(); await settle(page, 800);
     await page.waitForTimeout(1500);
-    check('notify: switch is on after a reload', await card(page, 'Notifications').locator('input[type=checkbox]').isChecked());
+    check('notify: switch is on after a reload', await card(page, 'Notifications').getByRole('checkbox', { name: 'Notify me when my weekly picks are ready' }).isChecked());
     check('notify: Alerts card counts the device', /Alerts also go to the device/.test(await card(page, 'Alerts').textContent()));
-    await card(page, 'Notifications').locator('input[type=checkbox]').uncheck();
+    await card(page, 'Notifications').getByRole('checkbox', { name: 'Notify me when my weekly picks are ready' }).uncheck();
     check('notify: turning off confirms', /off on this device/.test(await toastText(page, /off on this device/)));
     check('notify: the subscription is removed', w.q1('SELECT COUNT(*) n FROM push_subs WHERE user_id = 1').n === 0);
     const bare = S.world(await openWorld('function-bare'));
