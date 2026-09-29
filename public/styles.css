@@ -52,10 +52,14 @@
 /* Stand-ins drawn only until the web fonts arrive (display=swap in
    index.html): Arial resized so a line takes the same width in either, so
    nothing rewraps or jumps when the real font swaps in. Measured against
-   each family on the app's own text, at the weights it uses. */
+   each family on the app's own text, at the weights it uses (film titles at
+   46px for the display face: 72.6% ran about 5% wide, so a hero title that
+   fits one line at 320 took two until the font came). The display face's
+   ascent and descent grow as its size-adjust shrinks, keeping its lines where
+   they were. */
 @font-face { font-family: "IBM Plex Sans Fallback"; src: local("Arial"), local("ArialMT"); font-weight: 100 500; size-adjust: 100.7%; ascent-override: 101.3%; descent-override: 26.8%; line-gap-override: 0%; }
 @font-face { font-family: "IBM Plex Sans Fallback"; src: local("Arial Bold"), local("Arial-BoldMT"); font-weight: 600 900; size-adjust: 97.8%; ascent-override: 104.3%; descent-override: 27.6%; line-gap-override: 0%; }
-@font-face { font-family: "Big Shoulders Display Fallback"; src: local("Arial Bold"), local("Arial-BoldMT"); font-weight: 100 900; size-adjust: 72.6%; ascent-override: 135%; descent-override: 28.9%; line-gap-override: 0%; }
+@font-face { font-family: "Big Shoulders Display Fallback"; src: local("Arial Bold"), local("Arial-BoldMT"); font-weight: 100 900; size-adjust: 69.5%; ascent-override: 141%; descent-override: 30.2%; line-gap-override: 0%; }
 
 /* One type system in both themes: Big Shoulders Display for page titles,
    film titles and section headings; IBM Plex Sans for everything else. */

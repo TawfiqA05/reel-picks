@@ -1,6 +1,1 @@
-{
-  "design: type dark 320 home: font-swap layout shift under 0.01": "App bug: at 320 a hero title that fits one line in Big Shoulders Display wraps to two in its fallback face, so the page jumps about 45px when the web font arrives (layout shift about 0.03, limit 0.01).",
-  "design: type dark 320 movie: font-swap layout shift under 0.01": "App bug: at 320 a hero title that fits one line in Big Shoulders Display wraps to two in its fallback face, so the page jumps about 45px when the web font arrives (layout shift about 0.03, limit 0.01).",
-  "design: type light 320 home: font-swap layout shift under 0.01": "App bug: at 320 a hero title that fits one line in Big Shoulders Display wraps to two in its fallback face, so the page jumps about 45px when the web font arrives (layout shift about 0.03, limit 0.01).",
-  "design: type light 320 movie: font-swap layout shift under 0.01": "App bug: at 320 a hero title that fits one line in Big Shoulders Display wraps to two in its fallback face, so the page jumps about 45px when the web font arrives (layout shift about 0.03, limit 0.01)."
-}
+{}
