@@ -896,7 +896,7 @@ that it writes nothing), and Watchlist alerts on a mocked clock in Indianapolis 
 film, the 14-day return, Last chance, the 9 PM to 9 AM hold, grouping, every skip, a restart
 before the send, and privacy between friends).
 
-`npm run test:ui` runs the browser checks in about 10 minutes: accessibility (keyboard,
+`npm run test:ui` runs the browser checks in about 15 minutes: accessibility (keyboard,
 focus rings, names, dialogs, reduced motion, 200% zoom), layout at 320, 390 and 1280 in
 light and dark for every role with no sideways scroll, clipped text, contrast problem or
 console error, the design itself (tokens, fonts, buttons, cards, showtime rows), the
@@ -913,6 +913,12 @@ scores, I rerun the scores suite with `RP_UPDATE_EXPECTED=1` to save the new val
 
 Checks that need the real friend accounts run against a copy of the Railway database
 from a local folder, `~/reel-picks-qa`, which is never committed.
+
+GitHub runs `npm test` on every push and on every pull request to main
+(`.github/workflows/tests.yml`, on Node 24 like the Dockerfile, with no keys or secrets),
+and the badge at the top shows the latest result. The browser checks run only on my
+machine: on GitHub's runner they took over 17 minutes, and the design suite's font-swap
+checks need Arial, which Linux doesn't have.
 
 ## License
 
