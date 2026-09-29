@@ -1,13 +1,15 @@
 // Free-form place → coordinates via Nominatim (OpenStreetMap) — keyless, like
-// the OSRM router the drive times already use, and OWNER-ONLY: the geocode
-// endpoints are deliberately not on the guest allowlist, and nothing here is
-// ever sent to the shared link.
+// the OSRM router the drive times already use. The owner and friends use it
+// for their own home base; the geocode endpoints are deliberately not on the
+// guest allowlist, and nothing here is ever sent to the shared link. The
+// cache is shared: one person's lookup can answer another's same query.
 //
 // Nominatim usage policy (operations.osmfoundation.org/policies/nominatim):
 // identify the app with a real User-Agent, at most 1 request/second, cache
 // results. All requests funnel through a serialized ≥1.1s throttle, and every
 // answer is cached for months (a town's coordinates don't move), so repeated
 // lookups never touch the network at all.
+import { all, run } from '../db.js';
 import { cachedJson, fetchJson } from './cache.js';
 
 const BASE = 'https://nominatim.openstreetmap.org';
@@ -108,4 +110,22 @@ export async function reverseGeocode(lat, lng) {
   if (!r || r.error) return null;
   const s = shape(r);
   return s ? { ...s, lat: la2, lng: ln2 } : null;
+}
+
+// The cached lookups that gave one person their home base: the reverse lookup
+// of its point, and any place search that offered it as a candidate. Clearing
+// that home base forgets these; everyone else's lookups stay cached. `home` is
+// the person's own stored { lat, lng } (null when they never set one).
+export function forgetLookupsFor(home) {
+  const lat = Number(home?.lat);
+  const lng = Number(home?.lng);
+  if (home?.lat == null || home?.lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) return 0;
+  let gone = run('DELETE FROM cache WHERE key = ?', `nominatim:reverse:v1:${lat.toFixed(2)},${lng.toFixed(2)}`).changes;
+  for (const r of all("SELECT key, value FROM cache WHERE key LIKE 'nominatim:search:%'")) {
+    let rows;
+    try { rows = JSON.parse(r.value); } catch { continue; }
+    const offered = Array.isArray(rows) && rows.some((x) => { const s = shape(x); return s && s.lat === lat && s.lng === lng; });
+    if (offered) gone += run('DELETE FROM cache WHERE key = ?', r.key).changes;
+  }
+  return gone;
 }

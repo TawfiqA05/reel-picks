@@ -27,9 +27,8 @@ import {
   followedTheatres, homeBase, readDistance, addFollowed, removeFollowed, promoteToPrimary,
   replacePrimary, refreshDistances, MAX_THEATRES, sharedTheatreIds,
 } from './lib/theatres.js';
-import { geocode, reverseGeocode } from './lib/geocode.js';
+import { geocode, reverseGeocode, forgetLookupsFor } from './lib/geocode.js';
 import { showtimeIcs, icsFilename, theatreRecord } from './lib/calendar.js';
-import { bustCache } from './lib/cache.js';
 import { localYMD, addDays, csvField } from './lib/util.js';
 import { isGuest, ownerName } from './lib/guest.js';
 import { currentUserId, currentUser } from './lib/user.js';
@@ -374,8 +373,9 @@ router.put('/settings', (req, res) => {
 });
 
 // ---- home base / geocoding ----------------------------------------------
-// Owner-only: none of these are on the guest allowlist (lib/guest.js is
-// default-deny), so the shared link can neither geocode nor read home base.
+// The owner's and each friend's own home base. None of these are on the guest
+// allowlist (lib/guest.js is default-deny), so the shared link can neither
+// geocode nor read home base.
 
 // Free-form text ("Fishers IN", "46037", a street address) → up to 5
 // candidates via Nominatim, cached for months and throttled to 1 req/s
@@ -405,13 +405,17 @@ router.get('/geocode/reverse', h(async (req, res) => {
   }
 }));
 
-// Clear home base: wipe the stored location and every cache row derived from
-// it (drive times for any origin, geocoder lookups), then fall back to the
-// app default and re-measure drive times from there in the background.
+// Clear home base: wipe the stored location and the cache rows derived from
+// it (its drive times, and the geocoder lookups that found it; other people's
+// lookups stay), then fall back to the app default and re-measure drive times
+// from there in the background.
 router.delete('/home', h(async (req, res) => {
   const before = homeBase(getSettings());
+  const own = get('SELECT value FROM user_settings WHERE user_id = ? AND key = ?', currentUserId(), 'home');
+  let ownHome = null;
+  try { ownHome = own ? JSON.parse(own.value) : null; } catch { ownHome = null; }
   const next = updateSettings({ home: { label: null, lat: null, lng: null } });
-  bustCache('nominatim:');
+  forgetLookupsFor(ownHome);
   refreshDistances(next, before).catch((e) => console.error('[home] drive-time refresh', e.message));
   res.json({ cleared: true, home: homeBase(next) });
 }));

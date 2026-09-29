@@ -222,4 +222,36 @@ await step('departures: a film that leaves is logged but not written to departur
   } finally { await w.close(); }
 });
 
+await step('geocode: clearing a home base forgets only that person\'s own lookups', async () => {
+  const w = S.world(await openWorld('cleanup-geocode'));
+  try {
+    const { robin, casey } = w.friends;
+    const keys = () => w.q("SELECT key FROM cache WHERE key LIKE 'nominatim:%' ORDER BY key").map((r) => r.key);
+    // The owner looks up "two testville" and takes its second place as home,
+    // and also asks what's at that point.
+    const g = await w.api('GET', '/api/geocode?q=two%20testville');
+    const pick = g.json?.results?.[1];
+    check('geocode: the owner\'s search offers the place', Boolean(pick) && pick.lat === 40.5 && pick.lng === -82.5, JSON.stringify(g.json).slice(0, 200));
+    await w.api('PUT', '/api/settings', { body: { home: { label: pick.label, lat: pick.lat, lng: pick.lng } } });
+    await w.api('GET', '/api/geocode/reverse?lat=40.5&lng=-82.5');
+    // A friend's own lookups, for another place.
+    await w.api('GET', '/api/geocode?q=somewhere', { as: robin });
+    await w.api('GET', `/api/geocode/reverse?lat=${C.HOME.lat}&lng=${C.HOME.lng}`, { as: robin });
+    const all0 = keys();
+    const ownerKeys = ['nominatim:reverse:v1:40.50,-82.50', 'nominatim:search:v1:two testville'];
+    const robinKeys = [`nominatim:reverse:v1:${C.HOME.lat.toFixed(2)},${C.HOME.lng.toFixed(2)}`, 'nominatim:search:v1:somewhere'];
+    check('geocode: all four lookups are cached', [...ownerKeys, ...robinKeys].every((k) => all0.includes(k)), all0.join(', '));
+
+    // A friend who never set a home base clears it: nothing to forget.
+    const c = await w.api('DELETE', '/api/home', { as: casey });
+    check('geocode: clearing a home base that was never set forgets nothing', c.status === 200 && JSON.stringify(keys()) === JSON.stringify(all0), keys().join(', '));
+
+    const r = await w.api('DELETE', '/api/home');
+    check('geocode: the owner\'s clear works', r.status === 200 && r.json?.cleared === true, `${r.status} ${r.text.slice(0, 120)}`);
+    const all1 = keys();
+    check('geocode: the owner\'s own lookups for that home are gone', ownerKeys.every((k) => !all1.includes(k)), all1.join(', '));
+    check('geocode: the friend\'s lookups stay cached', robinKeys.every((k) => all1.includes(k)), all1.join(', '));
+  } finally { await w.close(); }
+});
+
 S.finish();
