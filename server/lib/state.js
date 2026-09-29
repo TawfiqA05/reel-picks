@@ -11,7 +11,7 @@
 // Shape note for later multi-user work: the document is { version, kind,
 // exportedAt, profile: {...} } — one profile per document today, but nothing
 // here assumes the instance only ever holds one.
-import { all, get, run, getSettings, updateSettings, DEFAULT_SETTINGS, USER_SETTING_KEYS } from '../db.js';
+import { db, all, get, run, getSettings, updateSettings, DEFAULT_SETTINGS, USER_SETTING_KEYS } from '../db.js';
 import { upsertLightMovie } from './movies.js';
 import { upsertRating } from './ratings.js';
 import { restoreWatched } from './alist.js';
@@ -65,6 +65,8 @@ export function exportState() {
 
 // Apply a state document. Additive and idempotent: rows are upserted, nothing
 // local is deleted, and re-importing the same file is a no-op. Returns counts.
+// All or nothing: the whole import is one transaction, so a file that fails
+// partway (a row the database won't take) leaves everything as it was.
 export function importState(doc) {
   if (!doc || doc.kind !== 'reelpicks-state' || !doc.profile) {
     throw Object.assign(new Error('Not a Reel Picks full-setup file. Use the JSON from Settings, Export full setup.'), { status: 400 });
@@ -76,7 +78,18 @@ export function importState(doc) {
   if (ver > STATE_VERSION) {
     throw Object.assign(new Error(`This file is from a newer Reel Picks (state v${ver}; this instance reads v${STATE_VERSION}). Update the deployment first.`), { status: 400 });
   }
-  const p = doc.profile;
+  db.exec('BEGIN');
+  try {
+    const out = applyState(doc.profile);
+    db.exec('COMMIT');
+    return out;
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
+}
+
+function applyState(p) {
   const out = { settings: 0, ratings: 0, watchlist: 0, watched: 0, matches: 0, hidden: 0, notes: 0 };
 
   // Only accept a value whose shape matches the default's: a hand-edited file

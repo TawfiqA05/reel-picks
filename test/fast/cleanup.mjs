@@ -81,4 +81,36 @@ await step('backfill: films already tried can\'t crowd out the ones after them',
   } finally { await w.close(); }
 });
 
+await step('import: a full-setup file that fails partway changes nothing', async () => {
+  const w = S.world(await openWorld('cleanup-import'));
+  try {
+    const TABLES = ['settings', 'user_settings', 'ratings', 'watchlist', 'watched', 'matches', 'hidden_movies', 'rating_notes'];
+    const hashes = () => { const d = w.db(); try { return Object.fromEntries(TABLES.map((t) => [t, tableHash(d, t)])); } finally { d.close(); } };
+    const good = {
+      version: 1, kind: 'reelpicks-state',
+      profile: {
+        settings: { avgTicketPrice: 21.5, excludedGenres: ['Horror'] },
+        ratings: [{ tmdb_id: 424201, title: 'Import Test One', year: 2001, rating: 4, source: 'import', rated_at: '2026-01-02T00:00:00.000Z' }],
+        watchlist: [{ tmdb_id: 424202, title: 'Import Test Two', year: 2002 }],
+        watched: [{ tmdb_id: 424201, title: 'Import Test One', watched_at: '2026-01-03T20:00:00.000Z', in_weekly4: 0, ticket_price: 12 }],
+        hidden: [{ tmdb_id: 424203, title: 'Import Test Three' }],
+      },
+    };
+    // The last match row can't be stored (an object where an id goes), so
+    // the import fails after everything before it went in.
+    const bad = { ...good, profile: { ...good.profile, matches: [{ amc_movie_id: '8801', amc_title: 'Fine', tmdb_id: 424201, updated_at: '2026-01-01T00:00:00.000Z' }, { amc_movie_id: { not: 'an id' } }] } };
+    await sleep(1500); // start-up work settles first
+    const h0 = hashes();
+    const r = await w.api('POST', '/api/state', { body: bad });
+    check('import: the broken file is refused', r.status >= 400, `${r.status} ${r.text.slice(0, 120)}`);
+    const h1 = hashes();
+    const changed = TABLES.filter((t) => h0[t] !== h1[t]);
+    check('import: every table is exactly as it was before the failed import', changed.length === 0, changed.join(', '));
+    check('import: none of its rows are left behind', !w.q1('SELECT 1 x FROM ratings WHERE tmdb_id = 424201') && !w.q1("SELECT 1 x FROM matches WHERE amc_movie_id = '8801'") && !w.q1('SELECT 1 x FROM movies WHERE tmdb_id IN (424201, 424202, 424203)'));
+    const ok = await w.api('POST', '/api/state', { body: good });
+    check('import: the same file without the bad row imports as before', ok.status === 200 && ok.json?.imported?.ratings === 1 && ok.json?.imported?.watchlist === 1 && ok.json?.imported?.watched === 1 && ok.json?.imported?.hidden === 1, `${ok.status} ${ok.text.slice(0, 200)}`);
+    check('import: its rows are there', Boolean(w.q1('SELECT 1 x FROM ratings WHERE user_id = 1 AND tmdb_id = 424201')) && JSON.parse(w.q1("SELECT value FROM user_settings WHERE user_id = 1 AND key = 'avgTicketPrice'")?.value || 'null') === 21.5);
+  } finally { await w.close(); }
+});
+
 S.finish();
