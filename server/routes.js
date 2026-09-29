@@ -58,6 +58,7 @@ import {
 } from './lib/sends.js';
 import { filmDone } from './lib/done.js';
 import { getNote, notesOf, setNote, deleteNote, queueReview, NOTE_MAX as RATING_NOTE_MAX } from './lib/notes.js';
+import { yearWindow, recapFor, sharePosterUrl } from './lib/year.js';
 
 const router = Router();
 const h = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -161,6 +162,8 @@ router.get('/status', (req, res) => {
       tourDone: Boolean(s.tourDone),
       youNoteSeen: Boolean(s.youNoteSeen),
       everythingPlayingCollapsed: Boolean(s.everythingPlayingCollapsed),
+      // Your year in movies (lib/year.js): open Dec 1 to Jan 15, and for which year.
+      year: yearWindow(),
       lastRefresh: s.lastRefresh,
       refreshing: refreshState.running,
       matching: Boolean(refreshState.draining),
@@ -211,6 +214,7 @@ router.get('/status', (req, res) => {
     tourDone: Boolean(s.tourDone),
     youNoteSeen: Boolean(s.youNoteSeen),
     everythingPlayingCollapsed: Boolean(s.everythingPlayingCollapsed),
+    year: yearWindow(),
     lastRefresh: s.lastRefresh,
     refreshing: refreshState.running,
     // Most recent refresh request (who asked is not recorded; force says whether it re-pulled).
@@ -1022,6 +1026,49 @@ router.delete('/sends/:id', notGuest, (req, res) => {
 // ---- stats / export ----------------------------------------------------
 
 router.get('/stats', (req, res) => res.json(getStats()));
+
+// ---- your year in movies (lib/year.js) -----------------------------------
+// The caller's own recap, open Dec 1 to Jan 15; the owner's preview (?preview=1)
+// any day. Not on the guest allowlist, like /stats. Read only.
+router.get('/year', notGuest, (req, res) => {
+  const preview = req.query.preview === '1';
+  if (preview && !isOwnerRequest()) return res.status(403).json({ error: 'Only the owner can preview it.' });
+  res.set('Cache-Control', 'no-store');
+  const r = recapFor({ preview });
+  if (!r) return res.status(404).json({ error: 'Your year in movies opens on December 1.' });
+  res.json(r);
+});
+
+// A poster for the saved image, from this server so the page's canvas can
+// read it back. Only films on the caller's own recap; kept in memory a day.
+const posterBytes = new Map();
+router.get('/year/poster/:id', notGuest, h(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!/^\d{1,10}$/.test(req.params.id) || !Number.isSafeInteger(id)) return res.status(404).json({ error: 'Not found' });
+  const preview = req.query.preview === '1';
+  if (preview && !isOwnerRequest()) return res.status(403).json({ error: 'Only the owner can preview it.' });
+  const url = sharePosterUrl(id, { preview });
+  if (!url) return res.status(404).json({ error: 'Not found' });
+  let hit = posterBytes.get(url);
+  if (!hit || Date.now() - hit.at > 864e5) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      const type = r.headers.get('content-type') || '';
+      if (!r.ok || !/^image\/(jpeg|png|webp)/.test(type)) throw new Error(`poster ${r.status} ${type}`);
+      const body = Buffer.from(await r.arrayBuffer());
+      if (body.length > 3 * 1024 * 1024) throw new Error('poster too large');
+      hit = { at: Date.now(), type, body };
+      if (posterBytes.size >= 64) posterBytes.delete(posterBytes.keys().next().value);
+      posterBytes.set(url, hit);
+    } catch (e) {
+      console.error('[year poster]', id, e.message);
+      return res.status(502).json({ error: "Couldn't load that poster." });
+    }
+  }
+  res.set('Content-Type', hit.type);
+  res.set('Cache-Control', 'private, max-age=86400');
+  res.send(hit.body);
+}));
 
 // ---- people ----------------------------------------------------------------
 // A person's page (lib/personPage.js). On the guest allowlist, read only: the

@@ -379,6 +379,8 @@ const GROUP_KEYS = {
   actor: (r) => parseList(r.cast),
 };
 const keysOf = (kind, r) => [...new Set(GROUP_KEYS[kind](r))].filter(Boolean);
+// The recap (lib/year.js) counts the year's films by the same keys.
+export const groupKeys = keysOf;
 const average = (sum, n) => Math.round((sum / n) * 100) / 100;
 
 function ranking(rows, kind) {
