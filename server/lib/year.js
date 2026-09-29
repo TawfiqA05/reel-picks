@@ -63,7 +63,7 @@ const monthsOf = (year, lastMonth) => Array.from({ length: lastMonth }, (_, i) =
 function filmsOfYear(uid, year) {
   const Y = String(year);
   const seen = all(
-    `SELECT w.tmdb_id, w.title, w.watched_date, w.in_weekly4, w.ticket_price, w.source
+    `SELECT w.tmdb_id, w.title, w.watched_date, w.in_weekly4, w.ticket_price, w.source, w.theatre
        FROM watched w WHERE w.user_id = ? AND substr(w.watched_date, 1, 4) = ?`,
     uid, Y,
   );
@@ -172,14 +172,15 @@ export function buildRecap(year, { now = new Date(), preview = false } = {}) {
     if (director || actor || genre) cards.push({ kind: 'tops', director, actor, genre });
   }
 
-  // Where they went: the showings they said they were going to this year
-  // (plans still on file) whose start has passed. A theater is known only
-  // from those; the watch log keeps no theater.
+  // Where they went: the films they saw this year whose theater the watch
+  // log knows (saved from an "I'm going" plan, lib/alist.js), and the
+  // showings they said they were going to this year (plans still on file,
+  // not answered yet) whose start has passed. A film seen with no theater on
+  // record isn't counted anywhere.
   const visits = new Map();
-  for (const p of all('SELECT theatre_name, date FROM plans WHERE user_id = ? AND substr(date, 1, 4) = ? AND start_epoch <= ?', uid, String(year), now.getTime())) {
-    const t = String(p.theatre_name || '').trim();
-    if (t) visits.set(t, (visits.get(t) || 0) + 1);
-  }
+  const visit = (name) => { const t = String(name || '').trim(); if (t) visits.set(t, (visits.get(t) || 0) + 1); };
+  for (const w of seen) visit(w.theatre);
+  for (const p of all('SELECT theatre_name, date FROM plans WHERE user_id = ? AND substr(date, 1, 4) = ? AND start_epoch <= ?', uid, String(year), now.getTime())) visit(p.theatre_name);
   if (visits.size) {
     const [theater, n] = [...visits].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
     cards.push({ kind: 'theater', name: theater, showings: n });

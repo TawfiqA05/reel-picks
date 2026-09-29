@@ -93,7 +93,7 @@ await step('legacy: the oldest layout on record', async () => {
   open(legacy);
   const file = path.join(legacy, 'reelpicks.db');
   const tags = backups(legacy).map(tag);
-  const want = ['theatres', 'matches-review', 'cache-keys', 'watched-daily', 'users', 'votes', 'details-missing', 'person-ids', 'watched-source', 'poster-color'];
+  const want = ['theatres', 'matches-review', 'cache-keys', 'watched-daily', 'users', 'votes', 'details-missing', 'person-ids', 'watched-source', 'poster-color', 'watched-theatre'];
   check('legacy: every step still runs, each after its own backup', want.every((t) => tags.includes(t)) && tags.length === want.length, tags.join(', '));
   const d = new DatabaseSync(file, { readOnly: true });
   const q = (sql) => d.prepare(sql).all();
@@ -114,6 +114,36 @@ await step('legacy: the oldest layout on record', async () => {
   const n = backups(legacy).length;
   open(legacy);
   check('legacy: opening it again changes nothing and backs nothing up', dump(file) === before && backups(legacy).length === n);
+});
+
+await step('theater: a database from before the watch log kept theaters', async () => {
+  // The layout just before watched.theatre, with a year of watch-log rows.
+  const prev = path.join(dir, 'prev');
+  fs.mkdirSync(prev);
+  fs.copyFileSync(path.join(fresh, 'reelpicks.db'), path.join(prev, 'reelpicks.db'));
+  const file = path.join(prev, 'reelpicks.db');
+  {
+    const d = new DatabaseSync(file);
+    d.exec('ALTER TABLE watched DROP COLUMN theatre');
+    const ins = d.prepare('INSERT INTO watched(user_id, tmdb_id, title, watched_at, watched_date, week_start, in_weekly4, ticket_price, source) VALUES(?,?,?,?,?,?,?,?,?)');
+    ins.run(1, 990001, 'The Paper Lantern', '2026-03-01T23:00:00.000Z', '2026-03-01', '2026-02-27', 1, 14.5, null);
+    ins.run(1, 990002, 'Northern Signal', '2026-05-02T23:00:00.000Z', '2026-05-02', '2026-05-01', 0, 14.5, 'letterboxd');
+    ins.run(2, 990001, 'The Paper Lantern', '2026-06-03T23:00:00.000Z', '2026-06-03', '2026-05-29', 0, 12, null);
+    d.close();
+  }
+  const rowsOf = () => { const d = new DatabaseSync(file, { readOnly: true }); try { return d.prepare('SELECT id, user_id, tmdb_id, title, watched_at, watched_date, week_start, in_weekly4, ticket_price, source FROM watched ORDER BY id').all(); } finally { d.close(); } };
+  const before = JSON.stringify(rowsOf());
+  open(prev);
+  const tags = backups(prev).map(tag);
+  check('theater: an existing database gains watched.theatre after exactly one backup', tags.join() === 'watched-theatre', tags.join(', '));
+  const d = new DatabaseSync(file, { readOnly: true });
+  const cols = d.prepare('PRAGMA table_info(watched)').all().map((c) => c.name);
+  const filled = d.prepare('SELECT COUNT(*) n FROM watched WHERE theatre IS NOT NULL').get().n;
+  d.close();
+  check('theater: the new column is there and empty on every row (nothing is guessed)', cols.includes('theatre') && filled === 0, `${cols.join(',')} / ${filled}`);
+  check('theater: every other value in the watch log is unchanged', JSON.stringify(rowsOf()) === before);
+  const diff = diffLayout(layout(path.join(fresh, 'reelpicks.db')), layout(file));
+  check('theater: it ends at the same layout as a new database', diff.length === 0, diff.join('; '));
 });
 
 if (!process.env.RP_KEEP_TEMP) fs.rmSync(dir, { recursive: true, force: true });

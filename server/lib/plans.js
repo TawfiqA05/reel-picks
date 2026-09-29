@@ -136,9 +136,9 @@ export function cancelPlan(userId, tmdbId) {
 }
 
 // Yes or No to "Did you see it?", once the showing has started. Yes logs the
-// film seen on the showing's day, weekly-4 flag from that week's log (never a
-// recomputed ranking), which also takes the plan away (lib/done.js). No just
-// takes it away. Runs as the caller (lib/user.js).
+// film seen on the showing's day at the plan's theater, weekly-4 flag from
+// that week's log (never a recomputed ranking), which also takes the plan
+// away (lib/done.js). No just takes it away. Runs as the caller (lib/user.js).
 export function answerPlan(tmdbId, seen, now = Date.now()) {
   const userId = currentUserId();
   const p = get('SELECT * FROM plans WHERE user_id = ? AND tmdb_id = ?', userId, tmdbId);
@@ -156,7 +156,7 @@ export function answerPlan(tmdbId, seen, now = Date.now()) {
     try { getRecommendations(); } catch { /* the first lookup answered */ }
     inWeekly4 = wasWeekly4Pick(tmdbId, week);
   }
-  const alist = logWatchedOn({ tmdb_id: tmdbId, title: p.title, date: p.date, at: p.start_epoch, in_weekly4: inWeekly4 });
+  const alist = logWatchedOn({ tmdb_id: tmdbId, title: p.title, date: p.date, at: p.start_epoch, in_weekly4: inWeekly4, theatre: p.theatre_name });
   cancelPlan(userId, tmdbId);
   return { seen: true, date: p.date, alist };
 }

@@ -563,9 +563,12 @@ A card only shows up when there's enough behind it:
 - **Favorites**: my top director, actor and genre among the films I saw or rated this
   year, ranked the way Stats ranks them (most films, then my average rating, then name),
   and only when one has at least two films.
-- **My theater**: the theater with the most of my I'm going showings this year. The app
-  only knows a theater from a plan that's still on file (an answered plan goes, and the
-  watch log keeps no theater), so this card often doesn't show.
+- **My theater**: the theater I went to most this year. A film I saw keeps its theater
+  when the app knows it: I said Yes to "Did you see it?" after an I'm going plan, or
+  marked it seen on the day of a planned showing that had started. Showings I planned
+  that have started but that I haven't answered yet count too. Films seen before the
+  app kept theaters, or with no plan behind them, have none, and nothing is guessed. My
+  theaters are only in my own recap.
 - **Months**: my busiest month, and the first and latest films of the year.
 - **Movie plan**: tickets used this year and what the plan saved me, counted month by month
   the way Stats counts "saved this month", from the first month I used a ticket. With no

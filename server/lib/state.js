@@ -46,8 +46,9 @@ export function exportState() {
           LEFT JOIN movies m ON m.tmdb_id = w.tmdb_id WHERE w.user_id = ?`,
         uid,
       ),
-      // source: 'letterboxd' for films the Letterboxd sync brought in (null otherwise).
-      watched: all('SELECT tmdb_id, title, watched_at, in_weekly4, ticket_price, source FROM watched WHERE user_id = ? ORDER BY id', uid),
+      // source: 'letterboxd' for films the Letterboxd sync brought in (null
+      // otherwise); theatre: where it was seen, when known (optional on import).
+      watched: all('SELECT tmdb_id, title, watched_at, in_weekly4, ticket_price, source, theatre FROM watched WHERE user_id = ? ORDER BY id', uid),
       // Every match row travels: the table IS the decision record (manual
       // repoints, ignores, review keeps), and automatic rows are harmless —
       // they just save the new instance re-deriving the same answer.
@@ -140,7 +141,7 @@ function applyState(p) {
     // file should say "0 watched", not re-count every dedup no-op.
     if (restoreWatched({
       tmdb_id: w.tmdb_id, title: w.title, watched_at: w.watched_at,
-      in_weekly4: Boolean(w.in_weekly4), price: w.ticket_price ?? null, source: w.source ?? null,
+      in_weekly4: Boolean(w.in_weekly4), price: w.ticket_price ?? null, source: w.source ?? null, theatre: w.theatre ?? null,
     })) out.watched++;
   }
 

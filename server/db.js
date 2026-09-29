@@ -174,7 +174,8 @@ CREATE TABLE IF NOT EXISTS watched (
   week_start    TEXT,      -- Friday that begins the A-List week (YYYY-MM-DD)
   in_weekly4    INTEGER DEFAULT 0,
   ticket_price  REAL,
-  source        TEXT       -- NULL, or 'letterboxd' for diary entries the sync brought in
+  source        TEXT,      -- NULL, or 'letterboxd' for diary entries the sync brought in
+  theatre       TEXT       -- where it was seen, when the app knows (see the migration below)
 );
 
 -- The weekly 4 as it was actually offered: one row per pick per A-List week,
@@ -841,6 +842,18 @@ if (!hasColumn('movies', 'poster_color') || !hasColumn('movies', 'poster_color_s
   if (!hasColumn('movies', 'poster_color')) db.exec('ALTER TABLE movies ADD COLUMN poster_color TEXT');
   if (!hasColumn('movies', 'poster_color_src')) db.exec('ALTER TABLE movies ADD COLUMN poster_color_src TEXT');
   console.log('[db] added movies.poster_color');
+}
+
+// watched.theatre: the theater a film was seen at, saved when the app knows
+// it: the "I'm going" plan behind a Yes to "Did you see it?", or Mark seen on
+// the day of a planned showing that has started (lib/alist.js). NULL
+// otherwise, and for every film logged before the column existed: nothing is
+// guessed. Each person's own; only their own year recap reads it (lib/year.js).
+// A copy of the database is written first.
+if (!hasColumn('watched', 'theatre')) {
+  preMigrationBackup(db, dataDir, 'watched-theatre');
+  db.exec('ALTER TABLE watched ADD COLUMN theatre TEXT');
+  console.log('[db] added watched.theatre');
 }
 
 // ---- low-level helpers -------------------------------------------------

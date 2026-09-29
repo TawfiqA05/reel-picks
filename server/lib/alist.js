@@ -1,7 +1,7 @@
 // Movie-plan usage tracker: logs watched movies, counts the plan's allowance
 // (A-List by default; weeks reset Friday, monthly plans on the 1st), and
 // computes money saved vs the monthly fee, or ticket spend with no plan.
-import { run, all, getSettings } from '../db.js';
+import { run, get, all, getSettings } from '../db.js';
 import { weekStartFriday, localYMD, round2 } from './util.js';
 import { currentUserId } from './user.js';
 import { planOf } from '../../public/js/plans.js';
@@ -15,27 +15,37 @@ const ALIST = 'source IS NULL';
 
 // At most one row per movie per local calendar day: the insert lands on the
 // unique (tmdb_id, watched_date) index, so a double-press can't double-count.
-// A rewatch on a later date is a new row as always.
+// A rewatch on a later date is a new row as always. With an "I'm going" plan
+// for today's showing of it that has started (lib/plans.js), the theater is
+// known and saved with it.
 export function logWatched({ tmdb_id, title, in_weekly4 = false }) {
   const settings = getSettings();
+  const today = localYMD();
+  const plan = get(
+    'SELECT theatre_name FROM plans WHERE user_id = ? AND tmdb_id = ? AND date = ? AND start_epoch <= ?',
+    currentUserId(), tmdb_id, today, Date.now(),
+  );
   run(
-    `INSERT INTO watched(user_id, tmdb_id, title, watched_at, week_start, watched_date, in_weekly4, ticket_price)
-      VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
-    currentUserId(), tmdb_id, title, new Date().toISOString(), weekStartFriday(), localYMD(), in_weekly4, Number(settings.avgTicketPrice) || 0,
+    `INSERT INTO watched(user_id, tmdb_id, title, watched_at, week_start, watched_date, in_weekly4, ticket_price, theatre)
+      VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
+    currentUserId(), tmdb_id, title, new Date().toISOString(), weekStartFriday(), today, in_weekly4, Number(settings.avgTicketPrice) || 0,
+    plan?.theatre_name || null,
   );
   filmDone(currentUserId(), tmdb_id, 'seen');
   return getWeek();
 }
 
 // "I'm going", then Yes the next morning (lib/plans.js): the film logged on
-// the day of the showing, at its start, and counted by the movie plan
-// exactly as Mark seen counts it. `date` is the showtime's listed day.
-export function logWatchedOn({ tmdb_id, title, date, at, in_weekly4 = false }) {
+// the day of the showing, at its start, at the plan's theater, and counted by
+// the movie plan exactly as Mark seen counts it. `date` is the showtime's
+// listed day.
+export function logWatchedOn({ tmdb_id, title, date, at, in_weekly4 = false, theatre = null }) {
   const settings = getSettings();
   run(
-    `INSERT INTO watched(user_id, tmdb_id, title, watched_at, week_start, watched_date, in_weekly4, ticket_price)
-      VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
+    `INSERT INTO watched(user_id, tmdb_id, title, watched_at, week_start, watched_date, in_weekly4, ticket_price, theatre)
+      VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
     currentUserId(), tmdb_id, title, new Date(at).toISOString(), weekStartFriday(new Date(`${date}T12:00:00`)), date, in_weekly4, Number(settings.avgTicketPrice) || 0,
+    theatre || null,
   );
   filmDone(currentUserId(), tmdb_id, 'seen');
   return getWeek();
@@ -50,14 +60,15 @@ export function undoWatched(id) {
 // per-day unique index does the de-duping — the same movie on the same local
 // day (this exact row on a re-import, or a pre-fix double-log) is dropped —
 // and the return says whether a row was actually inserted.
-export function restoreWatched({ tmdb_id, title, watched_at, in_weekly4 = false, price = null, source = null }) {
+export function restoreWatched({ tmdb_id, title, watched_at, in_weekly4 = false, price = null, source = null, theatre = null }) {
   const when = watched_at || new Date().toISOString();
   const settings = getSettings();
   const added = run(
-    `INSERT INTO watched(user_id, tmdb_id, title, watched_at, week_start, watched_date, in_weekly4, ticket_price, source)
-      VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
+    `INSERT INTO watched(user_id, tmdb_id, title, watched_at, week_start, watched_date, in_weekly4, ticket_price, source, theatre)
+      VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id, tmdb_id, watched_date) DO NOTHING`,
     currentUserId(), tmdb_id, title, when, weekStartFriday(new Date(when)), localYMD(new Date(when)), in_weekly4,
     price ?? Number(settings.avgTicketPrice) ?? 0, source === 'letterboxd' ? 'letterboxd' : null,
+    typeof theatre === 'string' && theatre.trim() ? theatre.trim().slice(0, 200) : null,
   ).changes > 0;
   if (added) filmDone(currentUserId(), tmdb_id, 'seen', when);
   return added;

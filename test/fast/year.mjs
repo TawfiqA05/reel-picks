@@ -13,6 +13,11 @@
 //             friend whose whole history is this year each get their set;
 //             short friendly versions, never an empty card; no theater card
 //             when no theater is known
+//   theater   a seen film keeps its theater when the app knows it (a Yes to
+//             "Did you see it?", Mark seen on the day of a planned showing
+//             that has started) and never otherwise; films seen before stay
+//             empty; the card counts them with past plans; each person's
+//             theaters show only in their own recap
 //   privacy   the guest gets 403 and no window; each recap holds only its
 //             own person's films, name and numbers; the poster route serves
 //             only the caller's own recap posters; no invite link, place or
@@ -102,6 +107,7 @@ async function expected(key, year, nowIso) {
   const nowMs = now.getTime();
   const visits = new Map();
   for (const p of w.q("SELECT theatre_name, start_epoch FROM plans WHERE user_id = ? AND date LIKE ? || '-%'", id, Y)) if (p.start_epoch <= nowMs && p.theatre_name) visits.set(p.theatre_name, (visits.get(p.theatre_name) || 0) + 1);
+  for (const r of w.q("SELECT theatre FROM watched WHERE user_id = ? AND watched_date LIKE ? || '-%' AND theatre IS NOT NULL", id, Y)) visits.set(r.theatre, (visits.get(r.theatre) || 0) + 1);
   const theater = visits.size ? [...visits].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] : null;
   const pickIds = new Set(seenRows.filter((s) => s.in_weekly4).map((s) => s.tmdb_id));
   const pickFilms = all.filter((f) => pickIds.has(f.id));
@@ -313,6 +319,58 @@ await S.step('readonly: nothing moves', async () => {
   const diff = Object.keys(USERS).filter((k) => before[k] !== after[k]).map((k) => `${k}: ${before[k].slice(0, 300)} => ${after[k].slice(0, 300)}`);
   S.check('readonly: every person\'s scores and weekly four are unchanged', !diff.length, diff.join(' || '));
   S.check('readonly: the guest\'s picks are unchanged', guestBefore === await recsOf(GUEST));
+});
+
+// ------------------------------------------------------------------ theater
+await S.step('theater: saved with a seen film when the app knows it, and counted', async () => {
+  const P = (k) => C.PLAYING.find((f) => f.k === k);
+  const MG = 'AMC Maple Grove 12'; const RS = 'AMC Riverside 8';
+  await w.jump('2026-12-02T09:00:00-05:00');
+  // Showings on Dec 2 (and one on Dec 5) at each person's theaters.
+  const shows = {
+    yes: { film: P(7), tid: '9102', date: '2026-12-02', time: '19:00' },
+    mark: { film: P(8), tid: '9102', date: '2026-12-02', time: '20:00' },
+    later: { film: P(9), tid: '9102', date: '2026-12-05', time: '19:00' },
+    robin: { film: P(10), tid: '9101', date: '2026-12-02', time: '19:30' },
+  };
+  for (const [k, x] of Object.entries(shows)) {
+    w.q('INSERT OR REPLACE INTO showtimes(id, amc_movie_id, tmdb_id, theatre_id, date, start_local, start_epoch, format, attributes, fetched_at) VALUES(?,?,?,?,?,?,?,?,?,?)',
+      `yr-${k}`, String(x.film.amcId), x.film.id, x.tid, x.date, `${x.date}T${x.time}:00`, Date.parse(`${x.date}T${x.time}:00-05:00`), 'Standard', '[]', '2026-12-02T14:00:00.000Z');
+  }
+  const noted = new Set(w.q('SELECT id FROM watched WHERE theatre IS NOT NULL').map((r) => r.id));
+  S.check('theater: films seen before this change have no theater', noted.size === 0, String(noted.size));
+  const plan = async (as, k) => (await api(as, 'PUT', '/api/plans', { showtime_id: `yr-${k}` })).status;
+  const planned = [await plan(null, 'yes'), await plan(null, 'mark'), await plan(null, 'later'), await plan(ROBIN, 'robin')];
+  S.check('theater: the plans are made', planned.every((x) => x === 200), planned.join(','));
+  await w.jump('2026-12-02T22:00:00-05:00');
+  const row = (uid, film) => w.q1('SELECT theatre, watched_date FROM watched WHERE user_id = ? AND tmdb_id = ? ORDER BY id DESC', uid, film.id);
+
+  const yes = await api(null, 'POST', `/api/plans/${shows.yes.film.id}/answer`, { seen: true });
+  S.check('theater: a Yes to "Did you see it?" saves the plan\'s theater', yes.status === 200 && row(1, shows.yes.film)?.theatre === RS, `${yes.status} ${JSON.stringify(row(1, shows.yes.film))}`);
+  await api(null, 'POST', '/api/watched', { tmdb_id: shows.mark.film.id, title: shows.mark.film.title });
+  S.check('theater: Mark seen on the day of a planned showing that has started saves its theater', row(1, shows.mark.film)?.theatre === RS, JSON.stringify(row(1, shows.mark.film)));
+  await api(null, 'POST', '/api/watched', { tmdb_id: shows.later.film.id, title: shows.later.film.title });
+  S.check('theater: Mark seen with a plan for another day saves no theater', row(1, shows.later.film) && row(1, shows.later.film).theatre === null, JSON.stringify(row(1, shows.later.film)));
+  await api(null, 'POST', '/api/watched', { tmdb_id: P(11).id, title: P(11).title });
+  S.check('theater: Mark seen with no plan saves no theater', row(1, P(11)) && row(1, P(11)).theatre === null, JSON.stringify(row(1, P(11))));
+  const ry = await api(ROBIN, 'POST', `/api/plans/${shows.robin.film.id}/answer`, { seen: true });
+  S.check('theater: a friend\'s Yes saves their own theater on their own row', ry.status === 200 && row(ROBIN.id, shows.robin.film)?.theatre === MG, JSON.stringify(row(ROBIN.id, shows.robin.film)));
+  const all = w.q('SELECT id, user_id, tmdb_id FROM watched WHERE theatre IS NOT NULL');
+  S.check('theater: no other watch-log row gained a theater', all.length === 3, JSON.stringify(all));
+
+  const mine = (await get(null, '/api/year')).json;
+  const e = await expected('owner', 2026, '2026-12-02T22:00:00-05:00');
+  const th = cardOf(mine, 'theater');
+  S.check('theater: the owner\'s card counts seen films with their theater and past plans', th?.name === e.theater?.[0] && th.showings === e.theater[1] && th.name === RS && th.showings === 3, JSON.stringify(th));
+  const rr = (await get(ROBIN, '/api/year')).json;
+  const rth = cardOf(rr, 'theater');
+  S.check('theater: a friend with a seen film at a known theater now gets the card', rth?.name === MG && rth.showings === 1, JSON.stringify(rth));
+  S.check('theater: the friend\'s recap has none of the owner\'s theaters', !JSON.stringify(rr).includes('Riverside'));
+  const cr = (await get(CASEY, '/api/year')).json;
+  S.check('theater: another friend (at Riverside) sees no theater from anyone', !cardOf(cr, 'theater') && !/Riverside|Maple Grove/.test(JSON.stringify(cr)));
+  const exp = (await get(ROBIN, '/api/state')).json;
+  const theaters = (exp?.profile?.watched || []).map((x) => x.theatre).filter(Boolean);
+  S.check('theater: a friend\'s own export carries only their own theater', JSON.stringify(theaters) === JSON.stringify([MG]), JSON.stringify(theaters));
 });
 
 await w.close();
