@@ -114,8 +114,10 @@ await w.api('POST', '/api/watchlist/toggle', { body: { tmdb_id: MOVIE } });
 const jf = await w.api('POST', '/api/friends', { body: { name: 'Morgan' } });
 const joinToken = new URL(jf.json.invite, 'http://x').searchParams.get('invite');
 const browser = await launch();
-const page = async (role, { width = 390, theme = 'dark', hash = 'home', guestJoin = false, ...o } = {}) => {
-  const p = await open(browser, w, { role: ROLES[role], width, theme, ...o });
+// choice: a Theme switch choice kept on the device ('light' or 'dark').
+const page = async (role, { width = 390, theme = 'dark', hash = 'home', guestJoin = false, choice = null, ...o } = {}) => {
+  const kept = choice ? { extraCtx: { storageState: { cookies: [], origins: [{ origin: w.base, localStorage: [{ name: 'rp.theme', value: choice }] }] } } } : {};
+  const p = await open(browser, w, { role: ROLES[role], width, theme, ...kept, ...o });
   await realSizePosters(p.ctx);
   if (guestJoin) { await p.page.goto(`${w.base}/?invite=${joinToken}`); await p.page.waitForTimeout(500); } else if (hash) await go(p.page, w, hash, 400);
   return p;
@@ -209,6 +211,12 @@ async function typeScale() {
   await p.ctx.close();
 }
 
+// The looks the checks below run in: the system's own dark and light, and
+// (FORCED) the same two chosen with the Theme switch on a device set the other
+// way, which must pass exactly the same checks.
+const SYSTEM = [{ theme: 'dark', system: 'dark', choice: null, label: 'dark' }, { theme: 'light', system: 'light', choice: null, label: 'light' }];
+const FORCED = [{ theme: 'dark', system: 'light', choice: 'dark', label: 'forced dark' }, { theme: 'light', system: 'dark', choice: 'light', label: 'forced light' }];
+
 // ---------------------------------------------------------------- buttons
 function disabledLook(vis) {
   const visible = eval(vis);
@@ -222,12 +230,12 @@ function disabledLook(vis) {
   e.removeAttribute('aria-disabled'); e.style.transition = '';
   return res;
 }
-async function buttons() {
+async function buttons(modes = SYSTEM) {
   const pages = [['owner', 'home'], ['owner', `movie/${MOVIE}`], ['owner', 'settings'], ['owner', 'stats'], ['heavy', 'rate'], ['heavy', 'watchlist'], ['heavy', 'home'], ['owner', 'help'], ['guest', 'home']];
-  for (const theme of ['dark', 'light']) {
+  for (const { system, choice, label: theme } of modes) {
     for (const width of [390, 1280]) {
       for (const [role, hash] of pages) {
-        const p = await page(role, { width, theme, hash });
+        const p = await page(role, { width, theme: system, choice, hash });
         if (hash === 'home' && role === 'heavy') { await p.page.locator('#wsw-btn').click(); await waitDialog(p.page); await p.page.click('[data-answer="theater"]'); await p.page.waitForTimeout(300); }
         const r = await p.page.evaluate(buttonsProbe, VISIBLE);
         S.check(`buttons ${theme} ${width} ${role} ${hash.split('/')[0]}: one button system`, !r.bad.length && !p.errors.length, [...r.bad, ...p.errors].slice(0, 4).join(' || '));
@@ -260,11 +268,11 @@ function grouped(vis) {
   }
   return { groups: groups.length, bodies: bodies.length, rows, dividers, bad };
 }
-async function boxes() {
-  for (const theme of ['dark', 'light']) {
+async function boxes(modes = SYSTEM) {
+  for (const { system, choice, label: theme } of modes) {
     for (const width of [390, 1280]) {
       for (const [role, hash] of [['owner', 'stats'], ['heavy', 'stats'], ['owner', 'settings'], ['heavy', 'settings'], ['owner', 'home'], ['owner', `movie/${MOVIE}`], ['heavy', 'rate'], ['heavy', 'together'], ['owner', 'help'], ['owner', 'schedule/leaving']]) {
-        const p = await page(role, { width, theme, hash });
+        const p = await page(role, { width, theme: system, choice, hash });
         const tag = `boxes ${theme} ${width} ${role} ${hash.split('/').slice(0, 2).join(' ')}`;
         const o = await p.page.evaluate(outlined, VISIBLE);
         S.check(`${tag}: no outlined boxes (only fields have an edge)`, !o.length, o.join(', '));
@@ -339,7 +347,7 @@ async function words() {
 }
 
 // ---------------------------------------------------------------- clean (rendered)
-async function cleanRendered() {
+async function cleanRendered(modes = SYSTEM) {
   const scenes = [
     ['picks', async () => {}],
     ['search', async (p) => { await p.click('#search-btn'); await p.waitForTimeout(500); }],
@@ -355,10 +363,10 @@ async function cleanRendered() {
     ['skeleton', async (p) => { await p.route('**/api/recommendations*', async (r) => { await new Promise((x) => setTimeout(x, 3000)); r.continue().catch(() => {}); }); await p.goto('about:blank'); await p.goto(`${w.base}/#/home`); await p.waitForSelector('.skeleton'); await p.waitForTimeout(300); }],
     ['join', null], ['expired', null],
   ];
-  for (const theme of ['dark', 'light']) {
+  for (const { system, choice, label: theme } of modes) {
     for (const [name, run] of scenes) {
       const guest = name === 'join' || name === 'expired';
-      const p = await page(guest ? 'guest' : 'owner', { width: 390, theme, hash: guest ? null : 'home', allow403: false });
+      const p = await page(guest ? 'guest' : 'owner', { width: 390, theme: system, choice, hash: guest ? null : 'home', allow403: false });
       if (name === 'join') { await p.page.goto(`${w.base}/?invite=${joinToken}`); await p.page.waitForTimeout(500); }
       else if (name === 'expired') { await p.page.goto(`${w.base}/?invite=not-a-token-at-all`); await p.page.waitForTimeout(500); }
       else await run(p.page);
@@ -395,7 +403,7 @@ function dangerLook(i) {
   }
   return { fill: s.backgroundColor, color: s.color, layers, page: getComputedStyle(document.body).backgroundColor, size: s.fontSize, what: `${String(e.className).trim().split(/\s+/).join('.')} "${(e.getAttribute('aria-label') || e.textContent).trim().slice(0, 24)}"` };
 }
-async function dangerHover() {
+async function dangerHover(modes = SYSTEM) {
   const same = (a, b) => { const x = parse(a); const y = parse(b); return Math.abs(x.r - y.r) + Math.abs(x.g - y.g) + Math.abs(x.b - y.b) <= 2 && Math.abs(x.a - y.a) < 0.006; };
   const scenes = [
     ['picks', 'owner', 'home', '#main', null],
@@ -406,10 +414,10 @@ async function dangerHover() {
     }],
     ['settings', 'owner', 'settings', '#main', null],
   ];
-  for (const theme of ['dark', 'light']) {
+  for (const { theme, system, choice, label } of modes) {
     const low = []; const rest = []; const hov = []; const blind = []; let small = 0; let n = 0;
     for (const [scene, role, hash, scope, prep] of scenes) {
-      const p = await page(role, { width: 390, theme, hash });
+      const p = await page(role, { width: 390, theme: system, choice, hash });
       if (prep) await prep(p.page);
       const count = await p.page.evaluate(({ vis, scope }) => {
         const v = eval(vis);
@@ -443,16 +451,21 @@ async function dangerHover() {
     }
     if (!small) blind.push('no 12px soft red button was hovered');
     // Light's hover is held as it is (the check below); its contrast is dark's job here.
-    if (theme === 'dark') S.check(`buttons ${theme} 390: the soft red button's hovered label keeps 4.5:1 on every surface`, n > 0 && !blind.length && !low.length, [...blind, ...low.sort((a, b) => a[0] - b[0]).map((x) => x[1])].slice(0, 4).join(' || '));
-    else S.check(`buttons ${theme} 390: the soft red button's hover is reached on every surface`, n > 0 && !blind.length, blind.slice(0, 4).join(' || '));
-    S.check(`buttons ${theme} 390: the soft red button's resting colours are unchanged`, n > 0 && !rest.length, rest.slice(0, 3).join(' || '));
-    if (DANGER[theme].hover) S.check(`buttons ${theme} 390: the soft red button's hover colours are unchanged`, n > 0 && !hov.length, hov.slice(0, 3).join(' || '));
+    if (theme === 'dark') S.check(`buttons ${label} 390: the soft red button's hovered label keeps 4.5:1 on every surface`, n > 0 && !blind.length && !low.length, [...blind, ...low.sort((a, b) => a[0] - b[0]).map((x) => x[1])].slice(0, 4).join(' || '));
+    else S.check(`buttons ${label} 390: the soft red button's hover is reached on every surface`, n > 0 && !blind.length, blind.slice(0, 4).join(' || '));
+    S.check(`buttons ${label} 390: the soft red button's resting colours are unchanged`, n > 0 && !rest.length, rest.slice(0, 3).join(' || '));
+    if (DANGER[theme].hover) S.check(`buttons ${label} 390: the soft red button's hover colours are unchanged`, n > 0 && !hov.length, hov.slice(0, 3).join(' || '));
   }
 }
 
 // The browser half runs its parts side by side, one browser.
 await S.step('browser: type, buttons, boxes, words, rendered colours', async () => {
-  const parts = [typeFonts, typeShift, typeScale, buttons, dangerHover, boxes, words, cleanRendered];
+  // The same checks with each theme chosen on the Theme switch against the system.
+  async function buttonsForced() { await buttons(FORCED); }
+  async function dangerHoverForced() { await dangerHover(FORCED); }
+  async function boxesForced() { await boxes(FORCED); }
+  async function cleanRenderedForced() { await cleanRendered(FORCED); }
+  const parts = [typeFonts, typeShift, typeScale, buttons, dangerHover, boxes, words, cleanRendered, buttonsForced, dangerHoverForced, boxesForced, cleanRenderedForced];
   const errs = [];
   await Promise.all(Array.from({ length: 4 }, async () => { while (parts.length) { const f = parts.shift(); try { await f(); } catch (e) { errs.push(`${f.name}: ${String(e.stack || e).split('\n').slice(0, 3).join(' | ')}`); } } }));
   for (const e of errs) S.check(`${e.split(':')[0]} ran to the end`, false, e);
