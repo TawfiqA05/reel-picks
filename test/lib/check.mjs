@@ -42,8 +42,9 @@ export function suite(name) {
     const failed = checks.filter((c) => !c.ok);
     const result = { suite: name, ms: Date.now() - t0, checks, ...extra };
     console.log(`\n${checks.length - failed.length}/${checks.length} checks passed in ${name}`);
-    console.log(`@@RESULT ${JSON.stringify(result)}`);
-    process.exit(failed.length ? 1 : 0);
+    // Exit once the line is written: a pipe on macOS takes it in pieces, and
+    // exiting straight away cut a long one short (the runner then saw none).
+    process.stdout.write(`@@RESULT ${JSON.stringify(result)}\n`, () => process.exit(failed.length ? 1 : 0));
   };
   return { name, check, step, finish, world, get current() { return current; } };
 }
