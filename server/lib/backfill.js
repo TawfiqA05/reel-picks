@@ -97,8 +97,12 @@ async function fetchOne(row) {
 async function runBackfill() {
   const tried = new Set();
   for (;;) {
-    const batch = all(`SELECT r.tmdb_id, MAX(r.title) AS title ${WAITING} GROUP BY r.tmdb_id ORDER BY r.tmdb_id LIMIT ?`, BATCH)
-      .filter((row) => !tried.has(row.tmdb_id));
+    // The films this run hasn't tried yet, BATCH at a time. Films it already
+    // tried and that are still waiting (an answer that didn't fill them in)
+    // are left out before the batch is taken, so they can't crowd out the
+    // films after them; they get another go at the next trigger.
+    const batch = all(`SELECT r.tmdb_id, MAX(r.title) AS title ${WAITING} GROUP BY r.tmdb_id ORDER BY r.tmdb_id`)
+      .filter((row) => !tried.has(row.tmdb_id)).slice(0, BATCH);
     // Nothing left, or only films this run already tried and couldn't finish.
     if (!batch.length) return;
     for (const row of batch) {

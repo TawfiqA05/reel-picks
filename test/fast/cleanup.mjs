@@ -44,4 +44,41 @@ await step('throttle: the import matcher waits for the shared TMDB throttle', as
   } finally { await w.close(); }
 });
 
+await step('backfill: films already tried can\'t crowd out the ones after them', async () => {
+  // 21 rated films whose cached TMDB answer never fills them in (it describes
+  // another film), all with lower ids than three films really waiting.
+  const stuck = Array.from({ length: 21 }, (_, i) => 101 + i);
+  const waiting = C.RATED.slice(0, 3).map((f) => f.id);
+  const w = S.world(await openWorld('cleanup-backfill', {
+    prepare: (d) => {
+      const now = new Date(C.BUILD_AT).toISOString();
+      for (const id of stuck) {
+        d.prepare('INSERT INTO ratings(user_id, tmdb_id, title, year, rating, source, rated_at, created_at) VALUES(1,?,?,2001,3,?,?,?)').run(id, `Stuck ${id}`, 'letterboxd', now, now);
+        d.prepare('INSERT OR REPLACE INTO cache(key, value, fetched_at, ttl) VALUES(?,?,?,?)').run(`tmdb:movie:${id}`, JSON.stringify({ id: 1, title: 'Somewhere Else' }), now, 7 * 86400);
+      }
+      for (const id of waiting) d.prepare('UPDATE movies SET details_at = NULL WHERE tmdb_id = ?').run(id);
+    },
+  }));
+  try {
+    const filled = () => w.q(`SELECT COUNT(*) n FROM movies WHERE tmdb_id IN (${waiting.join(',')}) AND details_at IS NOT NULL`)[0].n;
+    // The start-up run.
+    const ran = await until(async () => { const s = await status(w); return s?.creditsBackfill?.finishedAt && !s.creditsBackfill.running && s; }, 60000, 200);
+    check('backfill: the start-up run finished', Boolean(ran));
+    check('backfill: one run fills every film really waiting, past 21 that stay stuck', filled() === waiting.length, `${filled()} of ${waiting.length}`);
+    check('backfill: the stuck films are still waiting (their answer describes another film)', w.q(`SELECT COUNT(*) n FROM movies WHERE tmdb_id IN (${stuck.join(',')}) AND details_at IS NOT NULL`)[0].n === 0);
+
+    // A run stopped by TMDB trouble picks up at the next trigger.
+    await w.srv.stop();
+    { const d = w.db(); d.prepare(`UPDATE movies SET details_at = NULL WHERE tmdb_id IN (${waiting.join(',')})`).run(); d.prepare(`DELETE FROM cache WHERE key IN (${waiting.map((id) => `'tmdb:movie:${id}'`).join(',')})`).run(); d.close(); }
+    w.ctrl.tmdb = 'down'; w.writeCtrl();
+    await w.restart();
+    await until(async () => { const s = await status(w); return s?.creditsBackfill?.finishedAt && !s.creditsBackfill.running && s; }, 60000, 200);
+    check('backfill: with TMDB down the run stops and fills nothing', filled() === 0);
+    w.ctrl.tmdb = 'ok'; w.writeCtrl();
+    await w.restart();
+    await until(async () => filled() === waiting.length, 60000, 200);
+    check('backfill: the next run picks up where it stopped', filled() === waiting.length, `${filled()} of ${waiting.length}`);
+  } finally { await w.close(); }
+});
+
 S.finish();
