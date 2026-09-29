@@ -8,6 +8,7 @@ import * as stats from './stats.js';
 import * as together from './together.js';
 import * as settings from './settings.js';
 import * as help from './help.js';
+import { yearEntry } from '../year.js';
 
 export const SEGMENTS = [
   { key: 'stats', label: 'Stats', render: stats.render },
@@ -33,6 +34,8 @@ export async function render(root, params, ctx) {
     h('div', { class: 'section-title page-head' },
       h('h1', {}, 'You'),
       name ? h('span', { class: 'section-sub' }, `Signed in as ${name}`) : null),
+    // Your year in movies, Dec 1 to Jan 15 (js/year.js), above every segment.
+    yearEntry(ctx, 'you'),
     h('nav', { class: 'segmented you-seg', 'aria-label': 'You' },
       ...SEGMENTS.map((s) => h('a', {
         class: `segment${s === seg ? ' active' : ''}`, href: `#/${s.key}`, 'data-seg': s.key,

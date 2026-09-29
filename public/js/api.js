@@ -94,6 +94,9 @@ export const api = {
   stats: () => req('GET', '/stats'),
   statsGroup: (kind, name) => req('GET', `/stats/group?kind=${encodeURIComponent(kind)}&name=${encodeURIComponent(name)}`),
   statsMore: (kind, name) => req('GET', `/stats/more?kind=${encodeURIComponent(kind)}&name=${encodeURIComponent(name)}`),
+  // Your year in movies (js/year.js); the owner's preview any day.
+  year: (preview = false) => req('GET', `/year${preview ? '?preview=1' : ''}`),
+  yearPosterUrl: (id, preview = false) => `/api/year/poster/${Number(id)}${preview ? '?preview=1' : ''}`,
 
   friends: () => req('GET', '/friends'),
   addFriend: (name) => req('POST', '/friends', { name }),

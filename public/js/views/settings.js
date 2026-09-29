@@ -6,6 +6,7 @@ import { openHiddenList } from './components.js';
 import { PLANS, PLAN_IDS, planOf, planWords } from '../plans.js';
 import { servicesPicker } from './athome.js';
 import { servicesPhrase } from '../services.js';
+import { openYear } from '../year.js';
 
 const GENRES = ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama',
   'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance',
@@ -883,6 +884,8 @@ export async function render(root, params, ctx) {
       isOwner && bk?.last ? h('a', { class: 'btn soft', href: api.backupUrl() }, icon('download', { size: 16 }), 'Download latest backup') : null,
       isOwner ? h('button', { class: 'btn soft', onClick: () => ctx.triggerRefresh() }, icon('refresh', { size: 16 }), 'Refresh now') : null,
       h('a', { class: 'btn soft', href: '#/onboarding' }, icon('zap', { size: 16 }), 'Re-run quick rate'),
+      // The recap opens for everyone Dec 1 to Jan 15; the owner can look any day.
+      isOwner ? h('button', { class: 'btn soft', type: 'button', onClick: () => openYear(ctx, { preview: true }) }, icon('reel', { size: 16 }), 'Preview year in movies') : null,
     ),
     h('p', { class: 'muted small' }, isOwner
       ? 'Full setup carries settings, theaters, home base, ratings, watchlist, watch history, AMC match decisions, and hidden films. Everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'

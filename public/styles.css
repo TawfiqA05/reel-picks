@@ -1181,6 +1181,83 @@ a.person-link:hover { background: color-mix(in srgb, var(--chip) 82%, var(--text
 .modal-x:hover { color: var(--text); background: var(--chip); }
 .modal-body { padding: 16px; overflow: auto; }
 
+/* ---- Your year in movies (js/year.js) ----
+   Full-screen cards over the page: the whole screen on a phone, a tall card
+   in the middle of a wide one. Each card is washed in one of the palette's
+   soft tints, with its kicker and big figures in that tint's own colour (the
+   pairs the palette holds to AA on every surface); the opening card is a
+   solid marquee panel. Moving on slides the new card in; with reduced
+   motion it only fades. */
+.year-entry { gap: var(--sp-3); }
+.year-entry-icon { flex: 0 0 44px; display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--r-btn); background: var(--accent-soft); color: var(--accent-text); }
+.year-entry-text { flex: 1 1 auto; min-width: 0; }
+.year-entry > .btn { flex: 0 0 auto; }
+.modal-overlay.year-sheet { padding: 0; }
+.year-sheet .modal-card { width: 100%; height: 100%; max-height: none; border-radius: 0; padding: var(--sat) 0 var(--sab); }
+@media (min-width: 720px) {
+  .modal-overlay.year-sheet { padding: var(--sp-6); }
+  .year-sheet .modal-card { width: min(460px, 100%); height: min(880px, 100%); border-radius: var(--r-sheet); padding: 0; }
+}
+.year-sheet .modal-body { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
+.yr-body { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.yr-progress { display: flex; gap: var(--sp-1); padding: var(--sp-3) var(--sp-4) 0; }
+.yr-seg { flex: 1 1 0; height: 4px; border-radius: 2px; background: var(--chip); transition: background-color 200ms; }
+.yr-seg.done { background: var(--accent); }
+.yr-stage { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; padding: var(--sp-3) var(--sp-4); touch-action: pan-y; cursor: pointer; }
+.yr-card {
+  min-height: 100%; display: flex; flex-direction: column; justify-content: center; gap: var(--sp-4);
+  padding: var(--sp-6) var(--sp-5); border-radius: var(--r-card);
+  transition: opacity 240ms var(--ease-out), transform 320ms var(--ease-out);
+}
+.yr-card.yr-enter { opacity: 0; }
+.yr-card.yr-enter.yr-from-right { transform: translateX(32px); }
+.yr-card.yr-enter.yr-from-left { transform: translateX(-32px); }
+@media (prefers-reduced-motion: reduce) { .yr-card.yr-enter { transform: none; } }
+.yr-tint-accent { background: var(--accent); color: var(--on-accent); --yr-ink: var(--on-accent); }
+.yr-tint-blue { background: var(--blue-soft); --yr-ink: var(--blue); }
+.yr-tint-teal { background: var(--teal-soft); --yr-ink: var(--teal); }
+.yr-tint-purple { background: var(--purple-soft); --yr-ink: var(--purple); }
+/* The opening title in three lines, the year the biggest thing on the card. */
+.yr-stack { display: flex; flex-direction: column; }
+.yr-year { font-size: var(--fs-hero); line-height: 1; }
+.yr-kicker { margin: 0; color: var(--yr-ink); font-size: var(--fs-md); font-weight: 600; line-height: var(--lh-tight); overflow-wrap: anywhere; }
+.yr-title { font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: var(--display-tracking); font-size: var(--fs-2xl); line-height: var(--lh-display); overflow-wrap: anywhere; }
+@media (min-width: 380px) { .yr-title { font-size: var(--fs-hero-sm); } }
+.yr-title:focus { outline: none; }
+.yr-text { margin: 0; font-size: var(--fs-md); line-height: var(--lh-snug); }
+.yr-bigs { display: flex; flex-wrap: wrap; gap: var(--sp-5) var(--sp-7); }
+.yr-big { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.yr-figure { color: var(--yr-ink); font-family: var(--font-display); font-weight: var(--display-weight); font-size: var(--fs-3xl); line-height: 1; overflow-wrap: anywhere; }
+.yr-label { font-size: var(--fs-base); font-weight: 600; line-height: var(--lh-tight); }
+.yr-list { list-style: none; margin: 0; padding: 0; }
+.yr-list-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--sp-3); row-gap: 2px; padding: var(--sp-3) 0; border-top: 1px solid var(--divider); }
+.yr-list-key { grid-column: 1 / -1; font-size: var(--fs-sm); line-height: var(--lh-tight); }
+.yr-list-name { font-size: var(--fs-md); font-weight: 600; line-height: var(--lh-tight); overflow-wrap: anywhere; }
+.yr-list-n { align-self: center; font-size: var(--fs-sm); line-height: var(--lh-tight); white-space: nowrap; }
+.yr-films { display: flex; flex-direction: column; gap: var(--sp-3); }
+.yr-film { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; }
+.yr-film-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.yr-film-label, .yr-film-meta { font-size: var(--fs-sm); line-height: var(--lh-tight); }
+.yr-film-title { font-size: var(--fs-md); font-weight: 600; line-height: var(--lh-tight); overflow-wrap: anywhere; }
+.yr-hero { display: flex; align-items: flex-start; gap: var(--sp-4); }
+.yr-hero > .poster { flex: 0 0 auto; width: min(42%, 180px); }
+.yr-hero-text { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.yr-stars { display: inline-flex; align-items: center; gap: 2px; font-size: var(--fs-lg); font-weight: 700; line-height: var(--lh-tight); }
+.yr-stars .star-glyph { color: var(--gold); }
+.yr-note { margin: 0; padding-left: var(--sp-3); border-left: 3px solid var(--yr-ink); }
+.yr-note p { margin: 0; font-size: var(--fs-md); line-height: var(--lh-snug); overflow-wrap: anywhere; }
+.yr-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4); margin: 0; }
+.yr-fact { display: flex; flex-direction: column-reverse; gap: 2px; min-width: 0; }
+.yr-fact dt { font-size: var(--fs-sm); font-weight: 600; line-height: var(--lh-tight); }
+.yr-fact dd { margin: 0; color: var(--yr-ink); font-family: var(--font-display); font-weight: var(--display-weight); font-size: var(--fs-xl); line-height: var(--lh-display); overflow-wrap: anywhere; }
+.yr-posters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-2); }
+.yr-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.yr-cta { align-self: flex-start; }
+.yr-save-status { margin: 0; min-height: 20px; font-size: var(--fs-sm); line-height: 20px; }
+.yr-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+.yr-nav > .btn { min-width: 96px; }
+.yr-count { margin: 0; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-tight); font-variant-numeric: tabular-nums; }
+
 .toast-host { position: fixed; bottom: calc(var(--chrome-bottom) + 16px); left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: max-content; max-width: calc(100vw - 32px); }
 @media (min-width: 900px) { .toast-host { bottom: var(--sp-7); } }
 /* With the Save bar up, a toast sits above it, not on its button. */

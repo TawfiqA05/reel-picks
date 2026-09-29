@@ -7,6 +7,7 @@ import { homeSection } from './athome.js';
 import { openWhatToWatch } from '../wsw.js';
 import { pullToRefresh } from '../pull.js';
 import { loadSocial, inbox } from '../social.js';
+import { yearEntry } from '../year.js';
 
 export async function render(root, params, ctx) {
   clear(root);
@@ -113,6 +114,10 @@ function buildPage(data, status, ctx, state, actions) {
   const guest = Boolean(ctx.isGuest?.());
   const onHide = guest ? null : actions.hide;
   const onUnhide = guest ? null : (e) => actions.unhide(e);
+
+  // Your year in movies, Dec 1 to Jan 15 (js/year.js): first thing on the page.
+  const year = guest ? null : yearEntry(ctx, 'picks');
+  if (year) page.appendChild(year);
 
   // Onboarding nudge when the taste profile is thin.
   if (!guest && status && !status.onboardingDone && data.profile.count < 10) {
