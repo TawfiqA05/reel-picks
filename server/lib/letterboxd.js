@@ -124,11 +124,29 @@ export async function fetchFeed(username) {
     throw new SyncError(`Letterboxd has no public profile called "${username}". Check the spelling: it's the name in your profile's web address, letterboxd.com/username.`, 'username');
   }
   if (!res.ok) throw new SyncError(`Letterboxd answered with an error (HTTP ${res.status}). It will try again later.`, 'network');
-  const text = await res.text();
-  if (text.length > MAX_BYTES || !/<rss[\s>]/.test(text.slice(0, 2000))) {
+  const text = await readCapped(res, MAX_BYTES);
+  if (text == null || !/<rss[\s>]/.test(text.slice(0, 2000))) {
     throw new SyncError('Letterboxd sent something that isn\'t a feed. It will try again later.', 'network');
   }
   return parseFeed(text);
+}
+
+// The body as text, or null once it passes `max` bytes: reading stops there
+// and the rest is never downloaded.
+async function readCapped(res, max) {
+  if (Number(res.headers.get('content-length')) > max) { await res.body?.cancel().catch(() => {}); return null; }
+  if (!res.body) return '';
+  const reader = res.body.getReader();
+  const parts = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) { await reader.cancel().catch(() => {}); return null; }
+    parts.push(value);
+  }
+  return Buffer.concat(parts).toString('utf8');
 }
 
 // ---- state ------------------------------------------------------------------

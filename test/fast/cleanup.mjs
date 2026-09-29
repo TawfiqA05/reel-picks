@@ -113,4 +113,54 @@ await step('import: a full-setup file that fails partway changes nothing', async
   } finally { await w.close(); }
 });
 
+await step('letterboxd: an oversized feed is cut off while it is read', async () => {
+  // A "feed" of 40 MB, sent in 64 KB pieces only as fast as the app reads it.
+  const TOTAL = 40 * 1024 * 1024;
+  const big = { sent: 0, closed: false };
+  const chunk = Buffer.alloc(64 * 1024, 'x');
+  const feedSrv = await serve((req, res) => {
+    res.writeHead(200, { 'content-type': 'application/rss+xml' });
+    res.write('<?xml version="1.0"?><rss version="2.0"><channel>');
+    const pump = () => {
+      while (big.sent < TOTAL) {
+        big.sent += chunk.length;
+        if (!res.write(chunk)) return res.once('drain', pump);
+      }
+      res.end('</channel></rss>');
+      return undefined;
+    };
+    res.on('close', () => { big.closed = true; });
+    pump();
+  });
+  const w = S.world(await openWorld('cleanup-letterboxd', { env: { RP_LETTERBOXD_ORIGIN: feedSrv.origin } }));
+  try {
+    const r = await w.api('PUT', '/api/letterboxd', { body: { username: 'bigfeed' } });
+    await until(() => big.closed, 20000, 50);
+    check('letterboxd: the oversized feed is refused as not a feed', r.status === 200 && /isn't a feed/.test(JSON.stringify(r.json)), `${r.status} ${r.text.slice(0, 200)}`);
+    check('letterboxd: reading stopped near the 5 MB limit instead of taking all 40 MB', big.sent < 12 * 1024 * 1024, `${(big.sent / 1048576).toFixed(1)} MB sent`);
+    check('letterboxd: nothing was imported from it', !w.q1("SELECT 1 x FROM letterboxd_seen WHERE user_id = 1"));
+
+    // An uploaded file is held to its limit (20 MB) while it arrives too:
+    // express.json stops reading, and the rest is never taken in.
+    const up = await new Promise((resolve) => {
+      let sent = 0; let answered = null;
+      const req = http.request(`${w.base}/api/ratings/import`, { method: 'POST', headers: { 'content-type': 'application/json' } }, (res) => { answered = res.statusCode; res.resume(); res.on('end', () => resolve({ status: answered, sent })); });
+      req.on('error', () => resolve({ status: answered, sent }));
+      const piece = Buffer.alloc(256 * 1024, 'a');
+      req.write('{"csv":"');
+      const more = () => {
+        while (answered == null && sent < 60 * 1024 * 1024) {
+          sent += piece.length;
+          if (!req.write(piece)) return req.once('drain', more);
+        }
+        if (answered == null) req.end('"}');
+        return undefined;
+      };
+      more();
+    });
+    check('letterboxd: an oversized upload is refused with 413', up.status === 413, String(up.status));
+    check('letterboxd: the upload was cut off well before all 60 MB arrived', up.sent < 40 * 1024 * 1024, `${(up.sent / 1048576).toFixed(1)} MB sent`);
+  } finally { await w.close(); await feedSrv.shut(); }
+});
+
 S.finish();

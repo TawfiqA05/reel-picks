@@ -144,8 +144,25 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// Big bodies only where a file comes in (a ratings CSV, a full-setup file).
-app.use(['/api/ratings/import', '/api/state'], express.json({ limit: '20mb' }));
+// Big bodies only where a file comes in (a ratings CSV, a full-setup file),
+// held to their limit while they arrive: past it the answer is 413 at once
+// and the connection closes, so the rest of an oversized file is never read
+// (express.json alone would read it to the end before answering).
+const FILE_ROUTES = ['/api/ratings/import', '/api/state'];
+const FILE_LIMIT = 20 * 1024 * 1024;
+app.use(FILE_ROUTES, (req, res, next) => {
+  const tooBig = () => {
+    if (res.headersSent) return;
+    res.set('Connection', 'close');
+    res.status(413).json({ error: 'request entity too large' });
+    res.on('finish', () => req.destroy());
+  };
+  if (Number(req.get('content-length')) > FILE_LIMIT) return tooBig();
+  let seen = 0;
+  req.on('data', (chunk) => { seen += chunk.length; if (seen > FILE_LIMIT) tooBig(); });
+  next();
+});
+app.use(FILE_ROUTES, express.json({ limit: FILE_LIMIT }));
 app.use(express.json({ limit: '200kb' }));
 
 // Every API request runs as one user (lib/user.js): the owner, a signed-in
@@ -173,6 +190,8 @@ app.get('*', (req, res, next) => {
 
 app.use((err, req, res, next) => {
   console.error('[api error]', err.message);
+  // Already answered (an oversized file, above): nothing more to say.
+  if (res.headersSent) return;
   // A thrown error with a status was written for the reader; anything else is
   // internal (a database message, say) and stays in the log.
   const status = err.status || err.statusCode || 500;
