@@ -1,7 +1,7 @@
 // Normalizes public scores (IMDb / Rotten Tomatoes / Metacritic / TMDB) to a
 // single 0-100 number, splits critic vs audience, and flags divergence + the
 // "scores still settling" window for new releases.
-import { mean, daysBetween } from './util.js';
+import { mean, daysBetween, localYMD } from './util.js';
 
 // raw: { imdb: 0-10|null, rt: 0-100|null, metacritic: 0-100|null }
 // tmdbRating: 0-10|null (audience-side signal from TMDB)
@@ -70,7 +70,6 @@ export function computePublicScore(raw = {}, tmdbRating = null) {
 // neutral default, dashed pill and "No scores yet" badge as a film with nothing.
 export const MIN_TMDB_VOTES = 50;
 
-const localYMD = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 // The date a US audience can first see it: the US theatrical/limited release
 // when TMDB has one, else TMDB's primary date.

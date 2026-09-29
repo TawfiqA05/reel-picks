@@ -36,12 +36,14 @@ import crypto from 'node:crypto';
 import { all, run } from '../db.js';
 import { scoredLineup } from './recommend.js';
 import {
-  personal, done, excludedBySettings, scoreFilm, reasonFor, streamingCandidates, filmData, ensureDetails, confirmService, weeklyList, currentLabel,
+  personal, done, scoreFilm, reasonFor, streamingCandidates, filmData, ensureDetails, confirmService, weeklyList, currentLabel,
 } from './home.js';
 import { becauseLine } from './because.js';
 import { getMovie } from './movies.js';
 import { publicScoreForMovie } from './scoring.js';
 import { servicesPhrase } from '../../public/js/services.js';
+import { votesPhrase } from './util.js';
+import { excludedBySettings } from './ranking.js';
 
 export const MOODS = {
   funny: { genres: ['Comedy'], ids: [35] },
@@ -165,7 +167,6 @@ function tryInstead(ask) {
   return ` Try ${t.length > 1 ? `${t.slice(0, -1).join(', ')} or ${t[t.length - 1]}` : t[0]}.`;
 }
 
-const votesPhrase = (v) => (v ? `${v >= 1000 ? `${Math.round(v / 1000)}k` : v} votes` : null);
 
 function card(m, extra) {
   return {

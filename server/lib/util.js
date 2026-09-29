@@ -1,4 +1,6 @@
 // Small shared helpers.
+import crypto from 'node:crypto';
+
 export const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);
 export const sum = (a) => a.reduce((s, x) => s + x, 0);
 export const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
@@ -53,6 +55,25 @@ export function timeLabel(startLocal) {
 }
 
 export const round2 = (x) => (x == null ? null : Math.round(x * 100) / 100);
+
+// The year from a year or a YYYY-MM-DD date (number or string), or null.
+export const yearOf = (v) => (v ? Number(String(v).slice(0, 4)) || null : null);
+
+// "12k votes" / "640 votes", or null when there are none.
+export const votesPhrase = (v) => (v ? `${v >= 1000 ? `${Math.round(v / 1000)}k` : v} votes` : null);
+
+// A TMDB image URL at another size (w92, w500, …), or null for anything else.
+export const tmdbImageAt = (url, size) => (typeof url === 'string' && url.startsWith('https://image.tmdb.org/') ? url.replace(/\/(w\d+|original)\//, `/${size}/`) : null);
+
+// Constant-time, length-independent comparison of two secrets: both are
+// hashed to a fixed 32 bytes first, so neither timing nor length leaks
+// anything about either.
+export function safeEqual(a, b) {
+  return crypto.timingSafeEqual(
+    crypto.createHash('sha256').update(String(a)).digest(),
+    crypto.createHash('sha256').update(String(b)).digest(),
+  );
+}
 
 // Quote a value for CSV output.
 export function csvField(v) {

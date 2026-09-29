@@ -21,7 +21,7 @@ import { getStatsGroup, userLineup } from './recommend.js';
 import { usReleaseDate, tmdbIgnoredReason } from './scoring.js';
 import { tmdbThrottle } from './backfill.js';
 import { currentUserId } from './user.js';
-import { localYMD } from './util.js';
+import { localYMD, yearOf as year } from './util.js';
 
 const UNKNOWN_TTL = 7 * 86400; // seconds a "TMDB doesn't know this person" answer is kept
 // Actors: films with fewer votes than this go behind "Show smaller films".
@@ -69,7 +69,6 @@ async function personId(kind, name, films) {
   return [...count].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 }
 
-const year = (d) => (d ? Number(String(d).slice(0, 4)) || null : null);
 const opensOn = (date, today) => (date && date > today ? { opens: date } : null);
 
 function fromCredit(c, today) {

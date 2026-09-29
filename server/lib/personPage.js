@@ -17,7 +17,7 @@ import { playingIds } from './search.js';
 import { isFeature, isActing, countedRating, SMALL_FILM_VOTES } from './statsMore.js';
 import { usReleaseDate } from './scoring.js';
 import { currentUserId } from './user.js';
-import { localYMD } from './util.js';
+import { localYMD, yearOf as year } from './util.js';
 
 // What they're known for, in the words the page uses.
 const ROLE = { Directing: 'Director', Acting: 'Actor', Writing: 'Writer', Production: 'Producer' };
@@ -28,7 +28,6 @@ const placeholders = (n) => Array.from({ length: n }, () => '?').join(',');
 // nothing, so it doesn't count against the hourly limit.
 export const personCached = (id) => tmdb.personCached(id);
 
-const year = (d) => (d ? Number(String(d).slice(0, 4)) || null : null);
 const mostPopular = (a, b) => (b.popularity ?? 0) - (a.popularity ?? 0) || (b.tmdb_votes ?? 0) - (a.tmdb_votes ?? 0) || a.title.localeCompare(b.title);
 
 export async function getPerson(id, { guest = false } = {}) {

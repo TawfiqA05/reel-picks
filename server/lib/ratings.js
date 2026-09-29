@@ -6,8 +6,8 @@ import { get, run, all } from '../db.js';
 import { currentUserId } from './user.js';
 import { filmDone } from './done.js';
 import { dropNote } from './notes.js';
+import { yearOf as y } from './util.js';
 
-const y = (v) => (v ? Number(String(v).slice(0, 4)) || null : null);
 
 export function upsertRating({ tmdb_id, title, year, rating, source = 'manual', rated_at, userId = currentUserId() }) {
   const now = new Date().toISOString();

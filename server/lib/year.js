@@ -22,7 +22,7 @@
 // A rating's day is its local day: an app rating carries a UTC time, an
 // imported one often just a date.
 import { all, get, getSettings } from '../db.js';
-import { localYMD, round2 } from './util.js';
+import { localYMD, round2, tmdbImageAt } from './util.js';
 import { currentUser, currentUserId, OWNER_ID } from './user.js';
 import { ownerName } from './guest.js';
 import { userName } from './accounts.js';
@@ -252,5 +252,5 @@ export function sharePosterUrl(tmdbId, { preview = false } = {}) {
   const r = recapFor({ preview });
   if (!r?.share?.posters.includes(tmdbId)) return null;
   const p = get('SELECT poster FROM movies WHERE tmdb_id = ?', tmdbId)?.poster;
-  return typeof p === 'string' && p.startsWith('https://image.tmdb.org/') ? p.replace(/\/(w\d+|original)\//, '/w500/') : null;
+  return tmdbImageAt(p, 'w500');
 }

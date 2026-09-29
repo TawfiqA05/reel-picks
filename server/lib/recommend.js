@@ -13,7 +13,7 @@ import { getMatch } from './match.js';
 import { buildProfile, confidence, tasteMatch, topTasteFactor } from './taste.js';
 import { publicScoreForMovie, isSettling, isReleased, usReleaseDate } from './scoring.js';
 import {
-  finalScore, buildReason, reasonFacts, bestShowtime, showtimeFits, endTimeLabel, beThereByLabel, urgencyBoost,
+  finalScore, buildReason, reasonFacts, bestShowtime, showtimeFits, endTimeLabel, beThereByLabel, urgencyBoost, excludedBySettings,
 } from './ranking.js';
 import { getLastChance, dailyBreadth, computeHorizon, lineupExodus } from './leaving.js';
 import { followedTheatres, homeBase, readDistance, sharedTheatreIds } from './theatres.js';
@@ -130,13 +130,6 @@ function runwayAt(ctx, tid, tmdbId) {
     minGap: ctx.minGap,
     hedgeAll: Boolean(ctx.exodus.get(tid)?.exodus),
   });
-}
-
-function isExcluded(movie, settings) {
-  const exG = new Set(settings.excludedGenres || []);
-  const exM = new Set(settings.excludedMpaa || []);
-  if (movie.mpaa && exM.has(movie.mpaa)) return true;
-  return (movie.genres || []).some((g) => exG.has(g));
 }
 
 function cardShape(m) {
@@ -257,7 +250,7 @@ function evaluate(movie, ctx, tid = ctx.primaryId) {
   // day picker without another round-trip.
   const byDay = byDayOf(sts, movie, ctx);
   const watchlisted = ctx.watch.has(movie.tmdb_id);
-  const excluded = isExcluded(movie, ctx.settings);
+  const excluded = excludedBySettings(movie, ctx.settings);
 
   // Runway at the theatre this entry is about (urgency below is judged by it),
   // plus the hand-off line when the PRIMARY run is ending and another followed

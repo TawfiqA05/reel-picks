@@ -1,6 +1,6 @@
 // Persistence helpers for the `movies` table (light vs full records, scores).
 import { get, run, all } from '../db.js';
-import { jparse } from './util.js';
+import { jparse, yearOf as y } from './util.js';
 
 export function hydrate(m) {
   if (!m) return null;
@@ -23,7 +23,6 @@ export function getMovies(tmdbIds) {
   return all(`SELECT * FROM movies WHERE tmdb_id IN (${q})`, ...tmdbIds).map(hydrate);
 }
 
-const y = (v) => (v ? Number(String(v).slice(0, 4)) || null : null);
 
 // Insert a lightweight record (from search / now-playing / upcoming) without
 // clobbering richer detail fields we may already have.

@@ -26,11 +26,11 @@ import * as tmdb from './tmdb.js';
 import { tmdbThrottle } from './backfill.js';
 import { getMovie, upsertFullMovie } from './movies.js';
 import { buildProfile, confidence, tasteMatch, topTasteFactor } from './taste.js';
-import { finalScore, buildReason } from './ranking.js';
+import { finalScore, buildReason, excludedBySettings } from './ranking.js';
 import { publicScoreForMovie } from './scoring.js';
 import { profileRows } from './ratings.js';
 import { likedFilms, becauseLine } from './because.js';
-import { weekStartFriday } from './util.js';
+import { weekStartFriday, votesPhrase } from './util.js';
 import { SERVICES, cleanServices, serviceByKey } from '../../public/js/services.js';
 
 const MIN_VOTES = 50;
@@ -63,11 +63,6 @@ export function personal() {
 
 export const done = (p, id) => p.rated.has(id) || p.seen.has(id) || p.hidden.has(id);
 
-export function excludedBySettings(movie, settings) {
-  const exG = new Set(settings.excludedGenres || []);
-  if (movie.mpaa && (settings.excludedMpaa || []).includes(movie.mpaa)) return true;
-  return (movie.genres || []).some((g) => exG.has(g));
-}
 
 // The theater picks' score, minus the theater-only boosts.
 export function scoreFilm(movie, p) {
@@ -85,7 +80,7 @@ export function reasonFor(movie, scored, p, { fallback = null, used = null } = {
   if (because) return because;
   if (fallback) return fallback;
   if (p.conf < 0.5 || !scored.topTaste) {
-    const votes = movie.tmdb_votes ? `${movie.tmdb_votes >= 1000 ? `${Math.round(movie.tmdb_votes / 1000)}k` : movie.tmdb_votes} votes` : null;
+    const votes = votesPhrase(movie.tmdb_votes);
     return movie.tmdb_rating ? `Loved by viewers: TMDB ${Number(movie.tmdb_rating).toFixed(1)}${votes ? ` from ${votes}` : ''}` : 'Popular right now';
   }
   const r = buildReason({ pub: scored.pub, topTaste: scored.topTaste, conf: p.conf });

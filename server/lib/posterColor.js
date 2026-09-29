@@ -10,11 +10,12 @@
 // is no brighter behind the text than a blue one, and text over it keeps AA.
 import jpeg from 'jpeg-js';
 import { all, run, get } from '../db.js';
+import { tmdbImageAt } from './util.js';
 
 const SMALL = 'w92';
 const MAX_BYTES = 200 * 1024;
 
-const small = (url) => (typeof url === 'string' && url.startsWith('https://image.tmdb.org/') ? url.replace(/\/(w\d+|original)\//, `/${SMALL}/`) : null);
+const small = (url) => tmdbImageAt(url, SMALL);
 
 function rgbToHsl(r, g, b) {
   r /= 255; g /= 255; b /= 255;

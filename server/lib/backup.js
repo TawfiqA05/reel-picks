@@ -18,6 +18,7 @@
 // No import of db.js here: db.js calls in during its own startup migrations.
 import fs from 'node:fs';
 import path from 'node:path';
+import { localYMD as ymd } from './util.js';
 
 export const KEEP = 14;
 const NIGHTLY_HOUR = 3;
@@ -28,7 +29,6 @@ const isBackup = (name) => NIGHTLY.test(name) || PRE_MIGRATION.test(name);
 
 export const backupState = { lastError: null };
 
-const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 export const backupsDir = (dataDir) => path.join(dataDir, 'backups');
 export const nightlyName = (now = new Date()) => `reelpicks-${ymd(now)}.db`;

@@ -10,6 +10,7 @@
 import crypto from 'node:crypto';
 import { get, all, run, getSettings, setSetting } from '../db.js';
 import { OWNER_ID } from './user.js';
+import { safeEqual } from './util.js';
 
 export const MAX_USERS = 10; // owner included
 export const FRIEND_COOKIE = 'rp_user';
@@ -30,13 +31,6 @@ function secret() {
 
 const sign = (payload) => crypto.createHmac('sha256', secret()).update(payload).digest('base64url');
 
-// Constant-time and length-independent, as in lib/guest.js.
-function safeEqual(a, b) {
-  return crypto.timingSafeEqual(
-    crypto.createHash('sha256').update(String(a)).digest(),
-    crypto.createHash('sha256').update(String(b)).digest(),
-  );
-}
 
 export function signFriendCookie(user) {
   const payload = `v1.${user.id}.${user.session_version}.${Date.now() + FRIEND_TTL_MS}`;

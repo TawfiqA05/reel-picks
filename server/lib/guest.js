@@ -19,6 +19,7 @@ import crypto from 'node:crypto';
 import { onRailway } from '../env.js';
 import { FRIEND_COOKIE, verifyFriendCookie } from './accounts.js';
 import { OWNER_ID } from './user.js';
+import { safeEqual } from './util.js';
 
 export function guestModeEnabled() {
   const v = (process.env.GUEST_MODE || '').toLowerCase();
@@ -102,14 +103,6 @@ export function ownerToken() {
 const OWNER_COOKIE = 'rp_owner';
 const OWNER_TTL_MS = 365 * 24 * 3600 * 1000;
 
-// Constant-time, length-independent comparison (hash to a fixed 32 bytes first,
-// so neither timing nor length leaks anything about the secret).
-function safeEqual(a, b) {
-  return crypto.timingSafeEqual(
-    crypto.createHash('sha256').update(String(a)).digest(),
-    crypto.createHash('sha256').update(String(b)).digest(),
-  );
-}
 
 export function tokenMatches(token) {
   const t = ownerToken();

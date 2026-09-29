@@ -3,6 +3,14 @@
 import { clamp } from './util.js';
 import { topSourcePhrase, topSource } from './scoring.js';
 
+// A film the person's settings rule out: an excluded genre or rating (like
+// NC-17). The theater picks, At home and What should I watch? all use this.
+export function excludedBySettings(movie, settings) {
+  const exG = new Set(settings.excludedGenres || []);
+  if (movie.mpaa && (settings.excludedMpaa || []).includes(movie.mpaa)) return true;
+  return (movie.genres || []).some((g) => exG.has(g));
+}
+
 // weights: { public, taste } (need not sum to 1; normalized here).
 // conf: 0-1 taste confidence. When confidence is low we shift weight toward
 // public scores so a cold profile can't dominate. boosts: additive points.
