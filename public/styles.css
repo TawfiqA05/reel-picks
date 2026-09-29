@@ -1637,12 +1637,13 @@ a.tg-time:hover { border-color: var(--text); }
 .rate-sheet p { margin: 0; }
 
 /* Zoomed far in (200% on a phone is about 195px): the header's buttons wrap
-   under the name, the tab bar scrolls sideways instead of the page, and rows
+   under the name, the five tabs share the bar at their labels' own widths
+   (it scrolls sideways, not the page, if they ever outgrow it), and rows
    stack. Last in the file, so it wins over the rules it narrows. */
 @media (max-width: 299px) {
   .app-header { flex-wrap: wrap; position: static; }
   .bottom-nav { justify-content: flex-start; overflow-x: auto; scrollbar-width: none; left: 0; transform: none; width: 100vw; }
-  .nav-item { flex: 0 0 auto; }
+  .nav-item { flex: 1 1 auto; min-width: 0; padding-inline: 0; }
   .wc-head { flex-wrap: wrap; }
   .stat-grid { grid-template-columns: minmax(0, 1fr); }
   .hero-title, .detail-hero .hero-title { font-size: var(--fs-xl); overflow-wrap: anywhere; }
