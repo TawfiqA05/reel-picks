@@ -18,6 +18,12 @@
 // Never overwritten: a rating changed in Reel Picks after the Letterboxd entry
 // was logged (rated_at later than the entry's pubDate) is kept as it is.
 //
+// Reviews: an entry with a review brings it in as the note on the film
+// (lib/notes.js), as plain text cut at 280 characters with the whole review
+// kept. Only for a film with a rating, and never over a note written or
+// deleted in Reel Picks. Entries seen before still bring their review in (and
+// an edited review updates a Letterboxd note).
+//
 // Lists and anything that isn't a film are skipped. Imports start the credits
 // backfill, like every other import.
 import { get, run, all } from '../db.js';
@@ -27,6 +33,7 @@ import { filmDone } from './done.js';
 import { upsertLightMovie } from './movies.js';
 import { findTmdbMatch } from './match.js';
 import { startCreditsBackfill } from './backfill.js';
+import { reviewFromDescription, letterboxdNote } from './notes.js';
 import { localYMD, weekStartFriday } from './util.js';
 
 const TIMEOUT_MS = 20000;
@@ -75,7 +82,7 @@ function tag(xml, name) {
 }
 
 // The diary entries in a feed, oldest first (so a later rewatch's rating wins).
-// { guid, title, year, rating (0.5-5 | null), watchedDate, loggedAt, tmdbId }
+// { guid, title, year, rating (0.5-5 | null), watchedDate, loggedAt, tmdbId, review (plain text | null) }
 export function parseFeed(xml) {
   const out = [];
   for (const m of String(xml).matchAll(/<item>([\s\S]*?)<\/item>/g)) {
@@ -95,6 +102,7 @@ export function parseFeed(xml) {
       watchedDate: /^\d{4}-\d{2}-\d{2}$/.test(watchedDate || '') ? watchedDate : null,
       loggedAt: Number.isFinite(pub) ? new Date(pub).toISOString() : null,
       tmdbId: Number.isInteger(tmdbId) && tmdbId > 0 ? tmdbId : null,
+      review: reviewFromDescription(tag(it, 'description')),
     });
   }
   return out.sort((a, b) => (a.loggedAt || '').localeCompare(b.loggedAt || ''));
@@ -193,11 +201,15 @@ function addWatch(userId, tmdbId, title, ymd) {
 }
 
 async function importEntries(userId, entries) {
-  const sum = { ratingsAdded: 0, ratingsUpdated: 0, watchedAdded: 0, kept: 0, unmatched: 0 };
+  const sum = { ratingsAdded: 0, ratingsUpdated: 0, watchedAdded: 0, kept: 0, unmatched: 0, notes: 0 };
   const addedFilms = new Set();
   for (const e of entries) {
     const seen = get('SELECT rating FROM letterboxd_seen WHERE user_id = ? AND guid = ?', userId, e.guid);
-    if (seen && (seen.rating ?? null) === e.rating) continue;
+    if (seen && (seen.rating ?? null) === e.rating) {
+      // Already brought in: only its review, when the feed names the film.
+      if (e.review && e.tmdbId && letterboxdNote(userId, e.tmdbId, e.review)) sum.notes++;
+      continue;
+    }
     const tmdbId = await resolveFilm(e);
     if (!tmdbId) { sum.unmatched++; continue; } // tried again next sync
     if (e.rating != null) {
@@ -219,6 +231,7 @@ async function importEntries(userId, entries) {
       sum.watchedAdded++;
       addedFilms.add(tmdbId);
     }
+    if (e.review && letterboxdNote(userId, tmdbId, e.review)) sum.notes++;
     run(`INSERT INTO letterboxd_seen(user_id, guid, rating, seen_at) VALUES(?,?,?,?)
          ON CONFLICT(user_id, guid) DO UPDATE SET rating = excluded.rating, seen_at = excluded.seen_at`,
     userId, e.guid, e.rating, new Date().toISOString());
@@ -253,6 +266,7 @@ export async function syncUser(userId, { manual = false } = {}) {
       startCreditsBackfill('letterboxd');
       console.log(`  🎞  Letterboxd ${r.username}: ${sum.added} film(s) added (${sum.ratingsAdded} rated, ${sum.watchedAdded} watched, ${sum.ratingsUpdated} ratings updated)`);
     }
+    if (sum.notes) console.log(`  🎞  Letterboxd ${r.username}: ${sum.notes} review(s) brought in as notes`);
   } catch (e) {
     const kind = e instanceof SyncError ? e.kind : 'network';
     const message = e instanceof SyncError ? e.message : `The sync failed: ${e.message}`;

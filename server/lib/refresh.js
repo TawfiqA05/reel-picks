@@ -26,6 +26,7 @@ import {
   findTmdbMatch, recordMatch, getMatch, unmatchedTitles, reviewTitles, setReview, setAmcYear, stripQualifiers,
 } from './match.js';
 import { upsertRating } from './ratings.js';
+import { letterboxdNote } from './notes.js';
 import { localYMD, addDays, weekStartFriday } from './util.js';
 import { isSettling, MIN_TMDB_VOTES } from './scoring.js';
 import { getRecommendations } from './recommend.js';
@@ -230,7 +231,9 @@ async function ensureMatch(amcId, info, log) {
   }
 }
 
-// Match CSV-imported ratings that couldn't be resolved at import time.
+// Match CSV-imported ratings that couldn't be resolved at import time, then
+// reviews from a reviews.csv (after the ratings, so a review finds the rating
+// it belongs to).
 async function resolveUnmatchedRatings(log, limit = 25) {
   if (!tmdb.tmdbConfigured()) return;
   const rows = all('SELECT * FROM unmatched_ratings ORDER BY id LIMIT ?', limit);
@@ -249,6 +252,32 @@ async function resolveUnmatchedRatings(log, limit = 25) {
       log.errors.push(`resolve rating "${r.title}": ${e.message}`);
     }
   }
+  for (const r of all('SELECT * FROM unmatched_notes ORDER BY id LIMIT ?', limit)) {
+    try {
+      const found = await findTmdbMatch(r.title, r.year);
+      if (found) applyReview(r, found);
+    } catch (e) {
+      log.errors.push(`resolve review "${r.title}": ${e.message}`);
+    }
+  }
+}
+
+// A reviews.csv row whose film is now known: its rating when the person has
+// none for the film yet (ratings.csv is the up-to-date one), then the review
+// as the note unless they wrote their own here (lib/notes.js). A review with
+// no rating either way has nothing to belong to and is dropped.
+function applyReview(r, found) {
+  upsertLightMovie(found.result);
+  const rated = get('SELECT 1 AS x FROM ratings WHERE user_id = ? AND tmdb_id = ?', r.user_id, found.tmdb_id);
+  if (!rated && r.rating != null) {
+    upsertRating({
+      tmdb_id: found.tmdb_id, title: found.result.title, year: found.result.year,
+      rating: r.rating, source: 'letterboxd', rated_at: r.rated_at, userId: r.user_id,
+    });
+  }
+  const wrote = letterboxdNote(r.user_id, found.tmdb_id, r.review);
+  run('DELETE FROM unmatched_notes WHERE id = ?', r.id);
+  return wrote;
 }
 
 // Resolve the owner's primary theatre to an AMC id on first run (search by
@@ -705,42 +734,53 @@ export async function ingestOne(tmdbId, opts = {}) {
   return log;
 }
 
-// Background-resolve imported ratings that couldn't be matched at import time.
+// Background-resolve imported ratings that couldn't be matched at import
+// time, then reviews (reviews.csv). Rows queued while a run is going (a
+// second file picked right after the first) are picked up by the same run,
+// which goes round again before it reports.
+let drainAgain = false;
 export async function drainUnmatched({ max = 800 } = {}) {
-  if (state.draining) return { tried: 0, matched: 0, busy: true };
+  if (state.draining) { drainAgain = true; return { tried: 0, matched: 0, busy: true }; }
   state.draining = true;
   let tried = 0;
   let matched = 0;
+  let notes = 0;
   try {
     if (!tmdb.tmdbConfigured()) return { tried, matched };
-    const rows = all('SELECT * FROM unmatched_ratings ORDER BY id LIMIT ?', max);
-    let i = 0;
-    const worker = async () => {
-      while (i < rows.length) {
-        const r = rows[i++];
-        tried++;
-        try {
-          const found = await findTmdbMatch(r.title, r.year);
-          if (found) {
-            upsertLightMovie(found.result);
-            upsertRating({
-              tmdb_id: found.tmdb_id, title: found.result.title, year: found.result.year,
-              rating: r.rating, source: r.source, rated_at: r.rated_at, userId: r.user_id,
-            });
-            run('DELETE FROM unmatched_ratings WHERE id = ?', r.id);
-            matched++;
-          }
-        } catch {
-          /* leave in queue for a later attempt */
+    const inParallel = async (rows, one) => {
+      let i = 0;
+      const worker = async () => {
+        while (i < rows.length) {
+          const r = rows[i++];
+          tried++;
+          try { await one(r); } catch { /* left in the queue for a later attempt */ }
         }
-      }
+      };
+      await Promise.all(Array.from({ length: 5 }, worker));
     };
-    await Promise.all(Array.from({ length: 5 }, worker));
+    do {
+      drainAgain = false;
+      await inParallel(all('SELECT * FROM unmatched_ratings ORDER BY id LIMIT ?', max), async (r) => {
+        const found = await findTmdbMatch(r.title, r.year);
+        if (!found) return;
+        upsertLightMovie(found.result);
+        upsertRating({
+          tmdb_id: found.tmdb_id, title: found.result.title, year: found.result.year,
+          rating: r.rating, source: r.source, rated_at: r.rated_at, userId: r.user_id,
+        });
+        run('DELETE FROM unmatched_ratings WHERE id = ?', r.id);
+        matched++;
+      });
+      await inParallel(all('SELECT * FROM unmatched_notes ORDER BY id LIMIT ?', max), async (r) => {
+        const found = await findTmdbMatch(r.title, r.year);
+        if (found && applyReview(r, found)) notes++;
+      });
+    } while (drainAgain);
     // Remembered so the import flow can report "N matched" after its poll.
-    state.lastDrain = { tried, matched, finishedAt: new Date().toISOString() };
+    state.lastDrain = { tried, matched, notes, finishedAt: new Date().toISOString() };
     // Matched films only have light records; fetch their credits next.
     startCreditsBackfill('import');
-    return { tried, matched };
+    return { tried, matched, notes };
   } finally {
     state.draining = false;
   }

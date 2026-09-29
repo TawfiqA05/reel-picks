@@ -16,6 +16,7 @@ import { upsertLightMovie } from './movies.js';
 import { upsertRating } from './ratings.js';
 import { restoreWatched } from './alist.js';
 import { currentUserId, currentUser } from './user.js';
+import { exportNotes, importNotes } from './notes.js';
 
 export const STATE_VERSION = 1;
 
@@ -55,6 +56,9 @@ export function exportState() {
       // an older export (no `hidden` key) still imports, and an older instance
       // just ignores the key.
       hidden: all('SELECT tmdb_id, title, hidden_at FROM hidden_movies WHERE user_id = ?', uid),
+      // This person's own notes on their ratings (lib/notes.js), Delete
+      // markers included. Optional on import, like `hidden`.
+      notes: exportNotes(uid),
     },
   };
 }
@@ -73,7 +77,7 @@ export function importState(doc) {
     throw Object.assign(new Error(`This file is from a newer Reel Picks (state v${ver}; this instance reads v${STATE_VERSION}). Update the deployment first.`), { status: 400 });
   }
   const p = doc.profile;
-  const out = { settings: 0, ratings: 0, watchlist: 0, watched: 0, matches: 0, hidden: 0 };
+  const out = { settings: 0, ratings: 0, watchlist: 0, watched: 0, matches: 0, hidden: 0, notes: 0 };
 
   // Only accept a value whose shape matches the default's: a hand-edited file
   // with, say, extraTheatres as an object would otherwise brick every request
@@ -157,6 +161,10 @@ export function importState(doc) {
     );
     if (res?.changes) out.hidden++;
   }
+
+  // Notes, after the ratings they belong to. A note written on this instance
+  // wins over a Letterboxd one from the file (lib/notes.js).
+  out.notes = importNotes(currentUserId(), p.notes);
 
   return out;
 }

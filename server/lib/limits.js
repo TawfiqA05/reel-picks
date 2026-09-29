@@ -4,6 +4,7 @@
 //             yet (a TMDB and an OMDb lookup; OMDb has a daily quota)
 //   search    the Rate tab's TMDB search
 //   place     home-base lookups (Nominatim asks for one request a second)
+//   note      saving or deleting a note on a rating (lib/notes.js)
 //
 // Friends get room for far more than a busy evening; the guest link, keyed
 // by address, gets less (it can't reach any of these today, so its limits are
@@ -11,8 +12,8 @@
 // count again, which is fine for a limit meant to stop runaway use.
 // No imports, so a test can load it without a database.
 export const LIMITS = {
-  friend: { newFilm: 200, search: 300, place: 30 },
-  guest: { newFilm: 20, search: 30, place: 3 },
+  friend: { newFilm: 200, search: 300, place: 30, note: 300 },
+  guest: { newFilm: 20, search: 30, place: 3, note: 0 },
 };
 export const WINDOW_MS = 3600 * 1000;
 export const LIMIT_MESSAGE = 'Slow down a bit, try again in a few minutes.';

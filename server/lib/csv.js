@@ -1,5 +1,8 @@
 // Zero-dependency CSV parsing + Letterboxd/IMDb ratings-export detection.
 // Normalizes both to { title, year, rating(0.5-5 stars), rated_at, source }.
+// Letterboxd's reviews.csv comes out as { title, year, rating|null, review,
+// rated_at }: the review as plain text, for the note on the film.
+import { htmlToText } from './notes.js';
 
 // RFC-4180-ish parser: handles quoted fields, embedded commas/newlines, "" escapes.
 export function parseCsv(text) {
@@ -55,6 +58,8 @@ export function detectFormat(header) {
   const h = header.map((x) => x.trim().toLowerCase());
   if (h.includes('type') && h.includes('tmdb_id')) return 'reelpicks'; // our own backup export
   if (h.includes('letterboxd uri')) {
+    // reviews.csv: the same columns as diary.csv plus Review.
+    if (h.includes('review')) return 'letterboxd-reviews';
     // watched.csv / watchlist.csv have the same shape as ratings.csv MINUS the
     // Rating column — the classic wrong-file upload. Name it so the error can.
     return h.includes('rating') ? 'letterboxd' : 'letterboxd-no-ratings';
@@ -177,4 +182,37 @@ export function normalizeRatingsCsv(text) {
   }
 
   return { format, rows: out, skipped, skippedSamples };
+}
+
+// Letterboxd's reviews.csv (Date, Name, Year, Letterboxd URI, Rating, Rewatch,
+// Review, Tags, Watched Date). A review can carry Letterboxd's own markup
+// (<i>, <b>, <br />, links); it comes out as plain text. Rows with no review
+// text are skipped. The rating is kept when there is one (null otherwise).
+export function normalizeReviewsCsv(text) {
+  const parsed = parseCsv(text);
+  if (parsed.length < 1) return { rows: [], skipped: 0, skippedSamples: [] };
+  const idx = indexHeader(parsed[0]);
+  const rows = [];
+  let skipped = 0;
+  const skippedSamples = [];
+  for (let i = 1; i < parsed.length; i++) {
+    const cols = parsed[i];
+    const get = (name) => { const j = idx[name]; return j == null ? '' : (cols[j] ?? '').trim(); };
+    const title = get('name');
+    const review = htmlToText(get('review'));
+    if (!title || !review) {
+      skipped++;
+      if (title && skippedSamples.length < 5) skippedSamples.push(title);
+      continue;
+    }
+    const rating = parseFloat(get('rating'));
+    rows.push({
+      title,
+      year: yr(get('year')),
+      rating: Number.isFinite(rating) ? Math.max(0.5, Math.min(5, Math.round(rating * 2) / 2)) : null,
+      review,
+      rated_at: get('date') || get('watched date') || null,
+    });
+  }
+  return { rows, skipped, skippedSamples };
 }

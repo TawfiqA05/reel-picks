@@ -374,6 +374,34 @@ CREATE TABLE IF NOT EXISTS sends (
 CREATE INDEX IF NOT EXISTS idx_sends_to ON sends(to_user, cleared_at);
 CREATE INDEX IF NOT EXISTS idx_sends_from_day ON sends(from_user, sent_day);
 
+-- A person's one-line note on a film they rated (lib/notes.js), private to
+-- them. note is what shows (at most 280 characters, NULL after a Delete here);
+-- full is a Letterboxd review's whole text when the note had to be cut.
+-- source: 'app' (written here, never overwritten by Letterboxd) or
+-- 'letterboxd'. Notes change no score.
+CREATE TABLE IF NOT EXISTS rating_notes (
+  user_id    INTEGER NOT NULL,
+  tmdb_id    INTEGER NOT NULL,
+  note       TEXT,
+  full       TEXT,
+  source     TEXT NOT NULL,
+  updated_at TEXT,
+  PRIMARY KEY (user_id, tmdb_id)
+);
+
+-- Reviews from a Letterboxd reviews.csv whose film isn't matched to TMDB yet
+-- (the matcher empties it, like unmatched_ratings). rating is the one on the
+-- review, used only when the person has no rating for the film.
+CREATE TABLE IF NOT EXISTS unmatched_notes (
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id  INTEGER NOT NULL,
+  title    TEXT,
+  year     INTEGER,
+  rating   REAL,
+  review   TEXT,
+  rated_at TEXT
+);
+
 -- "What should I watch?" (lib/suggest.js): the films each person was shown
 -- and when, so a film shown once doesn't come back for 7 days. One row per
 -- person per film, the latest showing; rows older than 7 days are dropped

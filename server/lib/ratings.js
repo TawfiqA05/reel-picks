@@ -5,6 +5,7 @@
 import { get, run, all } from '../db.js';
 import { currentUserId } from './user.js';
 import { filmDone } from './done.js';
+import { dropNote } from './notes.js';
 
 const y = (v) => (v ? Number(String(v).slice(0, 4)) || null : null);
 
@@ -33,14 +34,18 @@ export function getRating(tmdbId) {
   return get('SELECT * FROM ratings WHERE user_id = ? AND tmdb_id = ?', currentUserId(), tmdbId);
 }
 
+// The rating's note (lib/notes.js) goes with it.
 export function deleteRating(tmdbId) {
   run('DELETE FROM ratings WHERE user_id = ? AND tmdb_id = ?', currentUserId(), tmdbId);
+  dropNote(currentUserId(), tmdbId);
 }
 
+// With this person's own note on each (lib/notes.js), for the Rate list.
 export function listRatings() {
   return all(
-    `SELECT r.*, m.poster, m.genres
+    `SELECT r.*, m.poster, m.genres, n.note, n.full AS note_full, n.source AS note_source
        FROM ratings r LEFT JOIN movies m ON m.tmdb_id = r.tmdb_id
+       LEFT JOIN rating_notes n ON n.user_id = r.user_id AND n.tmdb_id = r.tmdb_id AND n.note IS NOT NULL
       WHERE r.user_id = ?
       ORDER BY r.rated_at DESC`,
     currentUserId(),
@@ -77,6 +82,7 @@ export function ratingsCount() {
   return get('SELECT COUNT(*) AS n FROM ratings WHERE user_id = ?', currentUserId()).n;
 }
 
+// Ratings and reviews (reviews.csv) still waiting for a TMDB match.
 export function unmatchedCount() {
-  return get('SELECT COUNT(*) AS n FROM unmatched_ratings WHERE user_id = ?', currentUserId()).n;
+  return get('SELECT (SELECT COUNT(*) FROM unmatched_ratings WHERE user_id = ?) + (SELECT COUNT(*) FROM unmatched_notes WHERE user_id = ?) AS n', currentUserId(), currentUserId()).n;
 }

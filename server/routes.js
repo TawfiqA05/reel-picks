@@ -20,7 +20,7 @@ import { setManualMatch, ignoreMatch, unignoreMatch, unmatchedTitles, reviewTitl
 import { logWatched, undoWatched, getWeek, restoreWatched } from './lib/alist.js';
 import { getStats } from './lib/stats.js';
 import { getStatsMore } from './lib/statsMore.js';
-import { normalizeRatingsCsv, parseCsv, detectFormat, parseBackupCsv } from './lib/csv.js';
+import { normalizeRatingsCsv, parseCsv, detectFormat, parseBackupCsv, normalizeReviewsCsv } from './lib/csv.js';
 import * as tmdb from './lib/tmdb.js';
 import * as amc from './lib/amc.js';
 import {
@@ -57,6 +57,7 @@ import {
   recipients, sendPick, inbox, dismiss as dismissSend, sentToday, DAILY_LIMIT, NOTE_MAX, NOT_FOUND as SEND_NOT_FOUND,
 } from './lib/sends.js';
 import { filmDone } from './lib/done.js';
+import { getNote, notesOf, setNote, deleteNote, queueReview, NOTE_MAX as RATING_NOTE_MAX } from './lib/notes.js';
 
 const router = Router();
 const h = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -288,7 +289,8 @@ router.get('/movies/:id', h(async (req, res) => {
   }
   const detail = getMovieDetail(id, { guest });
   if (!detail) return res.status(404).json({ error: 'Movie not found' });
-  res.json(detail);
+  // The caller's own note on it (lib/notes.js); the guest link has none.
+  res.json(guest ? detail : { ...detail, myNote: detail.myRating != null ? getNote(currentUserId(), id) : null });
 }));
 
 // ---- settings / theatre ------------------------------------------------
@@ -516,6 +518,7 @@ router.get('/ratings', (req, res) => {
     ratings: listRatings().map((r) => ({
       tmdb_id: r.tmdb_id, title: r.title, year: r.year, rating: r.rating,
       source: r.source, rated_at: r.rated_at, poster: r.poster || null,
+      note: r.note || null, noteFull: r.note ? r.note_full || null : null,
     })),
   });
 });
@@ -571,6 +574,31 @@ router.delete('/ratings/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// ---- notes on ratings (lib/notes.js) ------------------------------------
+// The caller's own note on a film they rated: plain text, one line, up to
+// RATING_NOTE_MAX characters. Not on the guest allowlist. Friends' writes count
+// against an hourly limit like their other writes; the owner has none.
+const filmId = (raw) => (/^\d{1,10}$/.test(String(raw)) ? Number(raw) : NaN);
+
+router.put('/ratings/:id/note', (req, res) => {
+  const id = filmId(req.params.id);
+  if (!Number.isSafeInteger(id) || id <= 0) return res.status(404).json({ error: 'Movie not found' });
+  if (limited(req, res, 'note')) return;
+  try {
+    res.json({ note: setNote(currentUserId(), id, req.body?.note), max: RATING_NOTE_MAX });
+  } catch (e) {
+    res.status(e.status || 500).json({ error: e.status ? e.message : 'Could not save the note.' });
+  }
+});
+
+router.delete('/ratings/:id/note', (req, res) => {
+  const id = filmId(req.params.id);
+  if (!Number.isSafeInteger(id) || id <= 0) return res.status(404).json({ error: 'Movie not found' });
+  if (limited(req, res, 'note')) return;
+  deleteNote(currentUserId(), id);
+  res.json({ ok: true });
+});
+
 router.post('/ratings/import', (req, res) => {
   const csv = req.body?.csv;
   if (typeof csv !== 'string') return res.status(400).json({ error: 'Missing CSV text.' });
@@ -616,6 +644,29 @@ router.post('/ratings/import', (req, res) => {
 
   if (format === 'unknown') {
     return res.status(400).json({ error: 'Could not detect a Letterboxd, IMDb, or Reel Picks backup CSV in that file. Expected ratings.csv from a Letterboxd export ZIP, or the CSV from IMDb\'s "Your ratings" export.' });
+  }
+
+  // Letterboxd's reviews.csv: each review becomes the note on its film (and
+  // the rating on it counts only where there's no rating for the film yet).
+  // Queued for matching like ratings.csv; a note written here is never
+  // overwritten (lib/notes.js).
+  if (format === 'letterboxd-reviews') {
+    const parsed = normalizeReviewsCsv(csv);
+    if (!parsed.rows.length) {
+      return res.json({
+        format: 'letterboxd', reviews: true, received: 0, skipped: parsed.skipped, emptyExport: true,
+        note: 'This is Letterboxd\'s reviews.csv, but none of its rows has review text. Nothing to bring in.',
+      });
+    }
+    const ratingsBefore = ratingsCount();
+    const pendingBefore = unmatchedCount();
+    for (const row of parsed.rows) queueReview({ userId: currentUserId(), ...row });
+    drainUnmatched().catch((e) => console.error('[drain]', e.message));
+    return res.json({
+      format: 'letterboxd', reviews: true, received: parsed.rows.length, skipped: parsed.skipped,
+      skippedSamples: parsed.skippedSamples, skippedWhy: 'no review text on those rows',
+      ratingsBefore, pendingBefore, lastDrainAt: refreshState.lastDrain?.finishedAt || null, matching: tmdb.tmdbConfigured(),
+    });
   }
 
   // Letterboxd / IMDb: queue for background TMDB title matching.
@@ -802,7 +853,9 @@ router.get('/watchlist', (req, res) => {
     'SELECT m.* FROM watchlist w JOIN movies m ON m.tmdb_id = w.tmdb_id WHERE w.user_id = ? ORDER BY w.added_at DESC',
     currentUserId(),
   ).map(hydrate);
-  res.json({ movies: rows.map(card) });
+  // The caller's own note, where they rated a film they also saved, so the filter finds it.
+  const notes = notesOf(currentUserId());
+  res.json({ movies: rows.map((m) => ({ ...card(m), note: notes.get(m.tmdb_id)?.note ?? null })) });
 });
 
 router.post('/watchlist/toggle', h(async (req, res) => {
@@ -980,7 +1033,14 @@ router.get('/person/:id', h(async (req, res) => {
   if (!tmdb.tmdbConfigured()) return res.status(503).json({ error: "TMDB isn't set up, so there's no one to show." });
   if (!personCached(id) && limited(req, res, 'newFilm')) return;
   try {
-    res.json(await getPerson(id, { guest: isGuest(req) }));
+    const guest = isGuest(req);
+    const d = await getPerson(id, { guest });
+    // "You rated" shows the caller's own note under each film; never on the guest link.
+    if (!guest) {
+      const notes = notesOf(currentUserId());
+      d.rated = d.rated.map((f) => ({ ...f, myNote: notes.get(f.tmdb_id)?.note ?? null }));
+    }
+    res.json(d);
   } catch (e) {
     if (e.status === 404) return res.status(404).json({ error: 'Person not found' });
     console.error('[person]', id, e.message);
@@ -995,7 +1055,10 @@ router.get('/stats/group', (req, res) => {
   const name = String(req.query.name || '');
   if (!STATS_GROUP_KINDS.includes(kind)) return res.status(400).json({ error: 'kind must be genre, director or actor.' });
   if (!name || name.length > 300) return res.status(400).json({ error: 'name is required.' });
-  res.json(getStatsGroup(kind, name));
+  // Each film carries the caller's own note, for the sheet's second line and its filter.
+  const g = getStatsGroup(kind, name);
+  const notes = notesOf(currentUserId());
+  res.json({ ...g, films: g.films.map((f) => ({ ...f, note: notes.get(f.tmdb_id)?.note ?? null })) });
 });
 
 // The sheet's second section: "More from <person>" (TMDB filmography, cached
