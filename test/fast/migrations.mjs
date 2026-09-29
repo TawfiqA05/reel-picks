@@ -124,7 +124,7 @@ await step('theater: a database from before the watch log kept theaters', async 
   const file = path.join(prev, 'reelpicks.db');
   {
     const d = new DatabaseSync(file);
-    d.exec('ALTER TABLE watched DROP COLUMN theatre');
+    if (d.prepare('PRAGMA table_info(watched)').all().some((c) => c.name === 'theatre')) d.exec('ALTER TABLE watched DROP COLUMN theatre');
     const ins = d.prepare('INSERT INTO watched(user_id, tmdb_id, title, watched_at, watched_date, week_start, in_weekly4, ticket_price, source) VALUES(?,?,?,?,?,?,?,?,?)');
     ins.run(1, 990001, 'The Paper Lantern', '2026-03-01T23:00:00.000Z', '2026-03-01', '2026-02-27', 1, 14.5, null);
     ins.run(1, 990002, 'Northern Signal', '2026-05-02T23:00:00.000Z', '2026-05-02', '2026-05-01', 0, 14.5, 'letterboxd');
