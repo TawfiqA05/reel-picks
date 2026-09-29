@@ -174,11 +174,15 @@ function filmRow(e, ctx, { date = null, showDate = false } = {}) {
       e.runway.detail ? h('div', { class: 'lv-sub' }, e.runway.detail) : null,
       // "Still at Indianapolis through Sep 4": leaving here, not gone.
       e.handoff ? h('div', { class: 'lv-handoff' }, icon('handoff', { size: 13 }), ' ', e.handoff.text) : null,
-      shown.length ? h('div', { class: 'st-list' }, ...shown.map((st) => showtimeRow(st))) : null,
+    ),
+    // That day's showtimes: beside the poster, or across the row under it on
+    // a phone too narrow for their one line (styles.css).
+    shown.length ? h('div', { class: 'lv-times' },
+      h('div', { class: 'st-list' }, ...shown.map((st) => showtimeRow(st))),
       live.length > shown.length ? h('a', { class: 'lv-more', href: `#/movie/${e.tmdb_id}` }, `${live.length - shown.length} more that day`) : null,
       // I'm going: that day's showings in a sheet, or the plan (js/social.js).
-      live.length && !ctx?.isGuest?.() ? leavingPlan(e, date, ctx) : null,
-    ),
+      !ctx?.isGuest?.() ? leavingPlan(e, date, ctx) : null,
+    ) : null,
   );
 }
 

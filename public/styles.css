@@ -817,9 +817,9 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 .lv-day.no-films .lv-day-body { display: none; }
 .lv-day-body, .lv-later, .lv-hedged { display: flex; flex-direction: column; }
 :is(.lv-day-body, .lv-later, .lv-hedged) > .lv-film + .lv-film { border-top: 1px solid var(--divider); }
-.lv-film { display: flex; gap: var(--sp-3); padding: var(--sp-3) 0; min-width: 0; }
-.lv-poster { position: relative; flex: 0 0 auto; }
-.lv-film-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.lv-film { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px var(--sp-3); padding: var(--sp-3) 0; min-width: 0; }
+.lv-poster { position: relative; }
+.lv-film-body { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .lv-film-title { position: relative; font-weight: 600; line-height: var(--lh-tight); }
 /* A title link is one short line: its tap area reaches 44px tall over the
    plain text around it. */
@@ -831,6 +831,16 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 .lv-sub, .lv-handoff { font-size: var(--fs-xs); color: var(--muted); line-height: var(--lh-snug); }
 .lv-more { display: inline-flex; align-items: center; align-self: flex-start; min-height: 44px; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; }
 .lv-none { margin-bottom: var(--sp-4); }
+/* That day's showtimes, More and I'm going sit beside the poster, under the
+   film's words. From 360 to 415 the one line of cells (318px) is wider than
+   the room beside the poster (292px at 390), so they run across the row
+   under it instead. (At 320 the cells take two lines, which fit beside it.) */
+.lv-film:has(> .lv-times) > .lv-poster { grid-row: span 2; }
+.lv-times { grid-column: 2; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+@media (min-width: 360px) and (max-width: 415px) {
+  .lv-film:has(> .lv-times) > .lv-poster { grid-row: auto; }
+  .lv-times { grid-column: 1 / -1; }
+}
 
 /* ---- grouped lists: an inset group of rows with thin dividers ----
    Stats, Settings, Help and the movie page's sections. A heading above the
@@ -1655,6 +1665,13 @@ a.tg-time:hover { border-color: var(--text); }
   html .stars.interactive { font-size: var(--fs-lg) !important; }
   .rating-item > .stars { grid-column: 1 / -1; grid-row: 3; }
   .tg-film { flex-direction: column; }
+  /* Leaving: the poster over the film, and its showtimes on three lines. */
+  .lv-film { grid-template-columns: minmax(0, 1fr); }
+  .lv-film > .lv-poster, .lv-film:has(> .lv-times) > .lv-poster { grid-row: auto; justify-self: start; }
+  .lv-times { grid-column: 1 / -1; }
+  .lv-times .st-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "time book" "fmt fit" "end cal"; }
+  .lv-times .st-fit { justify-self: end; }
+  .lv-times .st-row.planned { grid-template-areas: "time book" "fmt fit" "end cal" "plan plan"; }
   .source-row { grid-template-columns: minmax(0, 1fr) auto; }
   .source-row .src-bar { grid-column: 1 / -1; grid-row: 2; }
   .pick-card, .list-row, .theatre-item { flex-direction: column; align-items: stretch; }
