@@ -938,7 +938,10 @@ async function groupB() {
     check('notify: turning on confirms', /You'll get a notification/.test(await toastText(page, /notification/)));
     check('notify: the subscription is stored for the owner', w.q1('SELECT COUNT(*) n FROM push_subs WHERE user_id = 1').n === 1);
     await page.reload(); await settle(page, 800);
-    await page.waitForTimeout(1500);
+    // The switch stays disabled until the page has asked the service worker
+    // for this device's subscription, which can take a few seconds on a slow
+    // machine; read it once that's done.
+    await page.waitForFunction(() => { const c = [...document.querySelectorAll('.settings-group')].find((x) => x.querySelector('.group-title')?.textContent === 'Notifications'); return c && !c.querySelector('input').disabled; }, null, { timeout: 12000 }).catch(() => {});
     check('notify: switch is on after a reload', await card(page, 'Notifications').getByRole('checkbox', { name: 'Notify me when my weekly picks are ready' }).isChecked());
     check('notify: Alerts card counts the device', /Alerts also go to the device/.test(await card(page, 'Alerts').textContent()));
     await card(page, 'Notifications').getByRole('checkbox', { name: 'Notify me when my weekly picks are ready' }).uncheck();
