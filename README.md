@@ -507,6 +507,45 @@ when they dismiss it, save the film, mark it seen or rate it, and the movie page
 "Sent by" with the note while it's there. Each person can send ten a day. The guest link
 can't send or receive, and sending never changes a score or a pick.
 
+## Watchlist alerts
+
+"Watchlist alerts" is a switch in Settings, in the Notifications card right under the
+weekly picks switch. It's off for everyone until they turn it on, and it's per person,
+not per device: the alerts go to every device that person turned notifications on for.
+While the device I'm on doesn't have notifications on, the switch says to turn them on
+first.
+
+With it on I get two kinds of push, both only about films on my own watchlist:
+
+- **Now showing**: the first time a film gets showtimes at one of my theaters, one push,
+  "(the film) is now showing at (the theater)". If it leaves all of my theaters for 14 days
+  or more and comes back, it can alert once more. A film that was already showing when I
+  saved it, or that's only at a theater I've just started following, isn't new to me and
+  doesn't alert.
+- **Last week**: when a film enters Last chance, found the same way the Last chance section
+  finds it (the density horizon and shrinking schedules at my primary theater), one push,
+  "Last week for (the film) at (the theater)". That's once per run in theaters; dropping out
+  of Last chance and coming back in the same run doesn't send another. I use the list before
+  the section's score bar and three-film cap, the same one the Watchlist page warns from,
+  because a film I saved is one I want to hear about whatever it scores.
+
+There's never an alert for a film I've rated, marked seen, hidden with Not for me, or have
+a live I'm going plan for, and a film I take off my watchlist before its alert goes out
+doesn't get one. When several are due at once they come as one push that names up to
+three films, like "3 films from your watchlist are now showing", and opens Watchlist. A
+single film's push opens that film's page.
+
+The check runs after every refresh. Anything it finds goes out right away, except between
+9 PM and 9 AM Indianapolis time, when it waits until 9 AM. Each alert is written to the
+database when it's found and claimed there before it's sent, and the send is checked every
+minute, so a restart between the refresh and the send still sends it once and nothing is
+ever sent twice. Just before it goes, each alert is checked again against the switch, my
+watchlist, ratings, seen films, hidden films and plans.
+
+Each person's alerts come from their own watchlist and their own theaters, and a push only
+ever names films, never a person. The guest link can't turn them on and gets none. Alerts
+never change a score, a pick or the weekly four; they only read them.
+
 ## Your year in movies
 
 From December 1 through January 15, a card at the top of Picks and a row at the top of You
@@ -578,8 +617,9 @@ the database before it goes out. A device the push service reports as gone (404/
 deleted. I can run the week's send by hand with `POST /api/push/weekly/send`,
 and it skips anyone who already got this week's.
 
-The same devices get the I'm going reminders and next-morning questions, and the pushes
-for picks sent to me. Each goes only to the person it's about.
+The same devices get the I'm going reminders and next-morning questions, the pushes
+for picks sent to me, and Watchlist alerts for anyone who turns them on. Each goes only to
+the person it's about.
 
 It's plain Web Push with VAPID keys, no extra dependency. Without `VAPID_PUBLIC_KEY` and
 `VAPID_PRIVATE_KEY` the feature is off and the switch never appears.
@@ -665,7 +705,8 @@ Settings page. A Save bar slides up above the tab bar only when something has ch
 - **AMC title matching** (mine): AMC titles that couldn't be matched to TMDB, matches that
   look wrong (Keep, or search and re-point), and Ignore for one-offs.
 - **Watch together** (friends): the switch for the Together tab.
-- **Notifications**: the weekly picks switch, per device. Only there when the VAPID keys are set.
+- **Notifications**: the weekly picks switch, per device, and the Watchlist alerts switch, per
+  person. Only there when the VAPID keys are set.
 - **Streaming services**: which services At home and What should I watch? use.
 - **Letterboxd**: the username to sync, Sync now, and how the last sync went.
 - **Home base**: where drive times are measured from. Look up a place or use my current
@@ -842,17 +883,20 @@ person page), search ranking on real TMDB answers, scores and picks against save
 values, security for every API route, the owner, friend and guest roles, privacy between
 friends, the hourly limits, the weekly lock, the background jobs on a mocked timeline,
 I'm going plans (reminders, the next morning's question, restarts) on a mocked clock,
-sending picks, and Your year in movies on a mocked Nov 30, Dec 1, Jan 15 and Jan 16 (every
+sending picks, Your year in movies on a mocked Nov 30, Dec 1, Jan 15 and Jan 16 (every
 figure against its own count and against Stats, which cards each person gets, privacy, and
-that it writes nothing).
+that it writes nothing), and Watchlist alerts on a mocked clock in Indianapolis time (a new
+film, the 14-day return, Last chance, the 9 PM to 9 AM hold, grouping, every skip, a restart
+before the send, and privacy between friends).
 
 `npm run test:ui` runs the browser checks in about 10 minutes: accessibility (keyboard,
 focus rings, names, dialogs, reduced motion, 200% zoom), layout at 320, 390 and 1280 in
 light and dark for every role with no sideways scroll, clipped text, contrast problem or
 console error, the design itself (tokens, fonts, buttons, cards, showtime rows), the
 installed iPhone app, service worker updates and offline, size budgets, I'm going and
-Send a pick for every role, width and theme, and every Your year in movies card for every
-person, width and theme, with tap, swipe, keys and the saved image.
+Send a pick for every role, width and theme, every Your year in movies card for every
+person, width and theme, with tap, swipe, keys and the saved image, and the Watchlist
+alerts switch for every person, width and theme.
 
 The first time, I install the browsers with `npx playwright install chromium webkit`.
 Real app bugs the tests have found but I haven't fixed yet are listed in
