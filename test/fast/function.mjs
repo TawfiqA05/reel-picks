@@ -921,13 +921,14 @@ async function groupB() {
   if (want('notify')) await step('Notifications opt-in (owner 390 light, push stand-in) and a server with no VAPID keys', async () => {
     const m0 = g.mark();
     const { page, ctx } = await g.open(null, 390, 'light', { sw: true, clock: false });
-    // Granted to the whole context: granted to one origin, headless Chromium
-    // on Linux reads Notification.permission as "denied" after a reload.
-    await ctx.grantPermissions(['notifications']);
+    await ctx.grantPermissions(['notifications'], { origin: w.base });
     await ctx.addInitScript((endpoint) => {
       const fake = { endpoint, options: { applicationServerKey: null }, toJSON() { return { endpoint, keys: { p256dh: 'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM', auth: 'tBHItJI5svbpez7KI4CCXg' } }; }, unsubscribe: async () => { localStorage.removeItem('fake-sub'); return true; } };
       PushManager.prototype.subscribe = async function (o) { fake.options.applicationServerKey = o.applicationServerKey; localStorage.setItem('fake-sub', '1'); return fake; };
       PushManager.prototype.getSubscription = async function () { return localStorage.getItem('fake-sub') ? fake : null; };
+      // Granted above; headless Chromium on Linux still reads the permission
+      // as "denied" after a reload, so the stand-in says what was granted.
+      Object.defineProperty(Notification, 'permission', { get: () => 'granted', configurable: true });
     }, `${w.push.origin}/push/device-1`);
     await go(page, w, '#/settings', 800, { fresh: true });
     const nc = card(page, 'Notifications');
