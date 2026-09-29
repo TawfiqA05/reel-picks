@@ -378,6 +378,15 @@ body.has-save main { padding-bottom: calc(var(--chrome-bottom) + var(--savebar-h
 .segment { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 0; padding: 0 var(--sp-2); border-radius: var(--r-btn); color: var(--muted); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
 .segment:hover { color: var(--text); }
 .segment.active { background: var(--accent); color: var(--on-accent); }
+/* The Theme switch (Settings, Appearance): three icon parts on one chip track,
+   like a native segmented control. The chosen one is filled with the accent
+   and lifted by a small shadow; the other two are plain icons. */
+.theme-row { flex-wrap: nowrap; }
+.theme-label { font-weight: 600; }
+.theme-switch { display: inline-flex; flex: 0 0 auto; gap: 2px; padding: 3px; border-radius: var(--r-btn); background: var(--chip); }
+.theme-part { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--r-btn); background: transparent; color: var(--muted); cursor: pointer; }
+.theme-part:hover { color: var(--text); }
+.theme-part[aria-checked="true"] { background: var(--accent); color: var(--on-accent); box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
 .page-head { margin-top: var(--sp-2); }
 .you-panel > .page > :first-child, .sched-panel > .page > :first-child { margin-top: var(--sp-2); }
 
