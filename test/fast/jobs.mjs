@@ -388,6 +388,10 @@ await S.step('Monday: AMC answers 500 and the nightly backup fails', async () =>
 
 // ============================================================ Tue 09-29: AMC 401
 await S.step('Tuesday: AMC answers 401', async () => {
+  // Monday's server may still be in an hourly retry; the count is taken once
+  // it has stopped, not halfway through a refresh rewriting the showtimes.
+  await idle();
+  await w.srv.stop();
   w.amc.mode = 'ok';
   proxy.mode = '401';
   const keep = primaryShowtimes('2026-09-29');
