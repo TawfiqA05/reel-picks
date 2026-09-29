@@ -909,7 +909,8 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 .src-fill { height: 100%; border-radius: 3px; background: var(--accent); }
 .src-val { font-weight: 600; font-variant-numeric: tabular-nums; }
 .factor-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--sp-3); align-items: center; font-size: var(--fs-sm); }
-.factor-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A name too long for its column ("Director: …" at 320) wraps in full. */
+.factor-name { overflow-wrap: anywhere; }
 .factor-n { color: var(--muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
 .showtimes { display: flex; flex-direction: column; gap: var(--sp-2); }
 .day-block { padding-top: var(--sp-2); }
