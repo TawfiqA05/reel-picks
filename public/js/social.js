@@ -12,8 +12,6 @@ import { noteSlot } from './notes.js';
 let state = null;
 const live = new Set();
 
-export const socialState = () => state;
-
 // Fetches /api/social (skipped for the guest). A failure keeps what was there:
 // the page still draws, just without plans or sent picks.
 export async function loadSocial(ctx) {

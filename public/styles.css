@@ -169,7 +169,7 @@ button, input, select, textarea { font-family: inherit; }
 /* Display face (Big Shoulders Display): hero, page and section
    titles, pick-card titles. Each theme loads one weight of it, which
    --display-weight names. */
-.display, .section-title h1, .section-title h2, .pick-title, .hero-title, .detail-title, .brand-name, .empty-title {
+.section-title h1, .section-title h2, .pick-title, .hero-title, .detail-title, .brand-name, .empty-title {
   font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: var(--display-tracking); line-height: var(--lh-display);
 }
 

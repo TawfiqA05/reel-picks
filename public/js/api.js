@@ -50,7 +50,6 @@ export const api = {
   comingSoon: () => req('GET', '/coming-soon'),
   movie: (id) => req('GET', '/movies/' + id),
   person: (id) => req('GET', '/person/' + id),
-  profile: () => req('GET', '/profile'),
 
   settings: () => req('GET', '/settings'),
   saveSettings: (patch) => req('PUT', '/settings', patch),

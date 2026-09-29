@@ -11,7 +11,7 @@
 // Shape note for later multi-user work: the document is { version, kind,
 // exportedAt, profile: {...} } — one profile per document today, but nothing
 // here assumes the instance only ever holds one.
-import { db, all, get, run, getSettings, updateSettings, DEFAULT_SETTINGS, USER_SETTING_KEYS } from '../db.js';
+import { db, all, run, getSettings, updateSettings, DEFAULT_SETTINGS, USER_SETTING_KEYS } from '../db.js';
 import { upsertLightMovie } from './movies.js';
 import { upsertRating } from './ratings.js';
 import { restoreWatched } from './alist.js';

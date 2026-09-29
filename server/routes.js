@@ -6,10 +6,10 @@ import { get, all, run, getSettings, updateSettings, getSetting, setSetting, dat
 import { exportState, importState } from './lib/state.js';
 import { keyStatus, onRailway } from './env.js';
 import {
-  refreshAll, shouldAutoRefresh, state as refreshState, ingestOne, drainUnmatched,
+  refreshAll, state as refreshState, ingestOne, drainUnmatched,
 } from './lib/refresh.js';
 import {
-  getRecommendations, getComingSoon, getMovieDetail, getProfileSummary, wasWeekly4Pick, getStatsGroup, STATS_GROUP_KINDS,
+  getRecommendations, getComingSoon, getMovieDetail, wasWeekly4Pick, getStatsGroup, STATS_GROUP_KINDS,
 } from './lib/recommend.js';
 import {
   upsertRating, addUnmatched, deleteRating, listRatings, ratedIds,
@@ -262,7 +262,6 @@ router.post('/refresh', ownerOnly, (req, res) => {
 
 router.get('/recommendations', h(async (req, res) => res.json(getRecommendations({ guest: isGuest(req) }))));
 router.get('/coming-soon', h(async (req, res) => res.json(getComingSoon({ guest: isGuest(req) }))));
-router.get('/profile', (req, res) => res.json(getProfileSummary()));
 
 // Movie detail. The Rate tab's TMDB search can link to a film we've never
 // stored, and Coming Soon rows are light records (no runtime/cast/trailer), so

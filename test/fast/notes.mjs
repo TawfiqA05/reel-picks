@@ -53,8 +53,9 @@ const recsOf = async (as) => {
   return JSON.stringify({ four: r.weekly4.map((e) => e.tmdb_id), list: r.list.map((e) => [e.tmdb_id, e.final]), worth: r.worthSeeing.map((e) => e.tmdb_id), near: (r.alsoNearby || []).map((e) => [e.tmdb_id, e.final]) });
 };
 const sideOf = async (as) => {
-  const [p, st] = await Promise.all([api(as, 'GET', '/api/profile'), api(as, 'GET', '/api/stats')]);
-  return JSON.stringify({ p: p.json, s: st.json });
+  // Stats carries the taste profile summary too.
+  const st = await api(as, 'GET', '/api/stats');
+  return JSON.stringify({ s: st.json });
 };
 const snapshot = async () => {
   const out = {};
@@ -119,7 +120,7 @@ await S.step('private: each person sees only their own notes', async () => {
   await api(R, 'POST', '/api/watchlist/toggle', { tmdb_id: R0.id });
   const own = (who) => MARK[who];
   const paths = [
-    '/api/status', '/api/recommendations', '/api/coming-soon', '/api/profile', `/api/movies/${R0.id}`, '/api/settings', '/api/state',
+    '/api/status', '/api/recommendations', '/api/coming-soon', `/api/movies/${R0.id}`, '/api/settings', '/api/state',
     '/api/ratings', '/api/letterboxd', '/api/search?q=silent', '/api/search/recents', '/api/watchlist', '/api/hidden', '/api/alist',
     '/api/together', '/api/social', '/api/stats', `/api/person/${C.PEOPLE.ada.id}`, `/api/stats/group?kind=director&name=${encodeURIComponent(C.PEOPLE.ada.name)}`,
     `/api/stats/more?kind=director&name=${encodeURIComponent(C.PEOPLE.ada.name)}`, '/api/export', '/api/friends', '/api/home-picks', '/api/push/config',

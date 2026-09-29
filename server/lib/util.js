@@ -59,11 +59,3 @@ export function csvField(v) {
   const s = v == null ? '' : String(v);
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
-
-// Minutes -> "2h 16m".
-export function runtimeLabel(min) {
-  if (!min) return '';
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return h ? `${h}h ${m}m` : `${m}m`;
-}

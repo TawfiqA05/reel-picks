@@ -47,10 +47,6 @@ export function followedTheatres(settings = getSettings()) {
   return list.map((t) => ({ ...t, short: shortName(t.name) }));
 }
 
-export function followedIds(settings = getSettings()) {
-  return followedTheatres(settings).map((t) => t.id).filter(Boolean);
-}
-
 // Users whose theatres the refresh covers: the owner and every friend who
 // hasn't been revoked, owner first.
 export function activeUserIds() {

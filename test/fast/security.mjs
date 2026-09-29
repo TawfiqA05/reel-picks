@@ -39,7 +39,6 @@ export const ROUTES = [
   ['POST', '/api/refresh', 'owner', {}],
   ['GET', '/api/recommendations', 'guest'],
   ['GET', '/api/coming-soon', 'guest'],
-  ['GET', '/api/profile', 'user'],
   ['GET', '/api/movies/{film}', 'guest'],
   ['GET', '/api/settings', 'user'],
   ['PUT', '/api/settings', 'user', {}],
@@ -359,7 +358,7 @@ async function main() {
   await S.step('bad inputs are refused and store nothing', async () => {
     const F = { name: 'junk', ...(await makeFriend(base(), 'Junk')) };
     const r2 = (method, p, body, headers = F.headers) => req({ name: 'junk', headers }, method, p, body === undefined ? {} : { body });
-    const views = ['/api/status', '/api/settings', '/api/recommendations', '/api/coming-soon', '/api/profile', '/api/alist', '/api/stats', '/api/ratings', '/api/watchlist', '/api/hidden', '/api/together', '/api/export', '/api/state', '/api/search/recents', '/api/home-picks'];
+    const views = ['/api/status', '/api/settings', '/api/recommendations', '/api/coming-soon', '/api/alist', '/api/stats', '/api/ratings', '/api/watchlist', '/api/hidden', '/api/together', '/api/export', '/api/state', '/api/search/recents', '/api/home-picks'];
     const userSetting = (k) => w.q1('SELECT value FROM user_settings WHERE user_id = ? AND key = ?', F.id, k)?.value;
     const badSettings = [
       ['weightPublic', 'abc'], ['weightPublic', 5], ['previewsMinutes', 2.5], ['home', 'x'], ['home', { lat: 999, lng: 0 }],

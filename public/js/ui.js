@@ -9,7 +9,6 @@ export function h(tag, props, ...kids) {
     for (const [k, v] of Object.entries(props)) {
       if (v == null || v === false) continue;
       if (k === 'class' || k === 'className') e.className = v;
-      else if (k === 'html') e.innerHTML = v;
       else if (k === 'style' && typeof v === 'object') Object.assign(e.style, v);
       else if (k === 'dataset') Object.assign(e.dataset, v);
       else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2).toLowerCase(), v);

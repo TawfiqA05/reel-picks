@@ -208,5 +208,3 @@ export function queueReview({ userId, title, year, rating, review, rated_at }) {
   run('INSERT INTO unmatched_notes(user_id, title, year, rating, review, rated_at) VALUES(?,?,?,?,?,?)',
     userId, title, year ?? null, rating ?? null, review, rated_at || null);
 }
-
-export const pendingReviews = (userId) => get('SELECT COUNT(*) AS n FROM unmatched_notes WHERE user_id = ?', userId).n;

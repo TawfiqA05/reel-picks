@@ -13,10 +13,9 @@ export function needsSetup(status) {
   return Boolean(status && !status.guest && status.user && !status.setupDone && (status.counts?.ratings ?? 0) < MIN_RATINGS);
 }
 
-// Set by js/app.js: what happens once the setup is finished or skipped (the
-// guided tour, then Picks).
-let afterSetup = (ctx) => ctx.navigate('#/home');
-export function onSetupDone(fn) { afterSetup = fn; }
+// What happens once the setup is finished or skipped: Picks (where the guided
+// tour starts on its own).
+const afterSetup = (ctx) => ctx.navigate('#/home');
 
 const STEPS = ['Your theater', 'Rate 10 movies', 'How it works'];
 

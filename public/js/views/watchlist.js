@@ -1,7 +1,7 @@
 // Watchlist grid + leaving-soon alerts.
 import { api } from '../api.js';
 import { h, clear, spinner, emptyState, sectionTitle, icon } from '../ui.js';
-import { posterTile, watchlistButton, dayLabel } from './components.js';
+import { posterTile, watchlistButton } from './components.js';
 import { filterBox } from '../filter.js';
 
 export async function render(root, params, ctx) {
