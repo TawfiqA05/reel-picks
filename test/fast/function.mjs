@@ -15,7 +15,7 @@
 import fs from 'node:fs';
 import { suite } from '../lib/check.mjs';
 import { openWorld, makeFriend, call, sleep, until, GUEST } from '../lib/world.mjs';
-import { launch, open as openPage, go, settle, toastText } from '../lib/browser.mjs';
+import { launch, open as openPage, go, settle, toastText, importFiles } from '../lib/browser.mjs';
 import * as C from '../lib/catalog.mjs';
 
 const S = suite('function');
@@ -1076,7 +1076,7 @@ async function groupB() {
 // Letterboxd, the guest, error and empty states, owner extras.
 async function groupC() {
   const lbFeed = C.CLASSICS.slice(10, 13).map((m, i) => ({ id: m.id, title: m.title, year: m.year, rating: [4, 3.5, 5][i], guid: `g${i}` }));
-  const w = S.world(await openWorld('function-c', { letterboxd: { heavyfan: lbFeed, newfan: [] }, prepare: seedNell }));
+  const w = S.world(await openWorld('function-c', { letterboxd: { heavyfan: lbFeed, newfan: [] }, prepare: seedNell, reqLog: true }));
   const g = group(w);
   const { api, recs } = g;
   const heavy = w.friends.robin;
@@ -1518,9 +1518,9 @@ async function groupC() {
     check('welcome: well-known films to rate', await tiles.count() >= 10, String(await tiles.count()));
     const two = C.STREAMING.slice(0, 2);
     const lbCsv = (rows) => ['Date,Name,Year,Letterboxd URI,Rating', ...rows.map((r, i) => `2024-01-0${i + 1},"${r.title}",${r.year},https://boxd.it/x${i},${r.rating}`)].join('\n');
-    await page.locator('.wc-import input[type=file]').setInputFiles({ name: 'ratings.csv', mimeType: 'text/csv', buffer: Buffer.from(lbCsv(two.map((m) => ({ title: m.title, year: m.year, rating: 4 })))) });
-    await page.waitForFunction(() => /Imported|weren't changed/.test(document.querySelector('.wc-import-note')?.textContent || ''), null, { timeout: 30000 }).catch(() => {});
-    check('welcome: importing ratings.csv in step 2 counts them', /Imported 2 ratings/.test(await page.locator('.wc-import-note').textContent()) && /2 rated/.test(await page.locator('.wc-count').textContent()), `${await page.locator('.wc-import-note').textContent()} / ${await page.locator('.wc-count').textContent()}`);
+    const wt = await importFiles(page, w, '.wc-import input[type=file]', { name: 'ratings.csv', mimeType: 'text/csv', buffer: Buffer.from(lbCsv(two.map((m) => ({ title: m.title, year: m.year, rating: 4 })))) },
+      () => /Imported|weren't changed/.test(document.querySelector('.wc-import-note')?.textContent || ''), { result: '.wc-import-note' });
+    check('welcome: importing ratings.csv in step 2 counts them', /Imported 2 ratings/.test(wt) && /2 rated/.test(await page.locator('.wc-count').textContent()), `${wt} / ${await page.locator('.wc-count').textContent()}`);
     for (let i = 0; i < 8; i++) { await rateStars(page, tiles.nth(i), [4, 3, 5, 2.5, 4.5, 3.5, 4, 5][i]); await page.waitForTimeout(250); }
     await page.waitForTimeout(500);
     check('welcome: counts to 10', /10 rated/.test(await page.locator('.wc-count').textContent()), await page.locator('.wc-count').textContent());
@@ -1571,11 +1571,10 @@ async function groupC() {
     const { page } = await g.open(imp, 390, 'light');
     await go(page, w, '#/rate', 500);
     await page.locator('button', { hasText: 'Show me how' }).click();
-    const upload = async (name, text) => {
-      await page.locator('input[type=file][accept=".csv,text/csv"]').setInputFiles({ name, mimeType: 'text/csv', buffer: Buffer.from(text) });
-      await page.waitForFunction(() => { const r = document.querySelector('.import-result'); return r && !r.hidden && !/Reading the file|Matching titles/.test(r.textContent); }, null, { timeout: 30000 }).catch(() => {});
-      return page.locator('.import-result').textContent();
-    };
+    // Each upload waits at most 30s; a stuck one fails its check with where
+    // it stopped (importFiles).
+    const upload = (name, text) => importFiles(page, w, 'input[type=file][accept=".csv,text/csv"]', { name, mimeType: 'text/csv', buffer: Buffer.from(text) },
+      () => { const r = document.querySelector('.import-result'); return r && !r.hidden && !/Reading the file|Matching titles/.test(r.textContent); });
     const c = C.CLASSICS.slice(0, 7);
     const lb = ['Date,Name,Year,Letterboxd URI,Rating', ...c.slice(0, 3).map((m, i) => `2024-01-0${i + 1},${m.title},${m.year},https://boxd.it/x${i},${[4, 2.5, 5][i]}`), '2024-02-02,Watched Only,2001,https://boxd.it/w,'].join('\n');
     let t = await upload('ratings.csv', lb);
@@ -1610,6 +1609,14 @@ async function groupC() {
     check('imports: the deleted rating is back', (await api(imp, 'GET', '/api/ratings')).json.ratings.length === before);
     t = await upload('ratings.csv', 'Date,Name,Year,Letterboxd URI,Rating\n2024-01-01,Qqzx Vorpal Nonfilm Xyzzy,1901,https://boxd.it/q,3');
     check('imports: an unmatched title is reported as kept for retry', /couldn't be matched/.test(t) || /0 ratings imported/.test(t), t);
+    // A stuck upload fails fast and says where it stopped (here the browser
+    // holds the request back, so the server never sees it).
+    await page.route('**/api/ratings/import', () => {});
+    const t0 = Date.now();
+    t = await importFiles(page, w, 'input[type=file][accept=".csv,text/csv"]', { name: 'ratings.csv', mimeType: 'text/csv', buffer: Buffer.from('Date,Name,Year,Letterboxd URI,Rating\n2024-01-01,The Ember,1980,https://boxd.it/a,3') },
+      () => { const r = document.querySelector('.import-result'); return r && !r.hidden && !/Reading the file|Matching titles/.test(r.textContent); }, { timeout: 3000 });
+    check('imports: a stuck upload ends with a clear timeout instead of hanging', /^TIMED OUT after/.test(t) && /no answer; the server never received it/.test(t) && Date.now() - t0 < 10000, `${Date.now() - t0}ms: ${t}`);
+    await page.unroute('**/api/ratings/import');
     g.noErrors('imports', m0, [/400 POST \/api\/ratings\/import/, /status of 400 \(Bad Request\) @\/#\/rate/]);
   });
 

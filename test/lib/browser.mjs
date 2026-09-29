@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { chromium, webkit } from 'playwright';
 import * as C from './catalog.mjs';
+import { reqEntries } from './world.mjs';
 
 const FONTS = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'fixtures', 'fonts');
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
@@ -154,3 +155,52 @@ __rp.ratio = (a, b) => { const x = __rp.lum(a), y = __rp.lum(b); return (Math.ma
 __rp.over = (top, under) => ({ r: top.r * top.a + under.r * (1 - top.a), g: top.g * top.a + under.g * (1 - top.a), b: top.b * top.a + under.b * (1 - top.a), a: 1 });
 __rp.bgOf = (el) => { const stack = []; for (let a = el; a; a = a.parentElement) { const c = __rp.parse(getComputedStyle(a).backgroundColor); if (c && c.a > 0) { stack.push(c); if (c.a >= 1) break; } } let col = { r: 255, g: 255, b: 255, a: 1 }; if (!stack.length || stack[stack.length - 1].a < 1) col = __rp.parse(getComputedStyle(document.body).backgroundColor) || col; for (let i = stack.length - 1; i >= 0; i--) col = __rp.over(stack[i], col); return col; };
 `;
+
+// Picks files in an import input and waits until `done` (a page predicate)
+// holds. Never waits for good and never fails quietly: after `timeout` it
+// returns text starting "TIMED OUT" that says where the import stopped: the
+// page never sent it, the browser is still waiting for POST
+// /api/ratings/import, or it was answered and the page never finished. With
+// the world's request log on (openWorld reqLog), it says too whether the
+// server got the request and answered it.
+export async function importFiles(page, w, input, files, done, { result = '.import-result', timeout = 30000 } = {}) {
+  const posts = [];
+  const isImport = (r) => r.method() === 'POST' && new URL(r.url()).pathname === '/api/ratings/import';
+  const onRequest = (r) => { if (isImport(r)) posts.push({ r, at: Date.now(), state: 'waiting' }); };
+  const onFinished = (r) => { const p = posts.find((x) => x.r === r); if (p) p.state = 'answered'; };
+  const onFailed = (r) => { const p = posts.find((x) => x.r === r); if (p) p.state = `failed (${r.failure()?.errorText || 'no reason'})`; };
+  page.on('request', onRequest);
+  page.on('requestfinished', onFinished);
+  page.on('requestfailed', onFailed);
+  const t0 = Date.now();
+  try {
+    await page.locator(input).setInputFiles(files);
+    const ok = await page.waitForFunction(done, null, { timeout }).then(() => true, () => false);
+    const text = (await page.locator(result).first().textContent({ timeout: 2000 }).catch(() => null)) ?? '';
+    if (ok) return text;
+    const secs = (ms) => `${(ms / 1000).toFixed(1)}s`;
+    let why;
+    const stuck = posts.filter((p) => p.state === 'waiting');
+    if (!posts.length) why = 'the page never sent POST /api/ratings/import';
+    else if (!stuck.length) why = `every POST /api/ratings/import was answered (${posts.map((p) => p.state).join(', ')}), but the page never finished`;
+    else {
+      const p = stuck[0];
+      const log = w?.srv ? reqEntries(w.srv) : null;
+      let server = 'the server was not logging requests';
+      if (log) {
+        const mine = log.filter((e) => e.url === '/api/ratings/import' && e.at >= p.at - 2000);
+        const got = mine.find((e) => e.ev === 'in');
+        const out = got && mine.find((e) => e.id === got.id && e.ev !== 'in' && e.ev !== 'body read');
+        server = !got ? 'the server never received it'
+          : out ? `the server received it and ${out.ev === 'out' ? `answered ${out.status} after ${secs(out.ms)}` : `closed it unanswered after ${secs(out.ms)}`}`
+            : `the server received it ${secs(got.at - p.at)} after it was sent and never answered`;
+      }
+      why = `POST /api/ratings/import was sent ${secs(Date.now() - p.at)} ago and the browser has no answer; ${server}`;
+    }
+    return `TIMED OUT after ${secs(Date.now() - t0)}: ${why}. The page says: "${text.slice(0, 200)}"`;
+  } finally {
+    page.off('request', onRequest);
+    page.off('requestfinished', onFinished);
+    page.off('requestfailed', onFailed);
+  }
+}

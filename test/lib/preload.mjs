@@ -59,6 +59,30 @@ const LOG = process.env.RP_NET_LOG;
 // `at` is the real time in ms, for suites that measure call rates.
 const note = (entry) => { if (LOG) try { fs.appendFileSync(LOG, `${JSON.stringify({ ...entry, at: RealDate.now() })}\n`); } catch { /* best effort */ } };
 
+// ---------------------------------------------------------------- request log
+// RP_REQ_LOG: every request the server gets, when it arrived and when its
+// answer finished (or that the connection closed first), one JSON line each,
+// so a stuck browser request can be told apart from a stuck server.
+const REQ_LOG = process.env.RP_REQ_LOG;
+if (REQ_LOG) {
+  const http = await import('node:http');
+  const realEmit = http.Server.prototype.emit;
+  let n = 0;
+  const line = (e) => { try { fs.appendFileSync(REQ_LOG, `${JSON.stringify(e)}\n`); } catch { /* best effort */ } };
+  http.Server.prototype.emit = function emit(type, req, res) {
+    if (type === 'request') {
+      const id = ++n;
+      const t0 = RealDate.now();
+      const port = this.address()?.port;
+      line({ id, port, at: t0, ev: 'in', method: req.method, url: req.url.slice(0, 120) });
+      req.on('end', () => line({ id, port, at: RealDate.now(), ev: 'body read' }));
+      res.on('finish', () => line({ id, port, at: RealDate.now(), ev: 'out', status: res.statusCode, ms: RealDate.now() - t0 }));
+      res.on('close', () => { if (!res.writableFinished) line({ id, port, at: RealDate.now(), ev: 'closed unanswered', ms: RealDate.now() - t0 }); });
+    }
+    return realEmit.apply(this, [type, req, res]);
+  };
+}
+
 // ---------------------------------------------------------------- saved TMDB answers
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const SAVED_DIR = path.join(HERE, '..', 'fixtures', 'tmdb');

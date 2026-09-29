@@ -61,14 +61,23 @@ export function copyApp(dir) {
 }
 
 // A JSON API call. `as`: undefined for the owner (localhost), GUEST, or a
-// friend { headers }.
+// friend { headers }. One the server doesn't answer within CALL_TIMEOUT_MS
+// fails with a message saying so, instead of waiting for good.
+const CALL_TIMEOUT_MS = 90000;
 export async function call(base, method, p, { body, headers = {}, as = null, raw = false } = {}) {
-  const res = await fetch(base + p, {
-    method, redirect: 'manual',
-    headers: { ...(body !== undefined && !raw ? { 'content-type': 'application/json' } : {}), ...(as?.headers || as || {}), ...headers },
-    body: body === undefined ? undefined : raw ? body : JSON.stringify(body),
-  });
-  const text = await res.text();
+  const signal = AbortSignal.timeout(CALL_TIMEOUT_MS);
+  let res; let text;
+  try {
+    res = await fetch(base + p, {
+      method, redirect: 'manual', signal,
+      headers: { ...(body !== undefined && !raw ? { 'content-type': 'application/json' } : {}), ...(as?.headers || as || {}), ...headers },
+      body: body === undefined ? undefined : raw ? body : JSON.stringify(body),
+    });
+    text = await res.text();
+  } catch (e) {
+    if (e?.name === 'TimeoutError') throw new Error(`${method} ${p.slice(0, 80)}: the test server gave no answer in ${CALL_TIMEOUT_MS / 1000}s`);
+    throw e;
+  }
   let json = null; try { json = JSON.parse(text); } catch { /* not JSON */ }
   return { status: res.status, json, text, headers: res.headers };
 }
@@ -82,11 +91,25 @@ function cleanEnv(extra) {
   return { ...env, ...extra };
 }
 
+// A port found free can be taken by another process before the server
+// listens on it (other suites start servers at the same time); the server
+// then starts again on a new one, up to three times.
 export async function startServer({ app, dataDir, env = {}, label = 'server' }) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await startOnce({ app, dataDir, env, label });
+    } catch (e) {
+      if (attempt >= 3 || !/EADDRINUSE/.test(String(e.message))) throw e;
+    }
+  }
+}
+
+async function startOnce({ app, dataDir, env, label }) {
   const port = await freePort();
   const startedAt = Date.now();
   const fakeNow = env.RP_FAKE_NOW ?? C.T0;
   const netLog = path.join(dataDir, '..', `net-${label}-${port}.jsonl`);
+  const reqLog = env.RP_REQ_LOG || process.env.RP_REQ_LOG || null;
   const child = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', `--import=${PRELOAD}`, 'server/index.js'], {
     cwd: app,
     env: cleanEnv({
@@ -94,6 +117,7 @@ export async function startServer({ app, dataDir, env = {}, label = 'server' }) 
       RP_DISABLE_REFRESH: '1', OWNER_NAME: C.OWNER_NAME,
       TMDB_API_KEY: 'test-tmdb-key', OMDB_API_KEY: 'test-omdb-key', AMC_API_KEY: 'test-amc-key',
       RP_LETTERBOXD_ORIGIN: 'http://127.0.0.1:9',
+      ...(reqLog ? { RP_REQ_LOG: reqLog } : {}),
       ...env,
     }),
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -104,14 +128,24 @@ export async function startServer({ app, dataDir, env = {}, label = 'server' }) 
   child.stderr.on('data', (d) => { out += d; });
   const t0 = Date.now();
   while (!out.includes('Reel Picks running')) {
-    if (child.exitCode != null || Date.now() - t0 > 20000) throw new Error(`server did not start:\n${out.slice(-2000)}`);
+    if (child.exitCode != null || Date.now() - t0 > 20000) {
+      if (child.exitCode == null) child.kill('SIGKILL');
+      children.delete(child);
+      throw new Error(`server did not start:\n${out.slice(-2000)}`);
+    }
     await sleep(50);
   }
   child.on('exit', () => children.delete(child));
   return {
-    child, port, dataDir, netLog, startedAt, fakeNowMs: fakeNow ? Date.parse(fakeNow) : null, base: `http://localhost:${port}`, log: () => out,
+    child, port, dataDir, netLog, reqLog, startedAt, fakeNowMs: fakeNow ? Date.parse(fakeNow) : null, base: `http://localhost:${port}`, log: () => out,
     stop: (sig = 'SIGTERM') => new Promise((r) => { if (child.exitCode != null || child.signalCode != null) return r(); child.once('exit', () => r()); child.kill(sig); }),
   };
+}
+
+// What the server logged about each request (RP_REQ_LOG; test/lib/preload.mjs).
+export function reqEntries(server) {
+  if (!server.reqLog) return null;
+  try { return fs.readFileSync(server.reqLog, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((e) => e.port === server.port); } catch { return []; }
 }
 
 // Every outside request the server made, from its network log.
@@ -243,7 +277,8 @@ export function loadBase() {
 // ---------------------------------------------------------------- one suite's world
 // opts: env (extra server env), refresh (let refreshes run), push (a push
 // stand-in with test VAPID keys), letterboxd (feeds), ctrl (a control file
-// for clock jumps), prepare(db) (edits the copied database before start).
+// for clock jumps), prepare(db) (edits the copied database before start),
+// reqLog (the server logs every request, see reqEntries).
 export async function openWorld(name, opts = {}) {
   let baseMeta = loadBase();
   let ownBase = null;
@@ -270,6 +305,7 @@ export async function openWorld(name, opts = {}) {
     ...(opts.refresh ? { RP_DISABLE_REFRESH: '0' } : {}),
     ...(push ? { RP_PUSH_TEST_ORIGIN: push.origin, ...vapid } : {}),
     ...(lb ? { RP_LETTERBOXD_ORIGIN: lb.origin } : {}),
+    ...(opts.reqLog ? { RP_REQ_LOG: path.join(dir, `req-${name}.jsonl`) } : {}),
     ...(opts.env || {}), ...extra,
   });
   let srv = await startServer({ app, dataDir, env: envFor(), label: name });
