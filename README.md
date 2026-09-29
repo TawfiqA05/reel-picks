@@ -97,7 +97,8 @@ There are five, along the bottom on a phone and across the top on a computer.
 
 - **Picks** is everything above: the four, At home, What should I watch?, Last chance, and
   the rest of the lineup. On a phone I pull the page down to refresh it: for me that runs
-  a real refresh, for a friend it just reloads the picks.
+  a real refresh, for a friend it just reloads the picks. From December 1 to January 15
+  a Your year in movies card sits at the top (see Your year in movies below).
 - **Schedule** holds Leaving soon and Coming soon as two segments, and it reopens the one
   I used last. Old `#/coming` and `#/leaving` links still land on the right one.
 - **Rate** is where ratings come in: search and rate, the Letterboxd and IMDb importer,
@@ -105,7 +106,8 @@ There are five, along the bottom on a phone and across the top on a computer.
 - **Watchlist** is every film I saved, as a poster grid. A saved film that's confirmed to
   be leaving gets a line at the top. A long list gets a filter box. Saved films get a
   ranking boost on Picks.
-- **You** holds four segments, and reopens the one I used last:
+- **You** holds four segments, and reopens the one I used last. From December 1 to
+  January 15 a Your year in movies row sits above them:
   - **Stats** shows this period's plan usage and savings (or ticket spend with no plan),
     films seen this year, my average rating, the pick hit-rate (how I rated the weekly
     picks I actually went to), a tip when my picks keep rating below my average, and my
@@ -505,6 +507,50 @@ when they dismiss it, save the film, mark it seen or rate it, and the movie page
 "Sent by" with the note while it's there. Each person can send ten a day. The guest link
 can't send or receive, and sending never changes a score or a pick.
 
+## Your year in movies
+
+From December 1 through January 15, a card at the top of Picks and a row at the top of You
+open my year in movies: a short run of full-screen cards about the year that's ending (this
+year in December, last year in January). I tap the right side of a card or swipe left to go
+on, and tap the left side or swipe right to go back. The arrow keys and the Back and Next
+buttons do the same, and the close button or Escape closes it. With reduced motion on, the
+cards fade instead of sliding. Each card has a heading and plain text, so a screen reader
+reads it like any page.
+
+A card only shows up when there's enough behind it:
+
+- **Numbers**: films seen in theaters this year (the same count as Stats' "seen in
+  theaters") and films rated this year.
+- **Favorites**: my top director, actor and genre among the films I saw or rated this
+  year, ranked the way Stats ranks them (most films, then my average rating, then name),
+  and only when one has at least two films.
+- **My theater**: the theater with the most of my I'm going showings this year. The app
+  only knows a theater from a plan that's still on file (an answered plan goes, and the
+  watch log keeps no theater), so this card often doesn't show.
+- **Months**: my busiest month, and the first and latest films of the year.
+- **Movie plan**: tickets used this year and what the plan saved me, counted month by month
+  the way Stats counts "saved this month", from the first month I used a ticket. With no
+  plan it shows what I spent on tickets instead.
+- **Weekly picks**: how many of the weekly four I went to, and the best of them by my rating.
+- **Highest rated**: my top-rated film of the year, with my note if I wrote one.
+- **Summary**: my numbers, top genre and director, up to four posters, and Save image.
+
+Someone with fewer than five films in the year gets a short, friendly version (the numbers,
+their favorite film and the summary), and someone brand new gets a card saying how to fill
+it in, never an empty card.
+
+Save image makes a 1080 by 1920 picture with my name, the year, my numbers, my top genre and
+director, and up to four posters of my highest-rated films. On a phone it opens the share
+sheet; on a computer it downloads. The posters come through the app's own server, and only
+the ones on my own recap, so the page can draw them. The picture carries nothing else: no
+other person, no invite link, no place.
+
+Everyone gets their own recap from their own data. Friends never see each other's, and the
+guest link sees none of it. The recap only reads: it changes no score, no pick and not the
+weekly four. Days and months are local time on the server (the `TZ` variable), like Stats.
+As the owner I can open it any day from Settings, Data, Preview year in movies, which shows
+this year so far.
+
 ## Privacy
 
 Everything lives in the SQLite file. Two keyless OpenStreetMap services see location
@@ -514,7 +560,8 @@ about location ever goes to TMDB, OMDb, or AMC. Each friend's drive times are me
 from their own home base, and nobody else sees it. The read-only guest link never carries
 home coordinates, drive times, or distances. Settings has a plain "where your location
 data goes" note and a one-click way to clear it all. Notes on ratings are only ever shown
-to the person who wrote them (see Notes on ratings).
+to the person who wrote them (see Notes on ratings), and each person's year in movies only
+to them (see Your year in movies).
 
 ## Notifications
 
@@ -639,7 +686,8 @@ Settings page. A Save bar slides up above the tab bar only when something has ch
 - **Alerts** (mine): the last 10 alerts and anything failing now.
 - **Data**: Export full setup (friends: Export my data), Import full setup (mine), Export
   backup CSV, Download latest backup (mine), the off-site backup status with Upload now
-  (mine), Refresh now (mine), Re-run quick rate, and the last refresh's warnings.
+  (mine), Refresh now (mine), Re-run quick rate, Preview year in movies (mine), and the
+  last refresh's warnings.
 
 ## Deploying
 
@@ -759,7 +807,8 @@ server/
   lib/                scoring, taste, ranking, runway, geocoding, accounts,
                       AMC/TMDB/OMDb clients, refresh pipeline, backups,
                       push, Letterboxd, At home, Together, search, people,
-                      I'm going plans and sent picks, notes on ratings
+                      I'm going plans and sent picks, notes on ratings,
+                      your year in movies
 public/               buildless frontend (vanilla ESM + CSS, PWA)
 scripts/              share tunnel, icon generation
 test/                 the fast and browser test suites and their made-up sample data
@@ -792,15 +841,18 @@ calendar, every Settings save, CSV import, setup export and import, the invite f
 person page), search ranking on real TMDB answers, scores and picks against saved expected
 values, security for every API route, the owner, friend and guest roles, privacy between
 friends, the hourly limits, the weekly lock, the background jobs on a mocked timeline,
-I'm going plans (reminders, the next morning's question, restarts) on a mocked clock, and
-sending picks.
+I'm going plans (reminders, the next morning's question, restarts) on a mocked clock,
+sending picks, and Your year in movies on a mocked Nov 30, Dec 1, Jan 15 and Jan 16 (every
+figure against its own count and against Stats, which cards each person gets, privacy, and
+that it writes nothing).
 
 `npm run test:ui` runs the browser checks in about 10 minutes: accessibility (keyboard,
 focus rings, names, dialogs, reduced motion, 200% zoom), layout at 320, 390 and 1280 in
 light and dark for every role with no sideways scroll, clipped text, contrast problem or
 console error, the design itself (tokens, fonts, buttons, cards, showtime rows), the
-installed iPhone app, service worker updates and offline, size budgets, and I'm going and
-Send a pick for every role, width and theme.
+installed iPhone app, service worker updates and offline, size budgets, I'm going and
+Send a pick for every role, width and theme, and every Your year in movies card for every
+person, width and theme, with tap, swipe, keys and the saved image.
 
 The first time, I install the browsers with `npx playwright install chromium webkit`.
 Real app bugs the tests have found but I haven't fixed yet are listed in
