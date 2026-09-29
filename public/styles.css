@@ -1409,6 +1409,19 @@ body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h)
 .tg-main { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; flex: 1; }
 .tg-title { font-weight: 700; font-size: var(--fs-base); color: var(--text); overflow-wrap: anywhere; }
 .tg-year { color: var(--muted); font-weight: 500; }
+/* "On their watchlist · great match for you": two tags drawn as one pill,
+   the dot between them with a space's width (.233em) each side, less the
+   tag's own gap. At 320 the whole is wider than the room beside the poster,
+   so they part: two pills, one under the other. */
+.tg-pair { display: inline-flex; max-width: 100%; }
+.tg-pair > .tag:first-child { padding-right: 0; border-radius: 999px 0 0 999px; }
+.tg-pair > .tag + .tag { padding-left: 0; border-radius: 0 999px 999px 0; }
+.tg-pair > .tag + .tag::before { content: "·"; margin: 0 calc(0.233em - var(--sp-1)) 0 0.233em; }
+@media (max-width: 359px) {
+  .tg-pair { flex-wrap: wrap; gap: 6px; }
+  .tg-pair > .tag:first-child, .tg-pair > .tag + .tag { padding: 3px 9px; border-radius: 999px; }
+  .tg-pair > .tag + .tag::before { content: none; }
+}
 .tag.tg-label.strong { background: var(--accent-soft); color: var(--accent-text); }
 .tg-times { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .tg-time { display: inline-flex; flex-direction: column; justify-content: center; gap: 1px; min-height: 44px; padding: 4px 10px; border-radius: var(--r-btn); background: var(--chip); color: var(--text); font-size: var(--fs-sm); line-height: var(--lh-tight); }

@@ -99,12 +99,21 @@ function filmRow(f) {
     poster(f, { size: 'sm' }),
     h('div', { class: 'tg-main' },
       h('a', { class: 'tg-title', href: `#/movie/${f.tmdb_id}` }, f.title, f.year ? h('span', { class: 'tg-year' }, ` ${f.year}`) : null),
-      badge(f.label, `tg-label ${f.labelKind}`),
+      label(f),
       f.showtimes.length
         ? h('ul', { class: 'tg-times', 'aria-label': 'Next showtimes' }, ...f.showtimes.map(showtime))
         : null,
     ),
   );
+}
+
+// Why the film is here. "On their watchlist · great match for you" is its
+// two halves, drawn as one tag; at 320, where the whole won't fit on a line,
+// they part onto two lines as two tags (styles.css).
+function label(f) {
+  const [first, second] = f.label.split(' · ');
+  if (!second) return badge(f.label, `tg-label ${f.labelKind}`);
+  return h('span', { class: 'tg-pair' }, badge(first, `tg-label ${f.labelKind}`), badge(second, `tg-label ${f.labelKind}`));
 }
 
 function showtime(st) {
