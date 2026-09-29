@@ -1,1 +1,4 @@
-{}
+{
+  "design: buttons light 390: the soft red button's hovered label keeps 4.5:1 on a What should I watch? film": "Light theme: Not for me hovered on a What should I watch? film (the chip fill) is 4.13:1 (3.81:1 before the page's hover went from 22% to 17%). Left for a decision: meeting 4.5:1 there needs its own hover on that card, and only the page's hover was to change.",
+  "design: buttons forced light 390: the soft red button's hovered label keeps 4.5:1 on a What should I watch? film": "The same, with Light chosen on the Theme switch."
+}

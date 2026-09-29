@@ -388,10 +388,11 @@ async function cleanRendered(modes = SYSTEM) {
 // button sits on (the page on Picks, a card or a Settings group, the chip fill
 // of a What should I watch? film, where the label is 12px at 390). Hover is
 // forced through the DevTools protocol, since the phone-sized contexts are
-// touch ones. Resting, and hovered in light, the colours stay what they were.
+// touch ones. Resting colours stay what they were; light's hover is the 17%
+// wash that gives 4.5:1 on the cream page (22% gave 4.16:1).
 const DANGER = {
   dark: { rest: ['rgba(255, 123, 114, 0.13)', 'rgb(255, 123, 114)'] },
-  light: { rest: ['rgba(168, 38, 26, 0.1)', 'rgb(168, 38, 26)'], hover: ['rgba(168, 38, 26, 0.22)', 'rgb(168, 38, 26)'] },
+  light: { rest: ['rgba(168, 38, 26, 0.1)', 'rgb(168, 38, 26)'], hover: ['rgba(168, 38, 26, 0.17)', 'rgb(168, 38, 26)'] },
 };
 function dangerLook(i) {
   const e = document.querySelector(`[data-dh="${i}"]`);
@@ -415,7 +416,7 @@ async function dangerHover(modes = SYSTEM) {
     ['settings', 'owner', 'settings', '#main', null],
   ];
   for (const { theme, system, choice, label } of modes) {
-    const low = []; const rest = []; const hov = []; const blind = []; let small = 0; let n = 0;
+    const low = []; const lowChip = []; const rest = []; const hov = []; const blind = []; let small = 0; let n = 0;
     for (const [scene, role, hash, scope, prep] of scenes) {
       const p = await page(role, { width: 390, theme: system, choice, hash });
       if (prep) await prep(p.page);
@@ -445,16 +446,21 @@ async function dangerHover(modes = SYSTEM) {
         let under = parse(after.page);
         for (const c of after.layers.slice().reverse()) under = over(parse(c), under);
         const r = ratio(parse(after.color), under);
-        if (r < 4.5) low.push([r, `${tag} ${after.size} ${r.toFixed(2)}:1`]);
+        if (r < 4.5) (scene === 'what should I watch' && theme === 'light' ? lowChip : low).push([r, `${tag} ${after.size} ${r.toFixed(2)}:1`]);
       }
       await p.ctx.close();
     }
     if (!small) blind.push('no 12px soft red button was hovered');
-    // Light's hover is held as it is (the check below); its contrast is dark's job here.
-    if (theme === 'dark') S.check(`buttons ${label} 390: the soft red button's hovered label keeps 4.5:1 on every surface`, n > 0 && !blind.length && !low.length, [...blind, ...low.sort((a, b) => a[0] - b[0]).map((x) => x[1])].slice(0, 4).join(' || '));
-    else S.check(`buttons ${label} 390: the soft red button's hover is reached on every surface`, n > 0 && !blind.length, blind.slice(0, 4).join(' || '));
+    const worst = (xs) => xs.sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+    if (theme === 'dark') S.check(`buttons ${label} 390: the soft red button's hovered label keeps 4.5:1 on every surface`, n > 0 && !blind.length && !low.length, [...blind, ...worst(low)].slice(0, 4).join(' || '));
+    else {
+      S.check(`buttons ${label} 390: the soft red button's hovered label keeps 4.5:1 on the page and on cards`, n > 0 && !blind.length && !low.length, [...blind, ...worst(low)].slice(0, 4).join(' || '));
+      // Light on a What should I watch? film (the chip fill): left as it was
+      // asked to be (only the page's hover was to change); see known-bugs.json.
+      S.check(`buttons ${label} 390: the soft red button's hovered label keeps 4.5:1 on a What should I watch? film`, !lowChip.length, worst(lowChip).slice(0, 3).join(' || '));
+    }
     S.check(`buttons ${label} 390: the soft red button's resting colours are unchanged`, n > 0 && !rest.length, rest.slice(0, 3).join(' || '));
-    if (DANGER[theme].hover) S.check(`buttons ${label} 390: the soft red button's hover colours are unchanged`, n > 0 && !hov.length, hov.slice(0, 3).join(' || '));
+    if (DANGER[theme].hover) S.check(`buttons ${label} 390: the soft red button's hover colours are the 4.5:1 ones`, n > 0 && !hov.length, hov.slice(0, 3).join(' || '));
   }
 }
 

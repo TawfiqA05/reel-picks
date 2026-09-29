@@ -104,7 +104,6 @@
   --warn: #9A4800;
   --bad: #A8261A;
   --bad-soft: rgba(168, 38, 26, .10);
-  --bad-hover: 22%;
   --field-edge: #7A6E60;
   --focus: var(--accent-text);
   --blue: #1E4E9E;
@@ -142,7 +141,6 @@
     --warn: #f2a93b;
     --bad: #ff7b72;
     --bad-soft: rgba(255, 123, 114, .13);
-    --bad-hover: 17%;
     --field-edge: #7883a1;
     --blue: #8fb8ff;
     --blue-soft: rgba(143, 184, 255, .14);
@@ -175,7 +173,6 @@
   --warn: #f2a93b;
   --bad: #ff7b72;
   --bad-soft: rgba(255, 123, 114, .13);
-  --bad-hover: 17%;
   --field-edge: #7883a1;
   --blue: #8fb8ff;
   --blue-soft: rgba(143, 184, 255, .14);
@@ -496,8 +493,9 @@ body.has-save main { padding-bottom: calc(var(--chrome-bottom) + var(--savebar-h
 .btn.soft, .icon-btn.soft { background: var(--accent-soft); color: var(--accent-text); }
 .btn.soft:hover, .icon-btn.soft:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
 .btn.danger, .icon-btn.danger { background: var(--bad-soft); color: var(--bad); }
-/* --bad-hover is lighter in dark, so the red label keeps 4.5:1 on a chip (4.6:1; 22% gave 4.2:1). */
-.btn.danger:hover, .icon-btn.danger:hover { background: color-mix(in srgb, var(--bad) var(--bad-hover), transparent); }
+/* A light wash, so the red label keeps 4.5:1: on a dark chip 4.6:1, on the
+   cream page 4.5:1 (22% gave 4.2:1 in both). */
+.btn.danger:hover, .icon-btn.danger:hover { background: color-mix(in srgb, var(--bad) 17%, transparent); }
 .btn.small { padding: 0 12px; font-size: var(--fs-sm); }
 .btn.wide { width: 100%; }
 /* Disabled looks disabled: no colour, a dashed edge, not just fainter text. */
