@@ -375,9 +375,84 @@ async function cleanRendered() {
   }
 }
 
+// ---------------------------------------------------------------- the soft red button's hover
+// Not for me, Revoke, Remove: hovered, the label keeps 4.5:1 on whatever the
+// button sits on (the page on Picks, a card or a Settings group, the chip fill
+// of a What should I watch? film, where the label is 12px at 390). Hover is
+// forced through the DevTools protocol, since the phone-sized contexts are
+// touch ones. Resting, and hovered in light, the colours stay what they were.
+const DANGER = {
+  dark: { rest: ['rgba(255, 123, 114, 0.13)', 'rgb(255, 123, 114)'] },
+  light: { rest: ['rgba(168, 38, 26, 0.1)', 'rgb(168, 38, 26)'], hover: ['rgba(168, 38, 26, 0.22)', 'rgb(168, 38, 26)'] },
+};
+function dangerLook(i) {
+  const e = document.querySelector(`[data-dh="${i}"]`);
+  const s = getComputedStyle(e);
+  const layers = [];
+  for (let a = e; a && a.nodeType === 1; a = a.parentElement) {
+    const c = getComputedStyle(a).backgroundColor;
+    if (!/rgba\(0, 0, 0, 0\)|transparent/.test(c)) { layers.push(c); if (!/rgba|\/ /.test(c)) break; }
+  }
+  return { fill: s.backgroundColor, color: s.color, layers, page: getComputedStyle(document.body).backgroundColor, size: s.fontSize, what: `${String(e.className).trim().split(/\s+/).join('.')} "${(e.getAttribute('aria-label') || e.textContent).trim().slice(0, 24)}"` };
+}
+async function dangerHover() {
+  const same = (a, b) => { const x = parse(a); const y = parse(b); return Math.abs(x.r - y.r) + Math.abs(x.g - y.g) + Math.abs(x.b - y.b) <= 2 && Math.abs(x.a - y.a) < 0.006; };
+  const scenes = [
+    ['picks', 'owner', 'home', '#main', null],
+    ['what should I watch', 'heavy', 'home', '.modal-card', async (pg) => {
+      await pg.locator('#wsw-btn').click(); await waitDialog(pg);
+      await pg.click('[data-answer="either"]'); await pg.click('[data-answer="any"]'); await pg.click('[data-answer="surprise"]');
+      await pg.waitForSelector('.wsw-film .btn.danger', { timeout: 30000 }).catch(() => {}); await pg.waitForTimeout(400);
+    }],
+    ['settings', 'owner', 'settings', '#main', null],
+  ];
+  for (const theme of ['dark', 'light']) {
+    const low = []; const rest = []; const hov = []; const blind = []; let small = 0; let n = 0;
+    for (const [scene, role, hash, scope, prep] of scenes) {
+      const p = await page(role, { width: 390, theme, hash });
+      if (prep) await prep(p.page);
+      const count = await p.page.evaluate(({ vis, scope }) => {
+        const v = eval(vis);
+        const els = [...document.querySelectorAll(`${scope} :is(.btn.danger, .icon-btn.danger)`)].filter(v).filter((e) => !e.matches(':disabled, [aria-disabled="true"]'));
+        els.forEach((e, i) => e.setAttribute('data-dh', String(i)));
+        return els.length;
+      }, { vis: VISIBLE, scope });
+      if (!count) blind.push(`${scene}: no soft red button on screen`);
+      const cdp = await p.ctx.newCDPSession(p.page);
+      await cdp.send('DOM.enable'); await cdp.send('CSS.enable');
+      const { root } = await cdp.send('DOM.getDocument', { depth: -1 });
+      for (let i = 0; i < count; i++) {
+        const before = await p.page.evaluate(dangerLook, i);
+        const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector: `[data-dh="${i}"]` });
+        await cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: ['hover'] });
+        await p.page.waitForTimeout(400); // past the 150ms colour transition
+        const after = await p.page.evaluate(dangerLook, i);
+        await cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: [] });
+        n++;
+        if (parseFloat(after.size) <= 12.5) small++;
+        const tag = `${scene} ${after.what}`;
+        if (!same(before.fill, DANGER[theme].rest[0]) || !same(before.color, DANGER[theme].rest[1])) rest.push(`${tag} rests ${before.fill} / ${before.color}`);
+        if (same(after.fill, before.fill)) blind.push(`${tag}: hover changed nothing (${after.fill})`);
+        if (DANGER[theme].hover && (!same(after.fill, DANGER[theme].hover[0]) || !same(after.color, DANGER[theme].hover[1]))) hov.push(`${tag} hovers ${after.fill} / ${after.color}`);
+        let under = parse(after.page);
+        for (const c of after.layers.slice().reverse()) under = over(parse(c), under);
+        const r = ratio(parse(after.color), under);
+        if (r < 4.5) low.push([r, `${tag} ${after.size} ${r.toFixed(2)}:1`]);
+      }
+      await p.ctx.close();
+    }
+    if (!small) blind.push('no 12px soft red button was hovered');
+    // Light's hover is held as it is (the check below); its contrast is dark's job here.
+    if (theme === 'dark') S.check(`buttons ${theme} 390: the soft red button's hovered label keeps 4.5:1 on every surface`, n > 0 && !blind.length && !low.length, [...blind, ...low.sort((a, b) => a[0] - b[0]).map((x) => x[1])].slice(0, 4).join(' || '));
+    else S.check(`buttons ${theme} 390: the soft red button's hover is reached on every surface`, n > 0 && !blind.length, blind.slice(0, 4).join(' || '));
+    S.check(`buttons ${theme} 390: the soft red button's resting colours are unchanged`, n > 0 && !rest.length, rest.slice(0, 3).join(' || '));
+    if (DANGER[theme].hover) S.check(`buttons ${theme} 390: the soft red button's hover colours are unchanged`, n > 0 && !hov.length, hov.slice(0, 3).join(' || '));
+  }
+}
+
 // The browser half runs its parts side by side, one browser.
 await S.step('browser: type, buttons, boxes, words, rendered colours', async () => {
-  const parts = [typeFonts, typeShift, typeScale, buttons, boxes, words, cleanRendered];
+  const parts = [typeFonts, typeShift, typeScale, buttons, dangerHover, boxes, words, cleanRendered];
   const errs = [];
   await Promise.all(Array.from({ length: 4 }, async () => { while (parts.length) { const f = parts.shift(); try { await f(); } catch (e) { errs.push(`${f.name}: ${String(e.stack || e).split('\n').slice(0, 3).join(' | ')}`); } } }));
   for (const e of errs) S.check(`${e.split(':')[0]} ran to the end`, false, e);

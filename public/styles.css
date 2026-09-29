@@ -449,6 +449,8 @@ body.has-save main { padding-bottom: calc(var(--chrome-bottom) + var(--savebar-h
 .btn.soft:hover, .icon-btn.soft:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
 .btn.danger, .icon-btn.danger { background: var(--bad-soft); color: var(--bad); }
 .btn.danger:hover, .icon-btn.danger:hover { background: color-mix(in srgb, var(--bad) 22%, transparent); }
+/* Dark: a lighter wash, so the red label keeps 4.5:1 on a chip (4.6:1; 22% gave 4.2:1). */
+@media (prefers-color-scheme: dark) { .btn.danger:hover, .icon-btn.danger:hover { background: color-mix(in srgb, var(--bad) 17%, transparent); } }
 .btn.small { padding: 0 12px; font-size: var(--fs-sm); }
 .btn.wide { width: 100%; }
 /* Disabled looks disabled: no colour, a dashed edge, not just fainter text. */
