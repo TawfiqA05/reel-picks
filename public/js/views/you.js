@@ -30,7 +30,9 @@ export async function render(root, params, ctx) {
   const name = status?.user?.name || (status?.user?.isOwner !== false ? status?.ownerName : '') || '';
   clear(root);
   const panel = h('div', { class: 'you-panel' });
-  root.append(
+  // The DOM's own append() writes null as the text "null" (h() skips it), so
+  // the year row, null outside Dec 1 to Jan 15, is filtered out first.
+  root.append(...[
     h('div', { class: 'section-title page-head' },
       h('h1', {}, 'You'),
       name ? h('span', { class: 'section-sub' }, `Signed in as ${name}`) : null),
@@ -42,6 +44,6 @@ export async function render(root, params, ctx) {
         ...(s === seg ? { 'aria-current': 'page' } : {}),
       }, s.label))),
     panel,
-  );
+  ].filter(Boolean));
   await seg.render(panel, params.slice(1), { ...ctx, inYou: true });
 }
