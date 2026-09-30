@@ -704,13 +704,15 @@ export async function render(root, params, ctx) {
   // ---- Hidden films: everything marked "Not for me", each with Unhide.
   const hiddenCount = h('p', { class: 'muted small' }, 'Checking…');
   const showHidden = h('button', { class: 'btn soft', type: 'button' }, 'Show hidden films');
+  const showHiddenRow = h('div', { hidden: true }, showHidden);
   const paintHidden = async () => {
     try {
       const n = (await api.hidden()).movies.length;
       hiddenCount.textContent = n
         ? `${n} film${n === 1 ? '' : 's'} marked Not for me. They stay out of your picks until you unhide them.`
         : 'Nothing is hidden. Films you mark Not for me land here, and you can bring them back any time.';
-      showHidden.hidden = !n;
+      // The row holding the button goes too, so no empty row sits under a divider.
+      showHiddenRow.hidden = !n;
     } catch { hiddenCount.textContent = ''; }
   };
   showHidden.addEventListener('click', () => openHiddenList(async (m) => {
@@ -721,7 +723,7 @@ export async function render(root, params, ctx) {
     paintHidden();
   }));
   paintHidden();
-  page.appendChild(card('Hidden films', hiddenCount, h('div', {}, showHidden)));
+  page.appendChild(card('Hidden films', hiddenCount, showHiddenRow));
 
   // ---- Now-playing fallback (only used when no AMC key)
   const recencyInput = h('input', { class: 'input num', type: 'number', min: '1', step: '1', value: String(s.fallbackRecencyWeeks ?? 8) });

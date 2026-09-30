@@ -912,6 +912,15 @@ a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset
 .group-body { display: flex; flex-direction: column; min-width: 0; padding: 0 var(--sp-4); border-radius: var(--r-card); background: var(--raised); }
 .group-body > * { margin: 0; padding: var(--sp-3) 0; min-width: 0; }
 .group-body > * + * { border-top: 1px solid var(--divider); }
+/* The first row starts as far below the card's top edge as the content sits
+   from its sides (16px), and the last row ends as far above its bottom. */
+.group-body > :first-child { padding-top: var(--sp-4); }
+/* The last row that shows: an empty status or error line after it is hidden
+   (below), so :last-child alone would miss it. :where keeps this as light as
+   the base rule, so the lists and number grids that set their own padding
+   (and the filled log box) keep it. */
+.group-body > :where(:not([hidden], [role="status"]:empty, .form-error:empty, div:empty):not(:has(~ :not([hidden], [role="status"]:empty, .form-error:empty, div:empty)))) { padding-bottom: var(--sp-4); }
+.group-body > .log:where(:not(:has(~ :not([hidden], [role="status"]:empty, .form-error:empty, div:empty)))) { margin-bottom: var(--sp-4); }
 .group-foot { margin: 0 2px; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-snug); }
 .row-line { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
 .row-text { min-width: 0; flex: 1 1 200px; }
@@ -1090,6 +1099,10 @@ a.person-link:hover { background: color-mix(in srgb, var(--chip) 82%, var(--text
 .bar-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .group-body > .bar-list { padding: 0; }
 .bar-list > .bar-item + .bar-item { border-top: 1px solid var(--divider); }
+/* A list that fills its card: 16px above the first row's content and below
+   the last's, like every other card. */
+.group-body > .bar-list:first-child > .bar-item:first-child > .bar-row { padding-top: var(--sp-4); }
+.group-body > .bar-list:last-child > .bar-item:not([hidden]):not(:has(~ .bar-item:not([hidden]))) > .bar-row { padding-bottom: var(--sp-4); }
 .bar-row {
   width: 100%; min-height: 56px; padding: var(--sp-2) 0; font: inherit; color: inherit; text-align: left; cursor: pointer;
   display: grid; grid-template-columns: 1.6em minmax(0, 1fr) auto auto auto; gap: var(--sp-3); align-items: center;
@@ -1160,8 +1173,11 @@ a.person-link:hover { background: color-mix(in srgb, var(--chip) 82%, var(--text
 /* ---- Settings: grouped lists ---- */
 .sub-label { font-size: var(--fs-sm); font-weight: 600; margin-bottom: var(--sp-2); }
 .field-block { display: flex; flex-direction: column; gap: var(--sp-2); }
-/* Help under a row reads as that row's note: no divider above it. */
-.group-body > p.muted.small, .group-body > .muted.small:not([role="status"]) { border-top: none; padding-top: 0; }
+/* Help under a row reads as that row's note: no divider above it. A note that
+   opens the card keeps the card's top space, and 16px down to the divider
+   under it (8px when another note follows instead). */
+.group-body > * + p.muted.small, .group-body > * + .muted.small:not([role="status"]) { border-top: none; padding-top: 0; }
+.group-body > :is(p.muted.small, .muted.small:not([role="status"])):first-child:not(:has(+ p.muted.small, + .muted.small:not([role="status"]))) { padding-bottom: var(--sp-4); }
 /* 8px between a row and its note: the row gives up some padding (a pulled-up
    note would overlap it). */
 .group-body > :has(+ p.muted.small, + .muted.small:not([role="status"])) { padding-bottom: var(--sp-2); }
