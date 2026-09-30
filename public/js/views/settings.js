@@ -921,13 +921,22 @@ export async function render(root, params, ctx) {
   // Automatic backups (owner only): nightly at 3am and before schema changes.
   const bk = status?.backup;
   const mb = (n) => `${(n / 1048576).toFixed(1)} MB`;
+  const keptWords = `One is taken every night at 3am; the newest ${bk?.keep?.nightly ?? 7} nightly copies and ${bk?.keep?.preMigration ?? 3} from before updates are kept.`;
   const backupLine = !isOwner ? null : setStatus(h('div', { class: bk?.lastError ? 'small' : 'muted small' }),
     bk?.lastError ? 'bad' : bk?.last ? 'ok' : 'warn',
     bk?.lastError
       ? `Last backup attempt failed (${new Date(bk.lastError.at).toLocaleString()}): ${bk.lastError.message}`
       : bk?.last
-        ? `Last automatic backup ${new Date(bk.last.at).toLocaleString()}, ${mb(bk.last.bytes)}. One is taken every night at 3am; the last 14 are kept.`
-        : 'No automatic backup yet. One is taken every night at 3am; the last 14 are kept.');
+        ? `Last automatic backup ${new Date(bk.last.at).toLocaleString()}, ${mb(bk.last.bytes)}. ${keptWords}`
+        : `No automatic backup yet. ${keptWords}`);
+  // The data volume (owner only): used and free, the live database, the backups.
+  const dk = status?.disk;
+  const size = (n) => (n >= 1073741824 ? `${(n / 1073741824).toFixed(1)} GB` : n < 10485760 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.round(n / 1048576)} MB`);
+  const diskLine = !isOwner || !dk ? null : setStatus(h('div', { class: dk.pct > 80 ? 'small disk-line' : 'muted small disk-line' }),
+    dk.pct > 80 ? 'warn' : '',
+    `${dk.total ? `Data volume: ${size(dk.used)} used, ${size(dk.free)} free of ${size(dk.total)}. ` : ''}`
+    + `Database ${size(dk.dbBytes)}, backups ${size(dk.backups.bytes)}`
+    + `${dk.older?.count ? `, plus ${size(dk.older.bytes)} in ${dk.older.count} older cop${dk.older.count === 1 ? 'y' : 'ies'} beside the database` : ''}.`);
   // Off-site copy (owner only, and only when the server has BACKUP_S3_* set):
   // the last upload's time and size, and Upload now. Hidden otherwise.
   const offsiteSlot = h('div', { class: 'offsite', hidden: true });
@@ -978,6 +987,7 @@ export async function render(root, params, ctx) {
       ? 'Full setup carries settings, theaters, home base, ratings, watchlist, watch history, AMC match decisions, and hidden films. Everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'
       : 'Your export carries your own settings, theaters, home base, ratings, watchlist, watch history and hidden films.'),
     backupLine,
+    diskLine,
     offsiteSlot,
     status?.lastRefreshLog?.errors?.length
       ? h('details', { class: 'log' }, h('summary', {}, `Last refresh: ${status.lastRefreshLog.errors.length} warning(s)`),
@@ -1105,7 +1115,8 @@ export async function render(root, params, ctx) {
 // ---- Friends (owner only): invite links, revoke, re-issue. A link is shown
 // once, right after it's made; the server keeps only a hash of it.
 // Owner alerts (server/lib/alerts.js): a failed refresh, nightly or off-site
-// backup, or a day with no showtimes at the primary theater. Newest first.
+// backup, a day with no showtimes at the primary theater, or the data volume
+// more than 80% full. Newest first.
 function alertsCard() {
   const note = h('p', { class: 'muted small' });
   const list = h('ul', { class: 'alert-list' });
@@ -1129,7 +1140,7 @@ function alertsCard() {
     }
   }).catch((e) => { setStatus(note, 'bad', e.message); });
   return card('Alerts',
-    h('p', { class: 'muted small' }, 'If the daily refresh or a backup fails, or no showtimes come back for your primary theater, you get one alert that day, and one more when it works again. Friends never see these.'),
+    h('p', { class: 'muted small' }, 'If the daily refresh or a backup fails, no showtimes come back for your primary theater, or the data volume gets more than 80% full, you get one alert that day, and one more when it works again. Friends never see these.'),
     note, list);
 }
 

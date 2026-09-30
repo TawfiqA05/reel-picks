@@ -634,8 +634,8 @@ It's plain Web Push with VAPID keys, no extra dependency. Without `VAPID_PUBLIC_
 `VAPID_PRIVATE_KEY` the feature is off and the switch never appears.
 
 The same devices get my owner alerts, which friends never do. If the nightly backup or the
-off-site upload fails, or AMC answers with no showtimes at all for my primary theater, my
-devices get one push with a one-line reason. It's at most one alert per problem per day,
+off-site upload fails, AMC answers with no showtimes at all for my primary theater, or the
+data volume gets more than 80% full, my devices get one push with a one-line reason. It's at most one alert per problem per day,
 however many times it fails, and one "back to normal" when it works again.
 
 A failed daily refresh (AMC doesn't answer for my primary theater, TMDB's lists fail, or
@@ -737,9 +737,9 @@ Settings page. A Save bar slides up above the tab bar only when something has ch
   day by day.
 - **Alerts** (mine): the last 10 alerts and anything failing now.
 - **Data**: Export full setup (friends: Export my data), Import full setup (mine), Export
-  backup CSV, Download latest backup (mine), the off-site backup status with Upload now
-  (mine), Refresh now (mine), Re-run quick rate, Preview year in movies (mine), and the
-  last refresh's warnings.
+  backup CSV, Download latest backup (mine), the last backup and how much space the data
+  volume has left (mine), the off-site backup status with Upload now (mine), Refresh now
+  (mine), Re-run quick rate, Preview year in movies (mine), and the last refresh's warnings.
 
 ## Deploying
 
@@ -751,9 +751,24 @@ redeploy.
 
 Every night at 3am (the server's `TZ`), or at the first check after that if the server was
 down, it writes a consistent copy of the database to
-`/data/backups/reelpicks-YYYY-MM-DD.db` and keeps the last 14. It also takes one right
+`/data/backups/reelpicks-YYYY-MM-DD.db` and keeps the newest 7. It also takes one right
 before any schema migration, as `backups/reelpicks-pre-<change>-<time>.db`, and keeps the
-last 14 of those. Running a migration a second time changes nothing. Right after a
+newest 3 of those. Running a migration a second time changes nothing.
+
+Each copy needs about as much free space as the database while it's written, and a full
+volume stops the live database from saving too. So before every copy the server checks
+the free space on the data volume. If there isn't room for one more copy plus a margin
+(64 MB, or a quarter of the database if that's bigger), it deletes older copies first,
+oldest first: the ones past 7 and 3, then more if it still needs the room. It never
+deletes the newest nightly or the newest pre-migration copy, and it never touches the live
+database or its WAL. If that still isn't enough, it skips the copy and the failure says how
+much space it was short. A copy left half-written by a crash is cleared after an hour.
+Settings → Data shows me one line with the space used and free on the volume, the size of
+the database and what the backups take, and I get an owner alert once a day while the
+volume is more than 80% full. Copies an older version wrote next to the database
+(`reelpicks.pre-*.db`) are counted in that line but never deleted.
+
+Right after a
 nightly copy succeeds, and only then, cached API answers more than three times past their
 lifetime are deleted; nothing but the cache is touched. The first time that happened, a
 one-time VACUUM gave the space back, and it never runs on its own again. I can
