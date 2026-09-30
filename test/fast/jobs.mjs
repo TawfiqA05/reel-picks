@@ -201,7 +201,7 @@ await S.step('Thursday: the day\'s first refresh, backups, off-site, friends, Le
   S.check('refresh: no alert on a good refresh', q1('SELECT COUNT(*) n FROM owner_alerts').n === alertsBefore);
 
   S.check('backup: tonight\'s nightly is taken at startup (after 3am)', fs.existsSync(path.join(BK, 'reelpicks-2026-09-24.db')) && backupLines('reelpicks-2026-09-24.db') === 1);
-  S.check('backup: retention keeps the newest 14 nightlies', nightlies().length === 14 && !nightlies().includes('reelpicks-2026-09-01.db') && nightlies().includes('reelpicks-2026-09-24.db'), `${nightlies().length} nightlies`);
+  S.check('backup: retention keeps the newest 7 nightlies', nightlies().length === 7 && !nightlies().includes('reelpicks-2026-09-11.db') && ['24', '23', '16', '15', '14', '13', '12'].every((d) => nightlies().includes(`reelpicks-2026-09-${d}.db`)), `${nightlies().length} nightlies`);
   S.check('backup: a file put there by hand is left alone', fs.existsSync(path.join(BK, 'keep-me.db')));
   await until(() => setting('offsiteLast')?.key, 10000);
   S.check('offsite: the first upload goes up at once (the newest nightly)', setting('offsiteLast')?.key === OURS('2026-09-24') && s3.objects.get(OURS('2026-09-24')) > 1000, `key=${setting('offsiteLast')?.key}`);

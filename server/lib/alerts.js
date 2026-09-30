@@ -6,6 +6,8 @@
 //   showtimes   AMC answered, but with no showtimes for the primary theater
 //   backup      the nightly database backup failed (lib/backup.js)
 //   offsite     the weekly off-site backup upload failed (lib/offsite.js)
+//   disk        the data volume is more than 80% full (lib/backup.js, checked
+//               hourly); back to normal once it is 75% full or less
 //   guestmode   on Railway with GUEST_MODE missing or off, so every visitor
 //               gets the guest view (index.js; once per start)
 //
@@ -26,6 +28,7 @@ export const PROBLEMS = {
   showtimes: 'Showtimes',
   backup: 'Nightly backup',
   offsite: 'Off-site backup',
+  disk: 'Data volume',
   guestmode: 'Guest mode',
 };
 // Push titles, and the one line a recovery sends.
@@ -34,6 +37,7 @@ const WORDS = {
   showtimes: { fail: 'No showtimes at your theater', ok: 'Showtimes are back to normal', okLine: 'Showtimes came back for your theater.' },
   backup: { fail: 'Nightly backup failed', ok: 'Nightly backup is back to normal', okLine: 'The nightly backup worked again.' },
   offsite: { fail: 'Off-site backup failed', ok: 'Off-site backup is back to normal', okLine: 'The off-site backup upload worked again.' },
+  disk: { fail: 'Data volume is over 80% full', ok: 'Data volume has room again', okLine: 'The data volume is 75% full or less again.' },
   guestmode: { fail: 'GUEST_MODE is off on Railway', ok: 'GUEST_MODE is on again', okLine: 'GUEST_MODE is on again on Railway.' },
 };
 const URL = '/#/settings';

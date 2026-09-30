@@ -90,11 +90,13 @@ await step('fresh: a new empty database', async () => {
 });
 
 await step('legacy: the oldest layout on record', async () => {
-  open(legacy);
+  const out = open(legacy);
   const file = path.join(legacy, 'reelpicks.db');
-  const tags = backups(legacy).map(tag);
+  // Each backup is logged as it's written; only the newest 3 stay on disk.
+  const tags = [...out.matchAll(/\[backup\] ✓ (reelpicks-pre-\S+\.db)/g)].map((m) => tag(m[1]));
   const want = ['theatres', 'matches-review', 'cache-keys', 'watched-daily', 'users', 'votes', 'details-missing', 'person-ids', 'watched-source', 'poster-color', 'watched-theatre'];
   check('legacy: every step still runs, each after its own backup', want.every((t) => tags.includes(t)) && tags.length === want.length, tags.join(', '));
+  check('legacy: only the newest 3 of those backups are kept', JSON.stringify(backups(legacy).map(tag).sort()) === JSON.stringify(['poster-color', 'watched-source', 'watched-theatre']), backups(legacy).join(', '));
   const d = new DatabaseSync(file, { readOnly: true });
   const q = (sql) => d.prepare(sql).all();
   check('legacy: ratings are kept and are the owner\'s', JSON.stringify(q('SELECT user_id, tmdb_id, rating FROM ratings ORDER BY tmdb_id')) === JSON.stringify([

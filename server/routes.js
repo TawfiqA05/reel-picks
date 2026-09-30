@@ -34,7 +34,7 @@ import { isGuest, ownerName } from './lib/guest.js';
 import { currentUserId, currentUser } from './lib/user.js';
 import { appVersion } from './lib/version.js';
 import { startCreditsBackfill, backfillStatus, backfillState, tmdbThrottle } from './lib/backfill.js';
-import { backupStatus, latestBackup, backupsDir } from './lib/backup.js';
+import { backupStatus, latestBackup, backupsDir, diskStatus } from './lib/backup.js';
 import { overview as togetherOverview, partnerFor, filmsFor, NOT_FOUND } from './lib/together.js';
 import { settingsProblems } from '../public/js/settingsRules.js';
 import { planProblems } from '../public/js/plans.js';
@@ -204,6 +204,8 @@ router.get('/status', (req, res) => {
     host: onRailway() ? 'railway' : 'local',
     // Automatic backups (lib/backup.js): the newest copy, and a failure since it.
     backup: backupStatus(dataDir),
+    // The data volume, the live database and what the backups take (Settings > Data).
+    disk: diskStatus(dataDir),
     theatre: { ...theatres[0] },
     theatres,
     maxTheatres: MAX_THEATRES,

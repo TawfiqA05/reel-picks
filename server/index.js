@@ -14,7 +14,7 @@ import { getSetting, db, dataDir } from './db.js';
 import { refreshAll, shouldAutoRefresh, retryIfDue, state as refreshState } from './lib/refresh.js';
 import { runAs } from './lib/user.js';
 import { startCreditsBackfill } from './lib/backfill.js';
-import { startNightlyBackups } from './lib/backup.js';
+import { startNightlyBackups, DISK_ALERT_PCT, DISK_OK_PCT, diskAlertLine } from './lib/backup.js';
 import { pushEnabled, sendWeeklyIfDue } from './lib/push.js';
 import { syncAllDue as syncLetterboxdDue } from './lib/letterboxd.js';
 import { raiseLater, resolveLater, raiseEveryStart } from './lib/alerts.js';
@@ -224,11 +224,18 @@ app.listen(config.port, () => {
   // Nightly database backup at 3am local time (lib/backup.js); a failure
   // alerts the owner, and the next good one says it's back to normal. Only
   // after a good one, expired cache rows are cleared (lib/housekeeping.js).
+  // The data volume is checked hourly and after every backup: more than 80%
+  // full alerts the owner (once a day), and 75% or less says it has room again.
   startNightlyBackups(db, dataDir, {
     onResult: (err) => {
       if (err) return raiseLater('backup', `The nightly backup failed: ${err}`);
       resolveLater('backup');
       afterNightlyBackup();
+    },
+    onDisk: (d) => {
+      if (d.pct == null) return;
+      if (d.pct > DISK_ALERT_PCT) raiseLater('disk', diskAlertLine(d));
+      else if (d.pct <= DISK_OK_PCT) resolveLater('disk');
     },
   });
   // Off-site copy of the newest nightly, Sunday 4am, when BACKUP_S3_* is set (lib/offsite.js).

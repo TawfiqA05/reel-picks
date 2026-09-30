@@ -1,4 +1,4 @@
-// Loaded into every test server with --import. Two jobs:
+// Loaded into every test server with --import. Three jobs:
 //
 // 1. The clock. The server believes it is RP_FAKE_NOW (catalog.mjs T0) and
 //    time runs on from there. A suite can jump it through the control file
@@ -12,6 +12,11 @@
 //    AMC, Letterboxd and push stand-ins). Anything else is refused. Every
 //    outside request is logged to RP_NET_LOG so a suite can prove none went
 //    unanswered.
+//
+// 3. The disk. The data folder sits on a made-up volume (8 GB unless the
+//    control file says {"disk":{"total":<bytes>,"other":<bytes>}}) whose used
+//    space is what the data folder really holds plus `other`, so a test can
+//    fill it up and see pruning free it again, on any machine.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -52,6 +57,32 @@ const tScale = Number(process.env.RP_TIMEOUT_SCALE || 0);
 if (tScale > 0) {
   const realSetTimeout = globalThis.setTimeout;
   globalThis.setTimeout = (fn, ms, ...a) => realSetTimeout(fn, ms >= 200 ? Math.max(1, Math.round(ms * tScale)) : ms, ...a);
+}
+
+// ---------------------------------------------------------------- disk
+// RP_REAL_DISK=1 leaves the real volume's figures (a check on a real small disk).
+const DATA = process.env.DATA_DIR && process.env.RP_REAL_DISK !== '1' ? path.resolve(process.env.DATA_DIR) : null;
+if (DATA) {
+  const realStatfs = fs.statfsSync;
+  const du = (d) => {
+    let n = 0;
+    let list = [];
+    try { list = fs.readdirSync(d, { withFileTypes: true }); } catch { return 0; }
+    for (const e of list) {
+      const p = path.join(d, e.name);
+      try { n += e.isDirectory() ? du(p) : fs.statSync(p).size; } catch { /* gone */ }
+    }
+    return n;
+  };
+  fs.statfsSync = (p, opts) => {
+    const abs = path.resolve(String(p));
+    if (abs !== DATA && !abs.startsWith(`${DATA}${path.sep}`)) return realStatfs(p, opts);
+    const bsize = 4096;
+    const total = Number(ctrl.disk?.total) || 8 * 1024 ** 3;
+    const used = du(DATA) + (Number(ctrl.disk?.other) || 0);
+    const free = Math.max(0, Math.floor((total - used) / bsize));
+    return { type: 0, bsize, blocks: Math.floor(total / bsize), bfree: free, bavail: free, files: 1e6, ffree: 1e6 };
+  };
 }
 
 // ---------------------------------------------------------------- network log
