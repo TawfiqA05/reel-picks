@@ -78,6 +78,14 @@ export function startDemo() {
   closeBase();
   const first = rebuild();
   setInterval(sweep, SWEEP_MS).unref();
+  // A stop takes the whole folder with it: the sample and every visitor's copy.
+  for (const sig of ['SIGTERM', 'SIGINT']) {
+    process.once(sig, () => {
+      closeAll();
+      fs.rmSync(dataDir, { recursive: true, force: true });
+      process.exit(0);
+    });
+  }
   return first;
 }
 
