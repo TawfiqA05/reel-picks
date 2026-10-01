@@ -174,5 +174,51 @@ await S.step('on a person page each person sees only their own ratings and saves
   S.check('friend B, who rated none of them, sees no You rated', !(await get(B, `/api/person/${PID}`)).json.rated.length);
 });
 
+// ---------------------------------------------------------------- account numbers
+// Accounts are numbered in the order they were made, so a friend told "you
+// are account 3" learns that someone else joined before them. A friend is
+// never given their own number: /api/status names them by a handle, and the
+// friend cookie carries the handle too. A cookie from before (v1, with the
+// number) still works and is swapped for the new kind on the next answer.
+await S.step('a friend is never told their own account number', async () => {
+  const handles = new Set();
+  for (const f of [A, B, Cf]) {
+    const st = (await get(f, '/api/status')).json;
+    const again = (await get(f, '/api/status')).json;
+    const id = st?.user?.id;
+    S.check(`${f.name}: status names them, but not by their account number`, st?.user?.isOwner === false && id != null && String(id) !== String(f.id) && !/^\d+$/.test(String(id)), JSON.stringify(id));
+    S.check(`${f.name}: the handle stays the same from one answer to the next`, again?.user?.id === id);
+    handles.add(id);
+  }
+  S.check('each friend has their own handle', handles.size === 3);
+  S.check('the owner is still account 1', (await get(OWNER, '/api/status')).json?.user?.id === 1);
+  // A new friend's cookie, as the Join page sets it.
+  const r = await w.api('POST', '/api/friends', { body: { name: 'Numbered Later' } });
+  const token = new URL(r.json.invite, 'http://x').searchParams.get('invite');
+  const j = await fetch(`${w.base}/invite/join`, { method: 'POST', redirect: 'manual', headers: { origin: w.base, 'cf-ray': 'test', 'content-type': 'application/x-www-form-urlencoded' }, body: `token=${token}` });
+  const cookie = (j.headers.get('set-cookie') || '').split(';')[0];
+  const parts = decodeURIComponent(cookie.slice('rp_user='.length)).split('.');
+  S.check('the friend cookie carries no account number', parts[0] === 'v2' && parts.length === 5 && !/^\d+$/.test(parts[1]) && parts[1] !== String(r.json.friend.id), parts.slice(0, 2).join('.'));
+  const NEW = { headers: { 'cf-ray': 'test', cookie } };
+  S.check('the new kind of cookie signs them in', (await get(NEW, '/api/status')).json?.user?.name === 'Numbered Later');
+  // A cookie from before the change: v1.<id>.<version>.<expiry>.<hmac>.
+  const secret = JSON.parse(w.q1("SELECT value FROM settings WHERE key = 'friendCookieSecret'").value);
+  const row = w.q1('SELECT id, session_version FROM users WHERE id = ?', A.id);
+  const payload = `v1.${row.id}.${row.session_version}.${Date.now() + 864e5 * 30}`;
+  const v1 = `rp_user=${payload}.${crypto.createHmac('sha256', secret).update(payload).digest('base64url')}`;
+  const old = await w.api('GET', '/api/ratings', { as: { headers: { 'cf-ray': 'test', cookie: v1 } } });
+  const swapped = (old.headers.get('set-cookie') || '').split(';')[0];
+  S.check('a cookie from before still signs the friend in', old.status === 200);
+  S.check('and is swapped for one without the account number', swapped.startsWith('rp_user=v2.') && !swapped.includes(`v2.${A.id}.`), swapped.slice(0, 12));
+  S.check('the swapped cookie is HttpOnly, Secure and SameSite=Lax', /HttpOnly/i.test(old.headers.get('set-cookie') || '') && /Secure/i.test(old.headers.get('set-cookie') || '') && /SameSite=Lax/i.test(old.headers.get('set-cookie') || ''));
+  S.check('the swapped cookie signs the same friend in', (await get({ headers: { 'cf-ray': 'test', cookie: swapped } }, '/api/status')).json?.user?.name === w.q1('SELECT name FROM users WHERE id = ?', A.id).name);
+  S.check('a new-kind cookie isn\'t swapped again', !(await w.api('GET', '/api/ratings', { as: { headers: { 'cf-ray': 'test', cookie: swapped } } })).headers.get('set-cookie'));
+  // Forgeries of either kind are refused.
+  const p2 = decodeURIComponent(swapped.slice('rp_user='.length)).split('.');
+  const otherHandle = (await get(B, '/api/status')).json.user.id;
+  S.check('a cookie with another friend\'s handle swapped in is refused', (await w.api('GET', '/api/ratings', { as: { headers: { 'cf-ray': 'test', cookie: `rp_user=${[p2[0], otherHandle, ...p2.slice(2)].join('.')}` } } })).status === 403);
+  S.check('an old-kind cookie edited to user 1 is refused', (await w.api('GET', '/api/friends', { as: { headers: { 'cf-ray': 'test', cookie: v1.replace(/^rp_user=v1\.\d+\./, 'rp_user=v1.1.') } } })).status === 403);
+});
+
 await w.close();
 S.finish();

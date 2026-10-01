@@ -139,7 +139,11 @@ await S.step('the invite flow', async () => {
   S.check('the new session works', (await w.api('GET', '/api/ratings', { as: { headers: { 'cf-ray': 'test', cookie: cookieD2 } } })).status === 200);
   const forged = cookieD2.replace(/\.(\d+)\.(\d+)\./, (m, v, e) => `.${Number(v) + 1}.${e}.`);
   S.check('a tampered friend cookie is refused', (await w.api('GET', '/api/ratings', { as: { headers: { 'cf-ray': 'test', cookie: forged } } })).status === 403);
-  const ownerAs = cookieD2.replace(/^rp_user=v1\.\d+\./, 'rp_user=v1.1.');
+  // The cookie names the friend by handle (v2); an old-kind one naming user 1
+  // with the same version, expiry and signature must not pass.
+  const [, , ver2, exp2, sig2] = decodeURIComponent(cookieD2.slice('rp_user='.length)).split('.');
+  const ownerAs = `rp_user=v1.1.${ver2}.${exp2}.${sig2}`;
+  S.check('the new session\'s cookie is the handle kind', cookieD2.startsWith('rp_user=v2.'));
   S.check('a friend cookie edited to user 1 is refused', (await w.api('GET', '/api/friends', { as: { headers: { 'cf-ray': 'test', cookie: ownerAs } } })).status === 403);
 });
 

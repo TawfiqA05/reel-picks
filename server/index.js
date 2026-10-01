@@ -170,6 +170,13 @@ app.use(express.json({ limit: '200kb' }));
 app.use('/api', (req, res, next) => {
   const u = requestUser(req);
   if (u.row) touchLastSeen(u.row);
+  // A friend cookie from before handles (v1) carries the account number:
+  // swap it for one that doesn't (lib/accounts.js), with a fresh year.
+  if (u.row?.legacy) {
+    res.cookie(FRIEND_COOKIE, signFriendCookie(u.row), {
+      httpOnly: true, secure: true, sameSite: 'lax', maxAge: FRIEND_TTL_MS, path: '/',
+    });
+  }
   const go = () => runAs(u.id, next, { guest: u.guest, isOwner: u.isOwner, name: u.name || null });
   // Demo mode: every query in this request goes to the visitor's own copy.
   if (DEMO) withDb(req.demo.handle, req.demo.key, go);

@@ -3,10 +3,12 @@
 // Same shape as the owner unlock in lib/guest.js. An invite link carries a
 // random token; only its SHA-256 is stored, and it is cleared the moment the
 // link is redeemed, so a link works once. Redeeming sets an HttpOnly cookie
-// whose value is "v1.<userId>.<sessionVersion>.<expiry>.<hmac>" — never the
-// token. The HMAC key is a random secret kept in the settings table (not in
-// DEFAULT_SETTINGS, so it never travels in an export). Revoke and re-issue
-// bump session_version, which kills every older cookie on the next request.
+// whose value is "v2.<handle>.<sessionVersion>.<expiry>.<hmac>": never the
+// token, and never the account number (see handleOf). Older "v1.<userId>…"
+// cookies still work and are swapped on the next request. The HMAC key is a
+// random secret kept in the settings table (not in DEFAULT_SETTINGS, so it
+// never travels in an export). Revoke and re-issue bump session_version,
+// which kills every older cookie on the next request.
 import crypto from 'node:crypto';
 import { get, all, run, getSettings, setSetting } from '../db.js';
 import { OWNER_ID } from './user.js';
@@ -31,25 +33,37 @@ function secret() {
 
 const sign = (payload) => crypto.createHmac('sha256', secret()).update(payload).digest('base64url');
 
+// A friend's handle: what their cookie and /api/status call them instead of
+// their account number. Accounts are numbered in the order they were made,
+// so "you are account 3" would tell a friend that someone else joined before
+// them. The handle is keyed by the cookie secret, so it can't be worked back
+// to a number or made up for someone else.
+export const handleOf = (id) => crypto.createHmac('sha256', secret()).update(`handle.${id}`).digest('base64url').slice(0, 22);
 
 export function signFriendCookie(user) {
-  const payload = `v1.${user.id}.${user.session_version}.${Date.now() + FRIEND_TTL_MS}`;
+  const payload = `v2.${handleOf(user.id)}.${user.session_version}.${Date.now() + FRIEND_TTL_MS}`;
   return `${payload}.${sign(payload)}`;
 }
 
 // The friend a cookie names, or null for anything absent, malformed, forged,
-// expired, revoked, superseded, or claiming to be the owner.
+// expired, revoked, superseded, or claiming to be the owner. v2 cookies name
+// the friend by handle; v1 cookies (from before handles) by number, and come
+// back with `legacy` set so the caller can swap them for a v2 one.
 export function verifyFriendCookie(value) {
   if (!value) return null;
   const parts = String(value).split('.');
-  if (parts.length !== 5 || parts[0] !== 'v1') return null;
+  if (parts.length !== 5 || (parts[0] !== 'v1' && parts[0] !== 'v2')) return null;
   const payload = parts.slice(0, 4).join('.');
   if (!safeEqual(parts[4], sign(payload))) return null;
-  const [id, ver, exp] = [Number(parts[1]), Number(parts[2]), Number(parts[3])];
-  if (!Number.isInteger(id) || id === OWNER_ID || !(exp > Date.now())) return null;
+  const [ver, exp] = [Number(parts[2]), Number(parts[3])];
+  if (!(exp > Date.now())) return null;
+  let id;
+  if (parts[0] === 'v1') id = Number(parts[1]);
+  else id = all('SELECT id FROM users WHERE id != ?', OWNER_ID).find((u) => safeEqual(parts[1], handleOf(u.id)))?.id;
+  if (!Number.isInteger(id) || id === OWNER_ID) return null;
   const user = get('SELECT id, name, revoked_at, session_version, last_seen_at FROM users WHERE id = ?', id);
   if (!user || user.revoked_at || user.session_version !== ver) return null;
-  return user;
+  return parts[0] === 'v1' ? { ...user, legacy: true } : user;
 }
 
 export function touchLastSeen(user) {

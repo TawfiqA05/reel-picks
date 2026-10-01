@@ -231,7 +231,9 @@ if (want('keep')) {
       await p.page.goto('about:blank');
       await p.page.goto(`${w.base}/#/home`);
       await settle(p.page, 500);
-      S.check('keep: the page is now the other person\'s', await p.page.evaluate(async () => (await (await fetch('/api/status')).json()).user?.id) === F.robin.id);
+      // A friend is named by a handle, not their account number (lib/accounts.js).
+      const robinNow = await p.page.evaluate(async () => (await (await fetch('/api/status')).json()).user);
+      S.check('keep: the page is now the other person\'s', robinNow?.isOwner === false && robinNow?.name === w.q1('SELECT name FROM users WHERE id = ?', F.robin.id).name && robinNow?.id !== 1);
       S.check('keep: the other person gets no sheet on Picks', !(await state(p.page)).open);
       await p.page.locator('#wsw-btn').click();
       await waitDialog(p.page);

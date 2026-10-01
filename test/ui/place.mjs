@@ -209,7 +209,9 @@ await S.step('search: per person, and the guest has none', async () => {
     await searchFor(p.page, 'the');
     await scrollAndOpen(p.page, 0);
     const keys = await p.page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('rp-search:')));
-    S.check('person: kept under Robin\'s id', JSON.stringify(keys) === JSON.stringify([`rp-search:${F.robin.id}`]), JSON.stringify(keys));
+    // Robin's handle (lib/accounts.js), never Robin's account number.
+    const handle = await p.page.evaluate(async () => (await (await fetch('/api/status')).json()).user?.id);
+    S.check('person: kept under Robin\'s handle', JSON.stringify(keys) === JSON.stringify([`rp-search:${handle}`]) && String(handle) !== String(F.robin.id), JSON.stringify(keys));
   } finally { await p.ctx.close(); }
   const g = await page('guest', 390, 'light');
   try {

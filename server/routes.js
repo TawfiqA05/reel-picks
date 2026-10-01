@@ -42,7 +42,7 @@ import { servicesProblems, cleanServices } from '../public/js/services.js';
 import { homePicks } from './lib/home.js';
 import { suggest, suggestState } from './lib/suggest.js';
 import { search, playingIds, listRecents, addRecent, removeRecent, clearRecents, restoreRecents } from './lib/search.js';
-import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, userName } from './lib/accounts.js';
+import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS, userName, handleOf } from './lib/accounts.js';
 import {
   pushEnabled, publicKey, saveSubscription, removeSubscription, hasSubscription, sendWeekly,
 } from './lib/push.js';
@@ -143,7 +143,9 @@ router.get('/status', (req, res) => {
     });
   }
   const me = currentUser();
-  const user = { id: me.userId, name: me.isOwner ? ownerName() : (userName(me.userId) || 'Friend'), isOwner: Boolean(me.isOwner) };
+  // A friend is named by their handle, never their account number (which
+  // would say how many accounts were made before theirs; lib/accounts.js).
+  const user = { id: me.isOwner ? me.userId : handleOf(me.userId), name: me.isOwner ? ownerName() : (userName(me.userId) || 'Friend'), isOwner: Boolean(me.isOwner) };
   if (!me.isOwner) {
     // A friend: their own theatres, home and counts; none of the owner's
     // diagnostics (key fingerprints, data dir, refresh log, AMC matching).
