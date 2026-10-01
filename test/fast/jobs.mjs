@@ -150,6 +150,9 @@ async function crash() {
 
 // ============================================================ Thu 09-24 10:00
 await S.step('Thursday: the day\'s first refresh, backups, off-site, friends, Letterboxd', async () => {
+  // The first server takes Wednesday's nightly as it starts. On a busy
+  // machine the restart below could stop it before that copy is written.
+  await until(() => fs.existsSync(path.join(BK, 'reelpicks-2026-09-23.db')), 30000, 50);
   fs.mkdirSync(BK, { recursive: true });
   for (let i = 1; i <= 16; i++) {
     const f = path.join(BK, `reelpicks-2026-09-${String(i).padStart(2, '0')}.db`);
