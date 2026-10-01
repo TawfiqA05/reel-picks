@@ -7,12 +7,14 @@
 // doesn't burn every remaining movie into the same wall; a genuine not-found is
 // returned as { found: false, error } so the caller can record it.
 import { config } from '../env.js';
+import { DEMO } from '../demo/mode.js';
 import { cachedJson, fetchJson } from './cache.js';
 
 const BASE = 'https://www.omdbapi.com/';
 
+// In demo mode OMDb is answered from the film snapshot (server/demo/net.js).
 export function omdbConfigured() {
-  return Boolean(config.omdbKey);
+  return DEMO || Boolean(config.omdbKey);
 }
 
 function url(params) {

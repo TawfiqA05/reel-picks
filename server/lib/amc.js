@@ -7,6 +7,7 @@
 // "Now Playing" for the movie list (see refresh.js). Adjust field names here if
 // your key returns a slightly different shape.
 import { config } from '../env.js';
+import { DEMO } from '../demo/mode.js';
 import { cachedJson, fetchJson } from './cache.js';
 import { localYMD } from './util.js';
 
@@ -14,8 +15,9 @@ import { localYMD } from './util.js';
 const BASE = (process.env.RP_AMC_BASE || '').trim() || 'https://api.amctheatres.com';
 const DAY = 86400;
 
+// In demo mode AMC is the made-up theaters (server/demo/net.js).
 export function amcConfigured() {
-  return Boolean(config.amcKey);
+  return DEMO || Boolean(config.amcKey);
 }
 
 function headers() {

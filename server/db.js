@@ -1,23 +1,33 @@
 // SQLite storage using Node's built-in node:sqlite (no native build step).
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { currentUserId } from './lib/user.js';
 import { preMigrationBackup } from './lib/backup.js';
+import { DEMO } from './demo/mode.js';
+import { scopedDb } from './demo/scope.js';
 
 // DATA_DIR lets the SQLite database live on a persistent volume in production
 // (e.g. a mounted /data). Locally it defaults to ./data next to the app.
-const dataDir = process.env.DATA_DIR
-  ? path.resolve(process.env.DATA_DIR)
-  : fileURLToPath(new URL('../data/', import.meta.url));
+// Demo mode (server/demo/) reads neither: it starts from an empty database in
+// a new folder of its own, every time.
+const dataDir = DEMO
+  ? fs.mkdtempSync(path.join(os.tmpdir(), 'reel-picks-demo-'))
+  : process.env.DATA_DIR
+    ? path.resolve(process.env.DATA_DIR)
+    : fileURLToPath(new URL('../data/', import.meta.url));
 fs.mkdirSync(dataDir, { recursive: true });
 const dbPath = path.join(dataDir, 'reelpicks.db');
 // Exported for the status diagnostics: "where is my data actually living?" is
 // the first question on a deployment whose volume may not be mounted.
 export { dataDir, dbPath };
 
-export const db = new DatabaseSync(dbPath);
+// In demo mode each request reads and writes its visitor's own copy
+// (server/demo/scope.js); `db` forwards there.
+const opened = new DatabaseSync(dbPath);
+export const db = DEMO ? scopedDb(opened) : opened;
 db.exec('PRAGMA journal_mode = WAL;');
 db.exec('PRAGMA foreign_keys = ON;');
 

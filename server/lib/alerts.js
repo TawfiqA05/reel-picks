@@ -22,6 +22,7 @@ import { get, run, all } from '../db.js';
 import { OWNER_ID } from './user.js';
 import { sendToUser } from './push.js';
 import { localYMD } from './util.js';
+import { DEMO } from '../demo/mode.js';
 
 export const PROBLEMS = {
   refresh: 'Daily refresh',
@@ -73,6 +74,7 @@ async function notify(problem, kind, message) {
 // recovery from that quiet episode then sends nothing either.
 export async function raise(problem, reason, now = new Date()) {
   if (!PROBLEMS[problem]) throw new Error(`Unknown alert problem: ${problem}`);
+  if (DEMO) return { sent: false }; // demo mode has no owner to alert
   const day = localYMD(now);
   const message = oneLine(reason);
   const at = now.toISOString();
@@ -97,6 +99,7 @@ export async function raise(problem, reason, now = new Date()) {
 // (GUEST_MODE on Railway): recorded as failing, and always sent.
 export async function raiseEveryStart(problem, reason, now = new Date()) {
   if (!PROBLEMS[problem]) throw new Error(`Unknown alert problem: ${problem}`);
+  if (DEMO) return { sent: false };
   const message = oneLine(reason);
   run(`INSERT INTO alert_state(problem, failing, alerted, since, last_alert_day, last_reason) VALUES(?, 1, 1, ?, ?, ?)
     ON CONFLICT(problem) DO UPDATE SET
@@ -109,6 +112,7 @@ export async function raiseEveryStart(problem, reason, now = new Date()) {
 // It worked. Sends one "back to normal" if an alert went out for this failure.
 export async function resolve(problem) {
   if (!PROBLEMS[problem]) throw new Error(`Unknown alert problem: ${problem}`);
+  if (DEMO) return { sent: false };
   const row = get('SELECT since, alerted FROM alert_state WHERE problem = ? AND failing = 1', problem);
   if (!row) return { sent: false };
   const claimed = run('UPDATE alert_state SET failing = 0 WHERE problem = ? AND failing = 1', problem).changes;

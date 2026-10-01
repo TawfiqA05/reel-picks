@@ -31,6 +31,7 @@ import fs from 'node:fs';
 import { getSetting, setSetting } from '../db.js';
 import { listBackups, backupsDir } from './backup.js';
 import { raiseLater, resolveLater } from './alerts.js';
+import { DEMO } from '../demo/mode.js';
 
 export const KEEP = 8;
 export const PREFIX = 'reel-picks/weekly/';
@@ -43,6 +44,7 @@ const RETRY_MS = 3600 * 1000;
 const TIMEOUT_MS = 10 * 60 * 1000;
 
 export function offsiteConfig() {
+  if (DEMO) return null; // demo mode keeps no backup
   const v = (k) => (process.env[k] || '').trim();
   const endpoint = v('BACKUP_S3_ENDPOINT').replace(/\/+$/, '');
   const bucket = v('BACKUP_S3_BUCKET');

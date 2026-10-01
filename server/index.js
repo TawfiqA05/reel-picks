@@ -28,10 +28,18 @@ import { backfillPosterColors } from './lib/posterColor.js';
 import { warmPeople } from './lib/people.js';
 import { runPlanJobs } from './lib/plans.js';
 import { sendDueLater as sendWatchlistAlerts } from './lib/watchalerts.js';
+import { DEMO } from './demo/mode.js';
+import { installDemoNet } from './demo/net.js';
+import { startDemo, demoVisitor } from './demo/sessions.js';
+import demoGuard from './demo/guard.js';
+import { withDb } from './demo/scope.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
 const RETRY_CHECK_MS = 60 * 1000;
 const PLAN_CHECK_MS = 60 * 1000;
+
+// Demo mode (server/demo/): nothing leaves the process, from here on.
+if (DEMO) installDemoNet();
 
 const app = express();
 app.disable('x-powered-by');
@@ -56,7 +64,7 @@ app.use((req, res, next) => { res.set({ 'X-Content-Type-Options': 'nosniff', 'X-
 // to a token-free URL, so the secret never lands in history, Referer, or a link
 // you share. The token is compared in constant time and never logged/rendered.
 app.use((req, res, next) => {
-  if (!('owner' in req.query)) return next();
+  if (DEMO || !('owner' in req.query)) return next();
   const raw = req.query.owner;
   const token = Array.isArray(raw) ? raw[0] : raw;
   if (tokenMatches(token)) {
@@ -90,7 +98,7 @@ const pageHeaders = (res) => res.set({
 });
 
 app.use((req, res, next) => {
-  if (!('invite' in req.query) || !['GET', 'HEAD'].includes(req.method)) return next();
+  if (DEMO || !('invite' in req.query) || !['GET', 'HEAD'].includes(req.method)) return next();
   if (isOwner(req) || isLocalRequest(req)) return res.redirect(302, '/#/settings');
   pageHeaders(res);
   const token = firstParam(req.query.invite);
@@ -111,6 +119,7 @@ function sameOriginPost(req) {
 }
 
 app.post('/invite/join', express.urlencoded({ extended: false, limit: '2kb' }), (req, res) => {
+  if (DEMO) return res.redirect(303, '/');
   if (isOwner(req) || isLocalRequest(req)) return res.redirect(303, '/#/settings');
   pageHeaders(res);
   if (!sameOriginPost(req)) return res.status(403).type('text').send('This invite has to be accepted from its own page.');
@@ -122,6 +131,9 @@ app.post('/invite/join', express.urlencoded({ extended: false, limit: '2kb' }), 
   const onboarded = getSetting('onboardingDone', { userId: friend.id });
   res.redirect(303, onboarded ? '/' : '/#/onboarding');
 });
+
+// Demo mode: each visitor's own copy of the sample (server/demo/sessions.js).
+if (DEMO) app.use('/api', demoVisitor);
 
 // Read-only guard for the public tunnel: reject guest writes and owner-only
 // reads BEFORE any body is parsed, so the shared link can never touch the DB.
@@ -158,8 +170,12 @@ app.use(express.json({ limit: '200kb' }));
 app.use('/api', (req, res, next) => {
   const u = requestUser(req);
   if (u.row) touchLastSeen(u.row);
-  runAs(u.id, next, { guest: u.guest, isOwner: u.isOwner, name: u.name || null });
+  const go = () => runAs(u.id, next, { guest: u.guest, isOwner: u.isOwner, name: u.name || null });
+  // Demo mode: every query in this request goes to the visitor's own copy.
+  if (DEMO) withDb(req.demo.handle, req.demo.key, go);
+  else go();
 });
+if (DEMO) app.use('/api', demoGuard);
 app.use('/api', router);
 
 const publicDir = fileURLToPath(new URL('../public/', import.meta.url));
@@ -183,6 +199,17 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(config.port, () => {
+  if (DEMO) {
+    // Demo mode runs none of the jobs below (refresh timers, backups,
+    // alerts, push, Letterboxd): it builds its sample and serves copies.
+    const where = process.env.NODE_ENV === 'production' ? `port ${config.port}` : `http://localhost:${config.port}`;
+    console.log(`\n  🎬  Reel Picks running → ${where}  (demo mode: made-up data, no keys, no network)\n`);
+    startDemo().then(() => console.log('  ✓ Demo sample ready')).catch((e) => {
+      console.error('  ✗ The demo sample could not be built:', e.stack || e.message);
+      process.exit(1);
+    });
+    return;
+  }
   const keys = [
     config.tmdbKey ? 'TMDB✓' : 'TMDB✗',
     config.omdbKey ? 'OMDb✓' : 'OMDb✗',

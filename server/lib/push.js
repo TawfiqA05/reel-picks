@@ -19,6 +19,7 @@ import { runAs, OWNER_ID } from './user.js';
 import { getRecommendations } from './recommend.js';
 import { weekOpen } from './lock.js';
 import { localYMD, weekStartFriday } from './util.js';
+import { DEMO } from '../demo/mode.js';
 
 const TITLE = 'Your 4 for this week are ready';
 const PICKS_URL = '/#/home';
@@ -41,6 +42,7 @@ const unb64u = (s) => Buffer.from(String(s || ''), 'base64url');
 let cached = { pub: null, priv: null, keys: null };
 
 function vapid() {
+  if (DEMO) return null; // demo mode sends no notification
   const pub = (process.env.VAPID_PUBLIC_KEY || '').trim();
   const priv = (process.env.VAPID_PRIVATE_KEY || '').trim();
   if (!pub || !priv) return null;

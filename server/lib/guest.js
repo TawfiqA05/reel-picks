@@ -20,6 +20,7 @@ import { onRailway } from '../env.js';
 import { FRIEND_COOKIE, verifyFriendCookie } from './accounts.js';
 import { OWNER_ID } from './user.js';
 import { safeEqual } from './util.js';
+import { DEMO } from '../demo/mode.js';
 
 export function guestModeEnabled() {
   const v = (process.env.GUEST_MODE || '').toLowerCase();
@@ -58,7 +59,10 @@ export function isLocalRequest(req) {
 export function requestUser(req) {
   if (req._rpUser) return req._rpUser;
   let u;
-  if (isOwner(req)) u = { id: OWNER_ID, isOwner: true, guest: false };
+  // Demo mode: every visitor is the owner of their own copy of the sample
+  // (server/demo/sessions.js). No guest view, no friend cookie.
+  if (DEMO) u = { id: OWNER_ID, isOwner: true, guest: false };
+  else if (isOwner(req)) u = { id: OWNER_ID, isOwner: true, guest: false };
   else {
     const friend = verifyFriendCookie(readCookie(req, FRIEND_COOKIE));
     if (friend) u = { id: friend.id, isOwner: false, guest: false, name: friend.name, row: friend };
@@ -105,6 +109,7 @@ const OWNER_TTL_MS = 365 * 24 * 3600 * 1000;
 
 
 export function tokenMatches(token) {
+  if (DEMO) return false; // no owner token in demo mode
   const t = ownerToken();
   if (!t || !token) return false;
   return safeEqual(token, t);

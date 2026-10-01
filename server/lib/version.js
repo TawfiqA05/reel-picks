@@ -6,6 +6,7 @@
 // update check didn't get through.
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { DEMO } from '../demo/mode.js';
 
 const swPath = fileURLToPath(new URL('../../public/sw.js', import.meta.url));
 const indexPath = fileURLToPath(new URL('../../public/index.html', import.meta.url));
@@ -22,7 +23,9 @@ let indexHtml = null;
 // index.html with its version filled in. Never cached by the browser: it is
 // the one file that says which version the rest belongs to.
 export function sendIndex(req, res) {
-  indexHtml ??= fs.readFileSync(indexPath, 'utf8').replace('__RP_VERSION__', appVersion || '');
+  indexHtml ??= fs.readFileSync(indexPath, 'utf8').replace('__RP_VERSION__', appVersion || '')
+    // Demo mode (server/demo/): the page shows its banner and its "Off in the demo" lines.
+    .replace('<html lang="en">', DEMO ? '<html lang="en" data-demo>' : '<html lang="en">');
   res.set('Cache-Control', 'no-cache');
   res.type('html').send(indexHtml);
 }

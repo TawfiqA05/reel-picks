@@ -19,6 +19,7 @@ import { all, get, run } from '../db.js';
 import * as tmdb from './tmdb.js';
 import { upsertFullMovie, upsertLightMovie } from './movies.js';
 import { currentUserId } from './user.js';
+import { DEMO } from '../demo/mode.js';
 
 export const PER_SECOND = 4;
 const BATCH = 20;
@@ -55,6 +56,8 @@ let nextAt = 0;
 const lastSecond = [];
 export async function tmdbThrottle() { return gate(); }
 async function gate() {
+  // Demo mode answers from the snapshot in this process: nothing to space out.
+  if (DEMO) return;
   // Re-check after sleeping: a timer that wakes early doesn't get to go early.
   for (let wait = nextAt - Date.now(); wait > 0; wait = nextAt - Date.now()) await sleep(wait);
   const now = Date.now();

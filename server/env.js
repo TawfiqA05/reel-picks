@@ -3,6 +3,7 @@
 // anything already set in the real environment.
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { DEMO } from './demo/mode.js';
 
 const envPath = fileURLToPath(new URL('../.env', import.meta.url));
 
@@ -27,25 +28,30 @@ function parseEnv(text) {
   return out;
 }
 
-try {
-  const text = fs.readFileSync(envPath, 'utf8');
-  const parsed = parseEnv(text);
-  for (const [k, v] of Object.entries(parsed)) {
-    if (process.env[k] === undefined || process.env[k] === '') process.env[k] = v;
+// Demo mode (server/demo/mode.js) reads no .env and no key.
+if (!DEMO) {
+  try {
+    const text = fs.readFileSync(envPath, 'utf8');
+    const parsed = parseEnv(text);
+    for (const [k, v] of Object.entries(parsed)) {
+      if (process.env[k] === undefined || process.env[k] === '') process.env[k] = v;
+    }
+  } catch (err) {
+    if (err.code !== 'ENOENT') console.warn('[env] could not read .env:', err.message);
   }
-} catch (err) {
-  if (err.code !== 'ENOENT') console.warn('[env] could not read .env:', err.message);
 }
+
+const key = (name) => (DEMO ? '' : (process.env[name] || '').trim());
 
 export const config = {
   get amcKey() {
-    return (process.env.AMC_API_KEY || '').trim();
+    return key('AMC_API_KEY');
   },
   get tmdbKey() {
-    return (process.env.TMDB_API_KEY || '').trim();
+    return key('TMDB_API_KEY');
   },
   get omdbKey() {
-    return (process.env.OMDB_API_KEY || '').trim();
+    return key('OMDB_API_KEY');
   },
   get port() {
     return Number(process.env.PORT) || 5170;
@@ -59,7 +65,9 @@ export function onRailway() {
     .some((k) => Boolean((process.env[k] || '').trim()));
 }
 
+// Demo mode has no keys and needs none: the snapshot answers for all three.
 export function keyStatus() {
+  if (DEMO) return { amc: true, tmdb: true, omdb: true };
   return {
     amc: Boolean(config.amcKey),
     tmdb: Boolean(config.tmdbKey),

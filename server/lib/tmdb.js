@@ -1,5 +1,6 @@
 // TMDB client — posters, metadata, credits, trailers, now-playing/upcoming.
 import { config } from '../env.js';
+import { DEMO } from '../demo/mode.js';
 import { cachedJson, fetchJson } from './cache.js';
 import { get, run } from '../db.js';
 
@@ -7,8 +8,9 @@ const BASE = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p';
 const DAY = 86400;
 
+// In demo mode TMDB is answered from the film snapshot (server/demo/net.js).
 export function tmdbConfigured() {
-  return Boolean(config.tmdbKey);
+  return DEMO || Boolean(config.tmdbKey);
 }
 
 // Standard, stable TMDB movie genre id -> name map (used for search/list results

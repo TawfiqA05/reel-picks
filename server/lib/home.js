@@ -31,6 +31,8 @@ import { publicScoreForMovie } from './scoring.js';
 import { profileRows } from './ratings.js';
 import { likedFilms, becauseLine } from './because.js';
 import { weekStartFriday, votesPhrase } from './util.js';
+import { DEMO } from '../demo/mode.js';
+import { visitorKey } from '../demo/scope.js';
 import { SERVICES, cleanServices, serviceByKey } from '../../public/js/services.js';
 
 const MIN_VOTES = 50;
@@ -156,6 +158,9 @@ async function collectionOf(id) {
 const servicesKey = (keys) => cleanServices(keys).join(',');
 const computing = new Map(); // userId -> Promise
 const failed = new Map(); // userId -> { at, message }
+// Demo visitors are all user 1, each in a database of their own
+// (server/demo/scope.js): their work is kept apart by visitor.
+const jobKey = (uid) => (DEMO ? `${visitorKey()}:${uid}` : uid);
 
 async function compute(uid, week, keys) {
   return runAs(uid, async () => {
@@ -208,15 +213,16 @@ async function compute(uid, week, keys) {
 }
 
 function startCompute(uid, week, keys) {
-  if (computing.has(uid)) return computing.get(uid);
-  failed.delete(uid);
+  const k = jobKey(uid);
+  if (computing.has(k)) return computing.get(k);
+  failed.delete(k);
   const job = compute(uid, week, keys)
     .catch((e) => {
-      failed.set(uid, { at: new Date().toISOString(), message: e.message });
+      failed.set(k, { at: new Date().toISOString(), message: e.message });
       console.error(`[home] picks for user ${uid}: ${e.message}`);
     })
-    .finally(() => computing.delete(uid));
-  computing.set(uid, job);
+    .finally(() => computing.delete(k));
+  computing.set(k, job);
   return job;
 }
 
@@ -267,8 +273,8 @@ export function homePicks() {
   const week = weekStartFriday();
   const list = stored(p.uid, week, p.services);
   if (!list) {
-    const err = failed.get(p.uid);
-    if (err && !computing.has(p.uid) && Date.now() - Date.parse(err.at) < 5 * 60 * 1000) {
+    const err = failed.get(jobKey(p.uid));
+    if (err && !computing.has(jobKey(p.uid)) && Date.now() - Date.parse(err.at) < 5 * 60 * 1000) {
       return { status: 'error', services: p.services, message: 'Couldn\'t reach TMDB to find your home picks. Try again in a few minutes.' };
     }
     startCompute(p.uid, week, p.services);
