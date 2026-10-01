@@ -2,6 +2,50 @@
 
 [![Tests](https://github.com/TawfiqA05/reel-picks/actions/workflows/tests.yml/badge.svg)](https://github.com/TawfiqA05/reel-picks/actions/workflows/tests.yml)
 
+Reel Picks tells me which four movies to see each week at my AMC. I built it because my
+A-List membership gives me four tickets a week and I kept spending them on so-so films, or
+finding out too late that the one I wanted had left. It ranks everything playing by blending
+critic and audience scores with my own ratings, and picks the showtime that fits my evening.
+
+![Picks on a laptop in the dark theme: this week's top pick with its Book button](docs/screenshots/picks-dark.jpg)
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/picks-light.jpg" alt="Picks on a phone in the light theme" width="230"></td>
+    <td><img src="docs/screenshots/movie-dark.jpg" alt="A movie page in the dark theme, with scores, the taste match and showtimes" width="230"></td>
+    <td><img src="docs/screenshots/wsw-light.jpg" alt="What should I watch? showing three films for the answers given" width="230"></td>
+    <td><img src="docs/screenshots/stats-dark.jpg" alt="Stats in the dark theme: ratings, top genres, directors and actors" width="230"></td>
+  </tr>
+  <tr>
+    <td>Picks</td><td>A movie page</td><td>What should I watch?</td><td>Stats</td>
+  </tr>
+</table>
+
+The screenshots come from the demo, which runs on made-up people and made-up theaters with
+real films (see Demo mode below). Here it is in motion: Picks, What should I watch?, then a
+film it suggested.
+
+<img src="docs/screenshots/demo.gif" alt="A phone scrolling Picks, answering What should I watch? and opening one of its films" width="300">
+
+## What's inside
+
+- **The ranking.** Every film playing gets a public score (Rotten Tomatoes, Metacritic,
+  IMDb and TMDB, normalized and averaged) and a taste match from my own ratings (genres,
+  directors and top-billed actors, leaning toward what I rated lately). The final score
+  blends the two, adds a few points for a film I saved, an IMAX showing or a showtime in my
+  usual hours, and a few more when a film's run is confirmed to be ending. The top four lock
+  on Friday for the week. The details are under How the scoring works.
+- **The data.** Showtimes come from AMC's API, film details, posters and credits from TMDB,
+  and review scores from OMDb. Drive times use OpenStreetMap's free router.
+- **The stack.** One Node 24 process with Express and the built-in `node:sqlite`, and a
+  frontend in plain ES modules and CSS with no build step that installs on a phone as a
+  PWA. Three runtime dependencies. It runs on Railway with one volume.
+- **The tests.** `npm test` (about 2 minutes, on GitHub for every push) and `npm run
+  test:ui` (browser checks in Chromium and WebKit, about 20 minutes) run on a made-up world
+  with no keys and no network. See Tests.
+
+## About
+
 I have an AMC A-List membership and a recurring problem: four movies a week is a lot of
 decisions, and I kept either wasting a slot on something mediocre or finding out too late
 that the one I actually wanted to see had left the theater on Wednesday. Reel Picks is my
@@ -660,7 +704,9 @@ the API. At localhost it's always me.
 On Railway the app fails closed: if `GUEST_MODE` is missing or not 1 there, it treats every
 visitor as a guest anyway, and sends me an owner alert each time it starts until I set it.
 My owner link and friends' logins keep working. Railway is detected from the variables
-Railway sets itself, so a copy on my Mac behaves as it always has.
+Railway sets itself, so a copy on my Mac behaves as it always has. The one exception is a
+service with `DEMO_MODE` on: there every visitor gets a private copy of the sample instead
+(see Demo mode), and that service has no data of mine to protect.
 
 When it isn't on Railway, the server only answers requests addressed to `localhost`,
 `127.0.0.1` or `[::1]`, so a web page can't point its own address at my machine and reach
@@ -710,6 +756,8 @@ Settings page. A Save bar slides up above the tab bar only when something has ch
 - **Appearance**: Theme, with Match system, Light or Dark, kept on this device only.
 - **API keys** (mine): which keys are connected. On Railway it says to change them in
   Railway's variables and redeploy; locally it points at `.env`.
+- **Data sources** (the demo only, in place of API keys): says the demo uses no key, and
+  that its films come from the saved snapshot and its people and theaters are made up.
 - **Theaters**: the primary plus up to four followed ones, with drive times; search AMC
   theaters to follow one or make it primary.
 - **Friends** (mine): add a friend, copy their one-time link, revoke, or re-issue.
@@ -740,6 +788,35 @@ Settings page. A Save bar slides up above the tab bar only when something has ch
   backup CSV, Download latest backup (mine), the last backup and how much space the data
   volume has left (mine), the off-site backup status with Upload now (mine), Refresh now
   (mine), Re-run quick rate, Preview year in movies (mine), and the last refresh's warnings.
+
+## Demo mode
+
+`DEMO_MODE=1` turns a copy of the app into a public demo that anyone can open without
+seeing my account. I run it as a second Railway service built from this same repo, with
+that one variable and nothing else.
+
+- At every start the server builds a sample database in a temp folder: four made-up
+  people (Sam, who every visitor is, plus Maya, Theo and Priya), two made-up theaters
+  (Riverside 12 and Northgate 8) in a made-up town, and a week of made-up showtimes that
+  always starts today. The films are real: what was in US theaters when I saved the
+  snapshot, this year's releases, and the most-rated films on TMDB. Then it runs the
+  app's own refresh against those theaters, so the scores, the weekly four and Last
+  chance come from the same code as the real thing.
+- Sam starts with 150 ratings, a watch log, a watchlist, a few notes, an I'm going plan
+  and a pick sent by Maya, so every screen has something on it.
+- Each visitor gets a private copy of that database, named by a cookie. Nobody else sees
+  what they do, and their copy is deleted an hour after it was made, or after half an hour
+  without a request.
+- It never opens `DATA_DIR` or `./data`, reads no `.env` and no key, and nothing leaves the
+  server: TMDB and OMDb are answered from `server/demo/snapshot.json`, AMC from the made-up
+  theaters, and everything else (drive times, place lookups, push) acts as if offline.
+  Push, invites, the owner token, owner alerts, backups and the guest view are off.
+  Anything that takes typed text (notes, a note with a sent pick, invites, Letterboxd,
+  home base, theater search, imports) says "Off in the demo." Booking links stay on the
+  page, since AMC doesn't know the made-up theaters.
+- `node scripts/demo-snapshot.mjs` saves a new snapshot with the TMDB and OMDb keys in
+  `.env`. It runs the demo's own build against the live services and keeps each answer
+  cut down to the fields the app reads, without the key. It's about 3 MB.
 
 ## Deploying
 
@@ -830,6 +907,12 @@ Sharing and the owner:
 - `RP_ALLOW_LAN`: when the app runs off Railway, it only answers at localhost. Turning
   this on lets other devices on my network reach it. Railway never needs it.
 
+The demo:
+
+- `DEMO_MODE`: `1` runs the public demo (see Demo mode). It's the only variable the demo
+  service needs, and it ignores the keys, `DATA_DIR`, `GUEST_MODE` and `OWNER_TOKEN`. On my
+  real service it stays unset.
+
 Notifications (optional):
 
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`: turn on weekly picks notifications and owner
@@ -872,13 +955,14 @@ server/
   routes.js           all /api endpoints
   db.js               node:sqlite schema, migrations, settings
   env.js              the .env loader
+  demo/               demo mode: the made-up world, the film snapshot, visitor copies
   lib/                scoring, taste, ranking, runway, geocoding, accounts,
                       AMC/TMDB/OMDb clients, refresh pipeline, backups,
                       push, Letterboxd, At home, Together, search, people,
                       I'm going plans and sent picks, notes on ratings,
                       your year in movies
 public/               buildless frontend (vanilla ESM + CSS, PWA)
-scripts/              share tunnel, icon generation
+scripts/              share tunnel, icon generation, the demo's film snapshot
 test/                 the fast and browser test suites and their made-up sample data
 data/                 SQLite db + backups (git-ignored)
 ```
@@ -914,7 +998,9 @@ sending picks, Your year in movies on a mocked Nov 30, Dec 1, Jan 15 and Jan 16 
 figure against its own count and against Stats, which cards each person gets, privacy, and
 that it writes nothing), and Watchlist alerts on a mocked clock in Indianapolis time (a new
 film, the 14-day return, Last chance, the 9 PM to 9 AM hold, grouping, every skip, a restart
-before the send, and privacy between friends).
+before the send, and privacy between friends), and demo mode (started next to canary
+databases, keys and a `.env`, it has to open none of them and make no network connection
+at all, and each visitor's changes stay theirs and are gone after an hour).
 
 `npm run test:ui` runs the browser checks in about 15 minutes: accessibility (keyboard,
 focus rings, names, dialogs, reduced motion, 200% zoom), layout at 320, 390 and 1280 in
