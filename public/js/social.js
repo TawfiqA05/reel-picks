@@ -8,6 +8,7 @@ import { api } from './api.js';
 import { h, clear, icon, toast, openModal, poster } from './ui.js';
 import { dayLabel, formatBadge, formatName, starRater, watchlistButton } from './views/components.js';
 import { noteSlot } from './notes.js';
+import { DEMO, offLine } from './demo.js';
 
 let state = null;
 const live = new Set();
@@ -394,8 +395,11 @@ export async function openSendSheet(film, ctx) {
   const counter = h('span', { class: 'note-count', id: `note-count-${n}` }, `0 of ${max}`);
   const note = h('textarea', { class: 'input note-input', id: `note-${n}`, rows: '3', maxlength: String(max), 'aria-describedby': `note-count-${n}`, placeholder: 'Why they\'d like it' });
   note.addEventListener('input', () => { counter.textContent = `${note.value.length} of ${max}`; });
-  body.appendChild(h('div', { class: 'field' },
-    h('label', { class: 'field-label', for: `note-${n}` }, 'Note (optional)'), note, counter));
+  // Demo mode sends the pick without a note.
+  body.appendChild(DEMO
+    ? h('div', { class: 'field' }, h('p', { class: 'field-label' }, 'Note (optional)'), offLine())
+    : h('div', { class: 'field' },
+      h('label', { class: 'field-label', for: `note-${n}` }, 'Note (optional)'), note, counter));
   body.appendChild(err);
   body.appendChild(h('div', { class: 'send-foot' },
     h('p', { class: 'muted small' }, left > 0 ? `You can send ${left} more today.` : 'You\'ve sent 10 today. You can send more tomorrow.'),
@@ -406,7 +410,7 @@ export async function openSendSheet(film, ctx) {
     if (!to) { err.textContent = 'Choose who to send it to.'; return; }
     sendBtn.disabled = true;
     try {
-      const r = await api.sendPick({ to: to.id, tmdb_id: film.tmdb_id, note: note.value });
+      const r = await api.sendPick({ to: to.id, tmdb_id: film.tmdb_id, note: DEMO ? '' : note.value });
       if (state?.send) state.send.left = r.left;
       modal.close();
       toast(`Sent ${film.title} to ${r.to?.name || to.name}.`, 'success');
@@ -417,7 +421,7 @@ export async function openSendSheet(film, ctx) {
   });
   paintBtn();
   modal = openModal(form, { title: `Send ${film.title}` });
-  (form.querySelector('input[type="radio"]') || note).focus();
+  (form.querySelector('input[type="radio"]') || (DEMO ? sendBtn : note)).focus();
   return modal;
 }
 

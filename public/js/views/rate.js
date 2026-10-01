@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { h, clear, makeStars, toast, sectionTitle, chip, icon, withStars, tmdbSized } from '../ui.js';
 import { filterBox } from '../filter.js';
 import { noteSlot, noteLine } from '../notes.js';
+import { DEMO, offLine } from '../demo.js';
 
 // Where a rating came from, as the list names it.
 const SOURCES = { letterboxd: 'Letterboxd', imdb: 'IMDb', manual: 'Rated here', onboarding: 'Quick rate', reelpicks: 'Backup' };
@@ -313,10 +314,10 @@ export async function render(root, params, ctx) {
     h('div', { class: 'import-box' },
       h('h3', { class: 'import-head' }, icon('upload', { size: 18 }), 'Import from Letterboxd or IMDb'),
       h('div', { class: 'muted small' }, 'Already rated films there? Download your ratings file from the site, then upload it here. The steps show where to find it.'),
-      h('div', {}, toggleGuide),
+      DEMO ? offLine() : h('div', {}, toggleGuide),
     ),
   ));
-  page.appendChild(guide);
+  if (!DEMO) page.appendChild(guide);
   page.appendChild(resultPanel);
   page.appendChild(fileInput);
 

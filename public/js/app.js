@@ -16,6 +16,7 @@ import * as watchlist from './views/watchlist.js';
 import * as you from './views/you.js';
 import * as onboarding from './views/onboarding.js';
 import * as welcome from './views/welcome.js';
+import { DEMO, demoBanner, keepBookingLinks } from './demo.js';
 
 // Every import above has loaded: the start-up watchdog in index.html stands down.
 window.__rpStarted = true;
@@ -308,6 +309,7 @@ function buildShell() {
         h('button', { id: 'search-btn', class: 'icon-btn header-search', type: 'button', hidden: true, 'aria-label': 'Search movies', title: 'Search (/)', 'aria-haspopup': 'dialog', onClick: () => openSearch(ctx) }, icon('search', { size: 20 })),
       ),
       h('div', { id: 'guest-banner', class: 'guest-banner' }),
+      DEMO ? demoBanner() : null,
       h('main', { id: 'main' }),
       h('nav', { id: 'bottom-nav', class: 'bottom-nav', 'aria-label': 'Sections' },
         ...NAV.map((n) => h('a', { class: 'nav-item', 'data-name': n.name, href: `#/${n.name}` },
@@ -322,6 +324,7 @@ function buildShell() {
 async function boot() {
   buildShell();
   ensureToastHost();
+  if (DEMO) keepBookingLinks();
   await refreshStatus();
   // A new friend (or anyone with under 5 ratings) who hasn't finished or
   // skipped the welcome setup starts there, whatever the link said.

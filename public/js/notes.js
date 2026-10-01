@@ -15,6 +15,7 @@
 // Tell it about each rating with slot.rated(value).
 import { api } from './api.js';
 import { h, clear, toast } from './ui.js';
+import { DEMO, offLine } from './demo.js';
 
 export const NOTE_MAX = 280;
 const LOOKS_LIKE_HTML = /<\s*(?:\/?\s*[a-z]|!)/i;
@@ -87,7 +88,7 @@ export function noteSlot(entry, { note = null, full = null, source = null, rated
       const edit = h('button', { class: 'link-btn note-edit', type: 'button', 'aria-label': `Edit your note on ${title}` }, 'Edit');
       edit.addEventListener('click', () => open(cur.note.replace(/…$/, '')));
       const acts = h('div', { class: 'note-acts' }, edit);
-      if (mode === 'full') {
+      if (mode === 'full' && !DEMO) {
         const del = h('button', { class: 'link-btn note-delete', type: 'button', 'aria-label': `Delete your note on ${title}` }, 'Delete');
         del.addEventListener('click', () => remove(del));
         acts.append(del);
@@ -106,6 +107,13 @@ export function noteSlot(entry, { note = null, full = null, source = null, rated
   function open(initial) {
     clear(el);
     el.hidden = false;
+    // Demo mode takes no typed text: the field's place says so instead.
+    if (DEMO) {
+      const line = offLine('note-off');
+      line.setAttribute('role', 'status');
+      el.append(line);
+      return;
+    }
     editing = true;
     const inputId = `note-input-${id}`;
     const help = h('span', { class: 'note-count', id: `note-count-${id}` });

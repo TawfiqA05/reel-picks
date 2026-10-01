@@ -7,6 +7,7 @@ import { PLANS, PLAN_IDS, planOf, planWords } from '../plans.js';
 import { servicesPicker } from './athome.js';
 import { servicesPhrase } from '../services.js';
 import { openYear } from '../year.js';
+import { DEMO, offLine } from '../demo.js';
 
 const GENRES = ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama',
   'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance',
@@ -237,7 +238,10 @@ export async function render(root, params, ctx) {
 
   // ---- API keys
   const keyState = status?.keys || {};
-  if (isOwner) page.appendChild(card('API keys',
+  if (isOwner && DEMO) {
+    page.appendChild(card('Data sources',
+      h('p', { class: 'muted small' }, 'This demo uses no API key. Film details, posters and scores come from a snapshot of TMDB and OMDb saved with the code. The theaters, showtimes and people are made up.')));
+  } else if (isOwner) page.appendChild(card('API keys',
     h('div', { class: 'key-list' },
       keyRow('TMDB', keyState.tmdb, 'posters, metadata, matching'),
       keyRow('OMDb', keyState.omdb, 'IMDb / RT / Metacritic scores'),
@@ -292,7 +296,7 @@ export async function render(root, params, ctx) {
             ? `${t.distance.label} from ${homeLabel()}${t.distance.estimated ? ' (estimated)' : ''}`
             : 'Drive time appears after the next refresh'),
         ),
-        t.isPrimary ? null : h('div', { class: 'ti-actions' },
+        t.isPrimary || DEMO ? null : h('div', { class: 'ti-actions' },
           h('button', { class: 'btn soft small', title: 'Rank by this theater instead', onClick: () =>
             act(() => api.setPrimaryTheatre(t.id), `${t.short} is now your primary theater`) }, 'Make primary'),
           h('button', { class: 'icon-btn danger', title: 'Stop following', 'aria-label': `Stop following ${t.name}`, onClick: () => confirmUnfollow(t) }, icon('x', { size: 18 })),
@@ -336,8 +340,9 @@ export async function render(root, params, ctx) {
   };
   theatreInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') theatreSearch(); });
   page.appendChild(card('Theaters', theatreList, followedNote,
-    h('div', { class: 'row-gap' }, theatreInput, h('button', { class: 'btn', onClick: theatreSearch }, 'Search')),
-    theatreResults,
+    // Demo mode: the two made-up theaters, and no search.
+    DEMO ? offLine() : h('div', { class: 'row-gap' }, theatreInput, h('button', { class: 'btn', onClick: theatreSearch }, 'Search')),
+    DEMO ? null : theatreResults,
   ));
 
   if (isOwner) page.appendChild(friendsCard());
@@ -635,8 +640,10 @@ export async function render(root, params, ctx) {
   // ---- Letterboxd auto-sync: owner and friends (the guest never gets here).
   if (!status?.guest) page.appendChild(letterboxdCard(ctx, planWords(planOf(s))));
 
+  // Demo mode: the made-up home base stays as it is.
+  if (DEMO) for (const input of [homeLabelIn, homeLat, homeLng]) input.disabled = true;
   page.appendChild(card('Home base',
-    h('div', { class: 'row-gap geo-row' }, placeIn, lookupBtn, locBtn),
+    DEMO ? offLine() : h('div', { class: 'row-gap geo-row' }, placeIn, lookupBtn, locBtn),
     geoStatus,
     geoResults,
     h('div', { class: 'grid-3' }, spanAll(labeled('Label', homeLabelIn)), labeled('Latitude', homeLat), labeled('Longitude', homeLng)),
@@ -650,7 +657,7 @@ export async function render(root, params, ctx) {
       + 'coordinates, to turn them into a place. Answers are cached for months, so repeats send nothing. Your location '
       + 'is never sent to TMDB, OMDb, or AMC, and the shared guest link never includes it. '
       + '"Clear home base" removes the stored location and all of those caches.'),
-    h('div', {}, clearHomeBtn),
+    DEMO ? null : h('div', {}, clearHomeBtn),
   ));
 
   // ---- Weights
@@ -924,7 +931,7 @@ export async function render(root, params, ctx) {
   const bk = status?.backup;
   const mb = (n) => `${(n / 1048576).toFixed(1)} MB`;
   const keptWords = `One is taken every night at 3am; the newest ${bk?.keep?.nightly ?? 7} nightly copies and ${bk?.keep?.preMigration ?? 3} from before updates are kept.`;
-  const backupLine = !isOwner ? null : setStatus(h('div', { class: bk?.lastError ? 'small' : 'muted small' }),
+  const backupLine = !isOwner || DEMO ? null : setStatus(h('div', { class: bk?.lastError ? 'small' : 'muted small' }),
     bk?.lastError ? 'bad' : bk?.last ? 'ok' : 'warn',
     bk?.lastError
       ? `Last backup attempt failed (${new Date(bk.lastError.at).toLocaleString()}): ${bk.lastError.message}`
@@ -934,7 +941,7 @@ export async function render(root, params, ctx) {
   // The data volume (owner only): used and free, the live database, the backups.
   const dk = status?.disk;
   const size = (n) => (n >= 1073741824 ? `${(n / 1073741824).toFixed(1)} GB` : n < 10485760 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.round(n / 1048576)} MB`);
-  const diskLine = !isOwner || !dk ? null : setStatus(h('div', { class: dk.pct > 80 ? 'small disk-line' : 'muted small disk-line' }),
+  const diskLine = !isOwner || !dk || DEMO ? null : setStatus(h('div', { class: dk.pct > 80 ? 'small disk-line' : 'muted small disk-line' }),
     dk.pct > 80 ? 'warn' : '',
     `${dk.total ? `Data volume: ${size(dk.used)} used, ${size(dk.free)} free of ${size(dk.total)}. ` : ''}`
     + `Database ${size(dk.dbBytes)}, backups ${size(dk.backups.bytes)}`
@@ -971,13 +978,13 @@ export async function render(root, params, ctx) {
   }
 
   // ---- Alerts (owner only): the last 10 problems and recoveries.
-  if (isOwner) page.appendChild(alertsCard());
+  if (isOwner && !DEMO) page.appendChild(alertsCard());
 
   page.appendChild(card('Data',
     h('div', { class: 'row-gap wrap' },
       h('a', { class: 'btn soft', href: api.stateUrl() }, icon('download', { size: 16 }), isOwner ? 'Export full setup' : 'Export my data'),
-      isOwner ? h('button', { class: 'btn soft', onClick: () => stateFile.click() }, icon('upload', { size: 16 }), 'Import full setup') : null,
-      isOwner ? stateFile : null,
+      isOwner && !DEMO ? h('button', { class: 'btn soft', onClick: () => stateFile.click() }, icon('upload', { size: 16 }), 'Import full setup') : null,
+      isOwner && !DEMO ? stateFile : null,
       h('a', { class: 'btn soft', href: api.exportUrl() }, icon('download', { size: 16 }), 'Export backup CSV'),
       isOwner && bk?.last ? h('a', { class: 'btn soft', href: api.backupUrl() }, icon('download', { size: 16 }), 'Download latest backup') : null,
       isOwner ? h('button', { class: 'btn soft', onClick: () => ctx.triggerRefresh() }, icon('refresh', { size: 16 }), 'Refresh now') : null,
@@ -988,6 +995,7 @@ export async function render(root, params, ctx) {
     h('p', { class: 'muted small' }, isOwner
       ? 'Full setup carries settings, theaters, home base, ratings, watchlist, watch history, AMC match decisions, and hidden films. Everything except caches and schedule history, which each instance builds itself. Importing is additive: nothing local is deleted.'
       : 'Your export carries your own settings, theaters, home base, ratings, watchlist, watch history and hidden films.'),
+    DEMO ? h('p', { class: 'muted small demo-off' }, 'Importing a setup is off in the demo, and there are no backups: everything here is wiped after an hour.') : null,
     backupLine,
     diskLine,
     offsiteSlot,
@@ -1198,10 +1206,11 @@ function letterboxdCard(ctx, words) {
   api.letterboxd().then(done).catch((e) => { setStatus(line, 'bad', e.message); });
   paint();
 
+  if (DEMO) syncRow.hidden = true;
   return card('Letterboxd',
-    h('div', { class: 'row-gap' }, nameIn, saveBtn),
-    line,
-    syncRow,
+    DEMO ? offLine() : h('div', { class: 'row-gap' }, nameIn, saveBtn),
+    DEMO ? null : line,
+    DEMO ? null : syncRow,
     h('p', { class: 'muted small' },
       'Once a day Reel Picks reads your public Letterboxd diary and brings in new star ratings and the films you logged as watched. '
       + `Each entry comes in once, and a rating you change here is never overwritten. Films logged on Letterboxd count as seen, ${words.notCounted}. `
@@ -1264,7 +1273,7 @@ function friendsCard() {
                 ), { title: 'Revoke friend' });
               },
             }, 'Revoke'),
-            h('button', {
+            DEMO ? null : h('button', {
               class: 'btn soft small', type: 'button', 'aria-label': `New link for ${f.name}`,
               onClick: () => act(() => api.reissueFriend(f.id), `New link for ${f.name}`),
             }, 'New link'),
@@ -1288,7 +1297,8 @@ function friendsCard() {
   addBtn.addEventListener('click', add);
   nameIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
   load();
-  return card('Friends', note, list, h('div', { class: 'row-gap' }, nameIn, addBtn), linkSlot);
+  // Demo mode: the made-up friends only, and no invites.
+  return card('Friends', note, list, DEMO ? offLine() : h('div', { class: 'row-gap' }, nameIn, addBtn), linkSlot);
 }
 
 function keyRow(name, present, desc) {

@@ -1774,3 +1774,12 @@ a.tg-time:hover { border-color: var(--text); }
   /* A person page's or Stats sheet's stars and Save under the whole row, not indented past the edge. */
   .more-tools { padding-left: 0; flex-wrap: wrap; }
 }
+
+/* ---- demo mode (js/demo.js): a slim line under the header ---- */
+.demo-banner {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 2px var(--sp-2);
+  padding: 6px var(--sp-4); text-align: center; font-size: var(--fs-xs); line-height: var(--lh-tight);
+  color: var(--muted); border-bottom: 1px solid var(--divider);
+}
+.demo-banner a { color: var(--accent-text); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.demo-off { margin: 0; }
