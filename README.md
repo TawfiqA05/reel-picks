@@ -2,6 +2,10 @@
 
 [![Tests](https://github.com/TawfiqA05/reel-picks/actions/workflows/tests.yml/badge.svg)](https://github.com/TawfiqA05/reel-picks/actions/workflows/tests.yml)
 
+**Try the demo:** [satisfied-dream-production-6401.up.railway.app](https://satisfied-dream-production-6401.up.railway.app).
+It runs on made-up people and made-up theaters with real films, and whatever you change there
+is yours alone and gone within the hour.
+
 Reel Picks tells me which four movies to see each week at my AMC. I built it because my
 A-List membership gives me four tickets a week and I kept spending them on so-so films, or
 finding out too late that the one I wanted had left. It ranks everything playing by blending
@@ -793,7 +797,7 @@ Settings page. A Save bar slides up above the tab bar only when something has ch
 
 `DEMO_MODE=1` turns a copy of the app into a public demo that anyone can open without
 seeing my account. I run it as a second Railway service built from this same repo, with
-that one variable and nothing else.
+that one variable and nothing else. It's the demo linked at the top.
 
 - At every start the server builds a sample database in a temp folder: four made-up
   people (Sam, who every visitor is, plus Maya, Theo and Priya), two made-up theaters
