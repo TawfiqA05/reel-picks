@@ -86,7 +86,8 @@ you want your own, you run your own copy with your own keys.
 - Learns my taste from star ratings (genre, director, and lead actors) and gets
   more opinionated the more I rate.
 - Follows up to four extra theaters, shows drive times from home, and flags when a film
-  leaving my theater is still playing at one of them.
+  leaving my theater is still playing at one of them. Until someone sets a home base, Picks
+  shows a "Set your home" card in place of drive times, and Not now hides it on that device.
 - Tracks my movie plan: money saved versus ticket prices, and whether my picks landed.
   Mark seen on a movie page logs it, and the button turns into "Seen · Undo". Each person
   picks their own plan in Settings: AMC A-List, Regal Unlimited, Cinemark Movie Club,
@@ -278,9 +279,10 @@ Keys are read once at startup, so after editing `.env`, restart the server. Then
 Settings to confirm the keys are connected, set your theater and home base, hit Refresh,
 and rate about twenty movies so the taste side of the scoring has something to work with.
 
-Out of the box the primary theater and `OWNER_NAME` in `.env.example` are mine. There's no
-home base until you set one, so drive times stay hidden until then. Change the theater and
-set a home base in Settings, and change the name in `.env`.
+Out of the box two things are mine: `OWNER_NAME` in `.env.example`, and the primary theater
+the code starts with. There's no home base until you set one, so drive times stay hidden
+and Picks shows a small "Set your home" card until then. Pick your theater and set a home
+base in Settings, and change the name in `.env`.
 
 `npm run dev` does the same with auto-reload. Every reload is a fresh start, and every
 start runs the database migrations against `data/reelpicks.db`, so I don't point it at
@@ -591,7 +593,7 @@ three films, like "3 films from your watchlist are now showing", and opens Watch
 single film's push opens that film's page.
 
 The check runs after every refresh. Anything it finds goes out right away, except between
-9 PM and 9 AM Indianapolis time, when it waits until 9 AM. Each alert is written to the
+9 PM and 9 AM Eastern time, when it waits until 9 AM. Each alert is written to the
 database when it's found and claimed there before it's sent, and the send is checked every
 minute, so a restart between the refresh and the send still sends it once and nothing is
 ever sent twice. Just before it goes, each alert is checked again against the switch, my
@@ -852,12 +854,13 @@ the database and what the backups take, and I get an owner alert once a day whil
 volume is more than 80% full. Copies an older version wrote next to the database
 (`reelpicks.pre-*.db`) are counted in that line but never deleted.
 
-Right after a
-nightly copy succeeds, and only then, cached API answers more than three times past their
-lifetime are deleted; nothing but the cache is touched. The first time that happened, a
-one-time VACUUM gave the space back, and it never runs on its own again. I can
-download the newest copy with Download latest backup in Settings → Data, and
-`/api/status` shows its time and size under `backup`.
+Right after a nightly copy succeeds, and only then, cached API answers more than three
+times past their lifetime are deleted, and any TMDB film details still saved in full are
+cut down to the fields the app reads. Nothing but the cache is touched. The first time that
+cleanup ran, a VACUUM gave the space back. It runs again only on a night that cut rows
+down, and it waits for a later night while the volume hasn't room for one more copy of
+the database. I can download the newest copy with Download latest backup in Settings →
+Data, and `/api/status` shows its time and size under `backup`.
 
 Once a week, Sunday at 4am (the server's `TZ`), the newest nightly copy also goes off-site
 to S3-compatible storage, Cloudflare R2 in my case, as
@@ -1007,13 +1010,13 @@ friends, the hourly limits, the weekly lock, the background jobs on a mocked tim
 I'm going plans (reminders, the next morning's question, restarts) on a mocked clock,
 sending picks, Your year in movies on a mocked Nov 30, Dec 1, Jan 15 and Jan 16 (every
 figure against its own count and against Stats, which cards each person gets, privacy, and
-that it writes nothing), and Watchlist alerts on a mocked clock in Indianapolis time (a new
+that it writes nothing), and Watchlist alerts on a mocked clock in Eastern time (a new
 film, the 14-day return, Last chance, the 9 PM to 9 AM hold, grouping, every skip, a restart
 before the send, and privacy between friends), and demo mode (started next to canary
 databases, keys and a `.env`, it has to open none of them and make no network connection
 at all, and each visitor's changes stay theirs and are gone after an hour).
 
-`npm run test:ui` runs the browser checks in about 15 minutes: accessibility (keyboard,
+`npm run test:ui` runs the browser checks in about 20 minutes: accessibility (keyboard,
 focus rings, names, dialogs, reduced motion, 200% zoom), layout at 320, 390 and 1280 in
 light and dark for every role with no sideways scroll, clipped text, contrast problem or
 console error, the design itself (tokens, fonts, buttons, cards, showtime rows), the
