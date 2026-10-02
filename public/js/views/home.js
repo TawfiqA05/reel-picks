@@ -119,6 +119,11 @@ function buildPage(data, status, ctx, state, actions) {
   const year = guest ? null : yearEntry(ctx, 'picks');
   if (year) page.appendChild(year);
 
+  // No theater picked yet (only a fresh install): say so first, since picks
+  // rank what's playing at a theater.
+  const noTheatre = !guest && Boolean(status?.user) && !status.theatre?.id && !status.theatre?.name;
+  if (noTheatre) page.appendChild(theatreBanner());
+
   // Onboarding nudge when the taste profile is thin.
   if (!guest && status && !status.onboardingDone && data.profile.count < 10) {
     page.appendChild(onboardingBanner(ctx));
@@ -138,9 +143,11 @@ function buildPage(data, status, ctx, state, actions) {
       : !ctx.isOwner()
         // Only the owner can refresh; a friend's showtimes come with the next daily one.
         ? emptyState('film', 'No movies loaded yet', 'Showtimes for your theater come in with the next daily refresh. Check back later today.')
-        : emptyState('film', 'No movies loaded yet',
-          status?.keys?.amc ? 'Tap refresh to pull showtimes from your theater.' : 'Add your keys, then refresh to load what\'s playing.',
-          h('button', { class: 'btn', onClick: () => ctx.triggerRefresh() }, icon('refresh', { size: 16 }), 'Refresh now')));
+        // With no theater, the ask above says what to do; a refresh can't help yet.
+        : noTheatre ? emptyState('film', 'No movies loaded yet', 'Pick your theater and its showtimes come in.')
+          : emptyState('film', 'No movies loaded yet',
+            status?.keys?.amc ? 'Tap refresh to pull showtimes from your theater.' : 'Add your keys, then refresh to load what\'s playing.',
+            h('button', { class: 'btn', onClick: () => ctx.triggerRefresh() }, icon('refresh', { size: 16 }), 'Refresh now')));
     return page;
   }
 
@@ -314,6 +321,17 @@ function skeleton() {
       )),
     h('div', { class: 'day-picker' }, ...Array.from({ length: 7 }, () => h('div', { class: 'sk day-btn' }))),
     h('div', { class: 'pick-grid' }, card(), card(), card()),
+  );
+}
+
+// A fresh install starts with no theater; Settings is where to pick one.
+function theatreBanner() {
+  return h('div', { class: 'banner theatre-ask' },
+    h('div', {},
+      h('div', { class: 'banner-title' }, 'Pick your theater'),
+      h('div', { class: 'banner-sub' }, 'Your picks rank what\'s playing there. Choose it in Settings.'),
+    ),
+    h('a', { class: 'btn', href: '#/settings' }, 'Pick theater'),
   );
 }
 

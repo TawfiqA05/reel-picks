@@ -58,6 +58,8 @@ export async function render(root, params, ctx) {
   const homeLabel = () => status?.home?.label || 'home';
   const theatreList = h('div', { class: 'theatre-list' });
   const followedNote = h('div', { class: 'muted small' });
+  // A fresh install has no theater yet: the primary is a blank entry.
+  const noPrimary = () => !theatres[0]?.id && !theatres[0]?.name;
 
   const reloadTheatres = async () => {
     const st = await ctx.refreshStatus();
@@ -89,6 +91,7 @@ export async function render(root, params, ctx) {
   const paintTheatres = () => {
     clear(theatreList);
     for (const t of theatres) {
+      if (t.isPrimary && !t.id && !t.name) continue;
       theatreList.appendChild(h('div', { class: 'theatre-item' },
         h('div', { class: 'ti-main' },
           h('div', { class: 'ti-name' }, t.name, t.isPrimary ? badge('Primary', 'accent') : null),
@@ -104,7 +107,8 @@ export async function render(root, params, ctx) {
       ));
     }
     const extras = theatres.length - 1;
-    followedNote.textContent = extras
+    followedNote.textContent = noPrimary() ? 'No theater picked yet. Search for yours below and tap Set primary.'
+      : extras
       ? `Following ${extras} more theater${extras > 1 ? 's' : ''} (up to ${maxTheatres - 1}). Ranking and runway badges use the primary; movies only playing elsewhere appear under "Also nearby".`
       : `Follow more theaters to see where else a movie is playing. Up to ${maxTheatres - 1} extra. Each adds about 14 AMC calls to the daily refresh. Drive times are never shown on the shared guest link.`;
   };
@@ -128,11 +132,14 @@ export async function render(root, params, ctx) {
           h('div', { class: 'ti-actions' },
             followed
               ? h('span', { class: 'muted small' }, followed.isPrimary ? 'Primary' : 'Following')
+              // Following needs a primary first.
+              : noPrimary() ? null
               : h('button', { class: 'btn soft small', disabled: full, title: full ? `Already following ${maxTheatres}` : 'Pull this theater\'s showtimes too', onClick: () =>
                 act(() => api.followTheatre({ id: t.id, name: t.name, slug: t.slug }), `Following ${t.name}. Refreshing showtimes.`) }, 'Follow'),
             followed?.isPrimary ? null : h('button', { class: 'btn small', title: 'Rank by this theater; your current primary stays followed', onClick: () =>
               act(() => (followed ? api.setPrimaryTheatre(t.id) : api.setTheatre({ id: t.id, name: t.name, slug: t.slug })),
-                `${t.name} is now your primary theater. ${theatres[0]?.short || 'The old primary'} stays followed.`) }, 'Set primary'),
+                noPrimary() ? `${t.name} is now your primary theater.`
+                  : `${t.name} is now your primary theater. ${theatres[0]?.short || 'The old primary'} stays followed.`) }, 'Set primary'),
           ),
         ));
       });

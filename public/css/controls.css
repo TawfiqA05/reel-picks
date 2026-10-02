@@ -174,12 +174,14 @@ input[type="checkbox"] { accent-color: var(--accent); width: 20px; height: 20px;
 .banner { background: var(--raised); justify-content: space-between; border-radius: var(--r-card); }
 .banner-title { font-weight: 700; }
 .banner-sub { font-size: var(--fs-sm); color: var(--muted); }
-/* The ask for a home base on Picks (views/home.js): each button keeps its words
-   on one line, and both drop under the text when the row is too narrow. */
-.home-ask { flex-wrap: wrap; }
-.home-ask > div:first-child { flex: 1 1 220px; min-width: 0; }
+/* The asks for a theater and a home base on Picks (views/home.js): each button
+   keeps its words on one line, and both drop under the text when the row is
+   too narrow. */
+.home-ask, .theatre-ask { flex-wrap: wrap; }
+.home-ask > div:first-child, .theatre-ask > div:first-child { flex: 1 1 220px; min-width: 0; }
 .home-ask .row-gap { margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
-.home-ask .btn, .home-ask .link-btn { white-space: nowrap; }
+.theatre-ask > .btn { margin-left: auto; }
+.home-ask .btn, .home-ask .link-btn, .theatre-ask .btn { white-space: nowrap; }
 .alert { background: var(--raised); font-size: var(--fs-sm); }
 .alert.tip { background: var(--chip); }
 .alert-icon { display: grid; place-items: center; color: var(--text); flex: 0 0 auto; }
