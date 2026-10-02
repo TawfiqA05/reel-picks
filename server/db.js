@@ -24,8 +24,6 @@ const dbPath = path.join(dataDir, 'reelpicks.db');
 // the first question on a deployment whose volume may not be mounted.
 export { dataDir, dbPath };
 
-// A database created by this start: no one in it has read anything yet.
-const isNewDb = !fs.existsSync(dbPath);
 // In demo mode each request reads and writes its visitor's own copy
 // (server/demo/scope.js); `db` forwards there.
 const opened = new DatabaseSync(dbPath);
@@ -904,7 +902,8 @@ export const DEFAULT_SETTINGS = {
   // these surface in a separate "Also nearby" section, never in the ranking.
   extraTheatres: [],
   // Where drive times are measured from. Computed once per theatre and cached.
-  home: { label: 'Fishers, IN', lat: 39.9568, lng: -86.0134 },
+  // Nobody has one until they set it; until then no drive time is shown.
+  home: { label: null, lat: null, lng: null },
   weightPublic: 0.5,
   weightTaste: 0.5,
   preferImax: true,
@@ -1035,42 +1034,3 @@ export function updateSettings(patch, { userId } = {}) {
 function structuredCloneish(v) {
   return v === undefined ? undefined : JSON.parse(JSON.stringify(v));
 }
-
-// ---- homes -------------------------------------------------------------
-
-// Anyone who never set a home, or cleared it, has been reading the app's
-// built-in default home at run time, field by field (lib/theatres.js
-// homeBase). That default is going away: a new friend will start with no
-// home. So first, whatever part of it each person reads today is saved as
-// their own, and nothing changes for them. Idempotent: a database where
-// everyone has a full saved home writes nothing. A copy of the database is
-// written first.
-function saveDefaultHomes() {
-  if (isNewDb) return;
-  const d = DEFAULT_SETTINGS.home;
-  const ok = (v) => v != null && v !== '' && Number.isFinite(Number(v));
-  const fixes = [];
-  for (const u of db.prepare('SELECT id FROM users ORDER BY id').all()) {
-    const row = db.prepare("SELECT value FROM user_settings WHERE user_id = ? AND key = 'home'").get(u.id);
-    let h = {};
-    if (row) { try { h = JSON.parse(row.value); } catch { h = {}; } }
-    if (!h || typeof h !== 'object' || Array.isArray(h)) h = {};
-    if (h.label && ok(h.lat) && ok(h.lng)) continue;
-    fixes.push([u.id, JSON.stringify({ ...h, label: h.label || d.label, lat: ok(h.lat) ? h.lat : d.lat, lng: ok(h.lng) ? h.lng : d.lng })]);
-  }
-  if (!fixes.length) return;
-  const backup = preMigrationBackup(db, dataDir, 'homes');
-  const save = db.prepare(`INSERT INTO user_settings(user_id, key, value) VALUES(?, 'home', ?)
-    ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value`);
-  db.exec('BEGIN');
-  try {
-    for (const [id, value] of fixes) save.run(id, value);
-    db.exec('COMMIT');
-    console.log(`[db] homes: saved the home ${fixes.length} person(s) read from the app default (backup: ${backup})`);
-  } catch (err) {
-    db.exec('ROLLBACK');
-    throw err;
-  }
-}
-
-saveDefaultHomes();

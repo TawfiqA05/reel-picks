@@ -41,7 +41,7 @@ function shapeProblems(patch) {
         && w && typeof w === 'object' && typeof w.enabled === 'boolean' && TIME.test(w.after) && TIME.test(w.before));
       if (!ok) out.push({ key: k, message: 'Use weekday and weekend windows with times like 18:30.' });
     }
-    if (k === 'home' && v && typeof v === 'object' && 'label' in v && (typeof v.label !== 'string' || v.label.length > 200)) out.push({ key: 'home.label', message: 'Use a place name of up to 200 characters.' });
+    if (k === 'home' && v && typeof v === 'object' && 'label' in v && v.label !== null && (typeof v.label !== 'string' || v.label.length > 200)) out.push({ key: 'home.label', message: 'Use a place name of up to 200 characters.' });
   }
   return out;
 }
@@ -88,7 +88,7 @@ router.put('/settings', (req, res) => {
   // Drop them and re-measure in the background (one OSRM call per theatre), so
   // the times heal in seconds instead of at the next daily refresh.
   const after = homeBase(next);
-  if ('home' in patch && (before.lat !== after.lat || before.lng !== after.lng)) {
+  if ('home' in patch && (before?.lat !== after?.lat || before?.lng !== after?.lng)) {
     refreshDistances(next, before).catch((e) => console.error('[home] drive-time refresh', e.message));
   }
   res.json(forCaller(next));
@@ -99,7 +99,7 @@ router.put('/settings', (req, res) => {
 // allowlist (lib/guest.js is default-deny), so the shared link can neither
 // geocode nor read home base.
 
-// Free-form text ("Fishers IN", "46037", a street address) → up to 5
+// Free-form text ("Springfield IL", "62701", a street address) → up to 5
 // candidates via Nominatim, cached for months and throttled to 1 req/s
 // (lib/geocode.js). Failure reports plainly; it never clears anything.
 router.get('/geocode', h(async (req, res) => {
@@ -129,8 +129,8 @@ router.get('/geocode/reverse', h(async (req, res) => {
 
 // Clear home base: wipe the stored location and the cache rows derived from
 // it (its drive times, and the geocoder lookups that found it; other people's
-// lookups stay), then fall back to the app default and re-measure drive times
-// from there in the background.
+// lookups stay). With no home base, no drive time is shown until a new one
+// is set.
 router.delete('/home', h(async (req, res) => {
   const before = homeBase(getSettings());
   const own = get('SELECT value FROM user_settings WHERE user_id = ? AND key = ?', currentUserId(), 'home');

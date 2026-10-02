@@ -278,8 +278,9 @@ Keys are read once at startup, so after editing `.env`, restart the server. Then
 Settings to confirm the keys are connected, set your theater and home base, hit Refresh,
 and rate about twenty movies so the taste side of the scoring has something to work with.
 
-Out of the box the primary theater, the home base and `OWNER_NAME` in `.env.example` are
-mine. Change the theater and home base in Settings and the name in `.env`.
+Out of the box the primary theater and `OWNER_NAME` in `.env.example` are mine. There's no
+home base until you set one, so drive times stay hidden until then. Change the theater and
+set a home base in Settings, and change the name in `.env`.
 
 `npm run dev` does the same with auto-reload. Every reload is a fresh start, and every
 start runs the database migrations against `data/reelpicks.db`, so I don't point it at

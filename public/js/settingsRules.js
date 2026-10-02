@@ -38,7 +38,7 @@ export function numberProblem(rule, raw) {
 
 // Every problem in a settings patch, as [{ key, message }]. Keys the patch
 // doesn't carry aren't checked. A home base may leave both coordinates blank
-// (the app default) but not just one.
+// (no home base) but not just one.
 export function settingsProblems(patch) {
   const out = [];
   for (const [key, rule] of Object.entries(NUMBER_RULES)) {

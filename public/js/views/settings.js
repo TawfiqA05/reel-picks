@@ -303,7 +303,7 @@ export async function render(root, params, ctx) {
     setGeoStatus(`Found ${r.label} (${r.lat}, ${r.lng}). Save settings to keep it.`);
   };
 
-  const placeIn = h('input', { class: 'input', type: 'search', placeholder: 'City, ZIP or address', 'aria-label': 'Look up a place: city and state, ZIP, or address, like Fishers IN' });
+  const placeIn = h('input', { class: 'input', type: 'search', placeholder: 'City, ZIP or address', 'aria-label': 'Look up a place: city and state, ZIP, or address, like Springfield IL' });
   const lookupBtn = h('button', { class: 'btn' }, 'Look up');
   const lookup = async () => {
     const q = placeIn.value.trim();
@@ -385,7 +385,7 @@ export async function render(root, params, ctx) {
       if (seq !== geoSeq) return;
       homeLabelIn.value = ''; homeLat.value = ''; homeLng.value = ''; placeIn.value = '';
       clear(geoResults);
-      setGeoStatus(`Cleared. The stored location, cached lookups, and cached drive times are gone. Drive times now measure from the app default (${r.home?.label || 'app default'}).`);
+      setGeoStatus('Cleared. The stored location, cached lookups, and cached drive times are gone. Drive times stay hidden until you set a home base again.');
       toast('Home base cleared');
       ctx.refreshStatus();
     } catch (e) { toast(e.message, 'error'); }
@@ -443,6 +443,7 @@ export async function render(root, params, ctx) {
   // Demo mode: the made-up home base stays as it is.
   if (DEMO) for (const input of [homeLabelIn, homeLat, homeLng]) input.disabled = true;
   page.appendChild(card('Home base',
+    status?.home ? null : h('p', { class: 'muted small' }, 'No home base yet. Set one and drive times show next to each theater.'),
     DEMO ? offLine() : h('div', { class: 'row-gap geo-row' }, placeIn, lookupBtn, locBtn),
     geoStatus,
     geoResults,

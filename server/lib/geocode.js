@@ -48,7 +48,7 @@ function unexpected(r) {
   return new Error(`Unexpected geocoder response: ${JSON.stringify(r).slice(0, 120)}`);
 }
 
-// "Fishers, IN" from a Nominatim record: the most local named place plus the
+// "Springfield, IL" from a Nominatim record: the most local named place plus the
 // US state code (ISO3166-2 "US-IN" → "IN"); falls back to the first parts of
 // display_name for anything that doesn't fit that mold.
 function shortLabel(r) {

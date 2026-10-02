@@ -124,6 +124,9 @@ function buildPage(data, status, ctx, state, actions) {
     page.appendChild(onboardingBanner(ctx));
   }
 
+  // No home base yet: ask for one, since drive times stay hidden until then.
+  if (!guest && status?.user && !status.home && !homeAskOff(status)) page.appendChild(homeBanner(status));
+
   // "Did you see <film>?" the morning after a plan, and picks sent to you.
   // Empty, it takes no room.
   if (!guest) page.appendChild(inbox(ctx, { onChange: () => actions.answered?.() }));
@@ -312,6 +315,29 @@ function skeleton() {
     h('div', { class: 'day-picker' }, ...Array.from({ length: 7 }, () => h('div', { class: 'sk day-btn' }))),
     h('div', { class: 'pick-grid' }, card(), card(), card()),
   );
+}
+
+// A new friend has no home base, nor does anyone after Clear home base.
+// "Not now" keeps the ask away on this device, for this person.
+const HOME_ASK = 'rp.homeAsk:';
+function homeAskOff(status) {
+  try { return localStorage.getItem(HOME_ASK + status.user.id) === 'off'; } catch { return false; }
+}
+function homeBanner(status) {
+  const box = h('div', { class: 'banner home-ask' },
+    h('div', {},
+      h('div', { class: 'banner-title' }, 'Set your home'),
+      h('div', { class: 'banner-sub' }, 'Drive times to your theaters show once you do.'),
+    ),
+    h('div', { class: 'row-gap' },
+      h('button', { class: 'link-btn', type: 'button', onClick: () => {
+        try { localStorage.setItem(HOME_ASK + status.user.id, 'off'); } catch { /* storage off: it asks again next time */ }
+        box.remove();
+      } }, 'Not now'),
+      h('a', { class: 'btn', href: '#/settings' }, 'Set home'),
+    ),
+  );
+  return box;
 }
 
 function onboardingBanner(ctx) {

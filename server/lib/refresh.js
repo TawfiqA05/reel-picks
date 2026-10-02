@@ -451,6 +451,7 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
       for (const uid of activeUserIds()) {
         const s = getSettings({ userId: uid });
         const home = homeBase(s);
+        if (!home) continue;
         for (const t of followedTheatres(s).filter((x) => pulled.has(x.id))) {
           await safe(theatreDistance(t.id, home), (e) => log.errors.push(`Drive time ${t.short}${uid === OWNER_ID ? '' : ` (friend ${uid})`}: ${e.message}`));
         }

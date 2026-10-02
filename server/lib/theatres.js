@@ -2,7 +2,7 @@
 // plus any extras the user added, in their order. Also the drive-time lookup
 // from home, computed once per theatre and cached for a year. Home coordinates
 // only ever leave the app rounded to ~1 km (see outboundHome below).
-import { get, all, getSettings, updateSettings, run, DEFAULT_SETTINGS } from '../db.js';
+import { get, all, getSettings, updateSettings, run } from '../db.js';
 import { OWNER_ID } from './user.js';
 import * as amc from './amc.js';
 import { cachedJson, fetchJson, bustCache } from './cache.js';
@@ -180,18 +180,16 @@ function haversineMiles(a, b) {
   return 2 * EARTH_MI * Math.asin(Math.sqrt(s));
 }
 
+// A person's home base, or null while they have none (a new friend, or after
+// Clear home base): then no drive time is measured or shown for them.
 export function homeBase(settings = getSettings()) {
   const h = settings.home || {};
-  const d = DEFAULT_SETTINGS.home;
   // null / '' mean "unset" (Number('') is 0, which would be a real coordinate).
   const num = (v) => (v == null || v === '' ? NaN : Number(v));
   const lat = num(h.lat);
   const lng = num(h.lng);
-  return {
-    label: h.label || d.label,
-    lat: Number.isFinite(lat) ? lat : d.lat,
-    lng: Number.isFinite(lng) ? lng : d.lng,
-  };
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { label: h.label || 'Home', lat, lng };
 }
 
 const round2 = (v) => Math.round(v * 100) / 100;
@@ -217,7 +215,7 @@ function shapeDistance({ miles, minutes, estimated }) {
 // and falls back to a straight-line estimate scaled for suburban roads so the
 // label still means something offline. Cached a year per (theatre, home).
 export async function theatreDistance(theatreId, home = homeBase()) {
-  if (!theatreId) return null;
+  if (!theatreId || !home) return null;
   const o = outboundHome(home); // rounded origin: the only form that goes out
   return cachedJson(geoKey(theatreId, o), 365 * 86400, async () => {
     const t = await amc.theatreDetail(theatreId);
@@ -243,7 +241,7 @@ export async function theatreDistance(theatreId, home = homeBase()) {
 // Synchronous read of an already-computed distance (request paths never hit
 // the network for this; the refresh computes it).
 export function readDistance(theatreId, home = homeBase()) {
-  if (!theatreId) return null;
+  if (!theatreId || !home) return null;
   const row = get('SELECT value FROM cache WHERE key = ?', geoKey(theatreId, outboundHome(home)));
   if (!row) return null;
   try { return JSON.parse(row.value); } catch { return null; }
@@ -261,6 +259,6 @@ export function refreshDistances(settings = getSettings(), oldHome = null) {
   }
   const home = homeBase(settings);
   return Promise.allSettled(
-    followedTheatres(settings).filter((t) => t.id).map((t) => theatreDistance(t.id, home)),
+    followedTheatres(settings).filter((t) => t.id && home).map((t) => theatreDistance(t.id, home)),
   );
 }
