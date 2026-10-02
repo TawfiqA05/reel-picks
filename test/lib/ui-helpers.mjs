@@ -590,7 +590,7 @@ export function contrastProbe({ scope = null } = {}) {
 // Hero text over artwork: marks each text element in a hero that sits straight
 // on the art (no fill of its own between it and the hero), returns their boxes
 // and colours, and hides their glyphs so a screenshot shows only what's behind.
-export function heroTextBoxes() {
+function heroTextBoxes() {
   const boxes = [];
   for (const hero of document.querySelectorAll('.hero-pick, .detail-hero')) {
     const content = hero.querySelector('.hero-content'); if (!content) continue;
@@ -804,7 +804,7 @@ export async function platformFonts(page) {
 // A solid PNG of any size (zlib, no dependency).
 const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
 const crc32 = (buf) => { let c = 0xffffffff; for (const b of buf) c = crcTable[(c ^ b) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
-export function solidPng(width, height, [r, g, b]) {
+function solidPng(width, height, [r, g, b]) {
   const chunk = (type, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type), data]); const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(td)); return Buffer.concat([len, td, crc]); };
   const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4); ihdr[8] = 8; ihdr[9] = 2;
   const row = Buffer.alloc(1 + width * 3); for (let x = 0; x < width; x++) { row[1 + x * 3] = r; row[2 + x * 3] = g; row[3 + x * 3] = b; }

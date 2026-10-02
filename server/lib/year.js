@@ -27,12 +27,12 @@ import { currentUser, currentUserId, OWNER_ID } from './user.js';
 import { ownerName } from './guest.js';
 import { userName } from './accounts.js';
 import { notesOf } from './notes.js';
-import { groupKeys } from './recommend.js';
+import { groupKeys, parseList as parse } from './recommend.js';
 import { planOf } from '../../public/js/plans.js';
 
 // A film counts toward the full recap from this many films in the year;
 // under it the recap is the short, friendly version.
-export const FULL_FROM = 5;
+const FULL_FROM = 5;
 const SHARE_POSTERS = 4;
 
 // Is the recap open today, and for which year?
@@ -55,7 +55,6 @@ export function localDay(s) {
   return Number.isFinite(t) ? localYMD(new Date(t)) : null;
 }
 
-const parse = (v) => { try { return (typeof v === 'string' ? JSON.parse(v) : v) || []; } catch { return []; } };
 const monthsOf = (year, lastMonth) => Array.from({ length: lastMonth }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
 
 // The films the person saw or rated in `year`, one entry each, with what the
@@ -147,7 +146,7 @@ function planYear(seen, settings, year, now) {
 }
 
 // The caller's recap for `year`. Everything in it is theirs.
-export function buildRecap(year, { now = new Date(), preview = false } = {}) {
+function buildRecap(year, { now = new Date(), preview = false } = {}) {
   const uid = currentUserId();
   const me = currentUser();
   const settings = getSettings();

@@ -6,7 +6,7 @@ import { h, toast } from './ui.js';
 
 export const DEMO = document.documentElement.hasAttribute('data-demo');
 export const DEMO_REPO = 'https://github.com/TawfiqA05/reel-picks';
-export const OFF_TEXT = 'Off in the demo.';
+const OFF_TEXT = 'Off in the demo.';
 
 export const offLine = (cls = '') => h('p', { class: `muted small demo-off${cls ? ` ${cls}` : ''}` }, OFF_TEXT);
 

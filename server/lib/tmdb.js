@@ -243,7 +243,7 @@ export async function searchPeople(query, { gate = null } = {}) {
 }
 
 // Compact shape for a person in search: the films they're known for, not TV.
-export function lightPerson(p) {
+function lightPerson(p) {
   return {
     id: p.id,
     name: p.name,
@@ -279,8 +279,8 @@ export function lightMovie(r) {
 }
 
 // A YouTube trailer, best first: type Trailer over Teaser over anything else,
-// then English, then official, then the newest. Exported for tests.
-export function pickTrailer(videos) {
+// then English, then official, then the newest.
+function pickTrailer(videos) {
   const yt = (videos?.results || []).filter((v) => v.site === 'YouTube' && v.key);
   const typeRank = (v) => (v.type === 'Trailer' ? 0 : v.type === 'Teaser' ? 1 : 2);
   const best = yt.sort((a, b) => typeRank(a) - typeRank(b)
@@ -300,7 +300,7 @@ function pickMpaa(releaseDates) {
 // The US theatrical release (TMDB types 2 limited, 3 theatrical), earliest
 // first. TMDB's own release_date is often a festival or foreign premiere, which
 // says nothing about when a US audience can see the film.
-export function pickUsRelease(releaseDates) {
+function pickUsRelease(releaseDates) {
   const us = (releaseDates?.results || []).find((r) => r.iso_3166_1 === 'US');
   const dates = (us?.release_dates || [])
     .filter((d) => d.type === 2 || d.type === 3)

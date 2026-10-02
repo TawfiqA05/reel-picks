@@ -8,12 +8,10 @@
 // density horizon); this module turns "last showtime" + "horizon" into a label
 // that commits ("Through Thu · 3 days left") only when the movie's last date
 // falls clearly short of the horizon, and otherwise says "through at least".
-import { daysApart } from './leaving.js';
-
-const asDate = (ymd) => new Date(`${ymd}T00:00:00`);
+import { daysApart, asDate } from './leaving.js';
 
 // "today" / "tomorrow" / "Thu" (inside the coming week) / "Sep 4" (beyond).
-export function dateWord(ymd, today) {
+function dateWord(ymd, today) {
   const d = daysApart(today, ymd);
   if (d == null) return '';
   if (d <= 0) return 'today';

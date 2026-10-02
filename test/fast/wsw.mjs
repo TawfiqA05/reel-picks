@@ -17,7 +17,6 @@
 //   same      suggesting changes no pick and no score anywhere else
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import path from 'node:path';
 import { suite } from '../lib/check.mjs';
 import { openWorld, tempDir, until, GUEST, PRELOAD } from '../lib/world.mjs';
 

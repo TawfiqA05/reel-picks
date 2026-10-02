@@ -1,7 +1,6 @@
 // A suite's checks. Each check has a stable name; the suite prints one line per
 // check and, last, one machine-readable line the runner reads (@@RESULT).
 // A step that throws counts as one failed check named after the step.
-import path from 'node:path';
 
 export function suite(name) {
   const t0 = Date.now();
@@ -48,5 +47,3 @@ export function suite(name) {
   };
   return { name, check, step, finish, world, get current() { return current; } };
 }
-
-export const suiteName = (url) => path.basename(new URL(url).pathname, '.mjs');

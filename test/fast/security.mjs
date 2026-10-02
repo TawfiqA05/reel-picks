@@ -120,7 +120,7 @@ export const ROUTES = [
   ['POST', '/api/push/weekly/send', 'owner', {}],
 ];
 // App-level routes in server/index.js, each checked by its own section below.
-export const APP_ROUTES = [
+const APP_ROUTES = [
   ['GET', '/?owner=<token>', 'owner unlock'],
   ['GET', '/?invite=<token>', 'invite page'],
   ['POST', '/invite/join', 'invite join'],
@@ -133,7 +133,7 @@ export const APP_ROUTES = [
 
 // The routes declared in the source, as "METHOD /path" (router paths without
 // /api; app-level ones by their own names).
-export function declaredRoutes(routesSrc, indexSrc) {
+function declaredRoutes(routesSrc, indexSrc) {
   const out = [...routesSrc.matchAll(/router\.(get|post|put|patch|delete|all)\(\s*['"`]([^'"`]+)['"`]/g)].map((m) => `${m[1].toUpperCase()} ${m[2]}`);
   for (const m of indexSrc.matchAll(/app\.(get|post|put|patch|delete|all)\(\s*(\[[^\]]*\]|['"`][^'"`]+['"`])/g)) {
     const paths = [...m[2].matchAll(/['"`]([^'"`]+)['"`]/g)].map((x) => x[1]);

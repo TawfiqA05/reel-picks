@@ -365,7 +365,7 @@ function byScore(a, b) {
 // sheets share GROUP_KEYS and statsRows(), so a sheet's films are exactly the
 // films its row counted.
 const TOP_SHOWN = 10;
-const parseList = (v) => { try { return (typeof v === 'string' ? JSON.parse(v) : v) || []; } catch { return []; } };
+export const parseList = (v) => { try { return (typeof v === 'string' ? JSON.parse(v) : v) || []; } catch { return []; } };
 const GROUP_KEYS = {
   genre: (r) => parseList(r.genres),
   director: (r) => [r.director],

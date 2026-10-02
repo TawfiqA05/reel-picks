@@ -5,7 +5,7 @@ import { mean, daysBetween, localYMD } from './util.js';
 
 // raw: { imdb: 0-10|null, rt: 0-100|null, metacritic: 0-100|null }
 // tmdbRating: 0-10|null (audience-side signal from TMDB)
-export function computePublicScore(raw = {}, tmdbRating = null) {
+function computePublicScore(raw = {}, tmdbRating = null) {
   const { imdb = null, rt = null, metacritic = null } = raw;
   const sources = [];
   const norm = {};

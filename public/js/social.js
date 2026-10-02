@@ -59,7 +59,7 @@ function whenSentence(p) {
   return /^(Tonight|Today|Tomorrow|Last night|Yesterday)$/.test(w) ? `${w.toLowerCase()} at ${p.time}` : `on ${w} at ${p.time}`;
 }
 // "You're going · Tonight 7:10 PM · Maple Grove" ("You planned" once it's started).
-export const planText = (p) => [p.started ? 'You planned' : 'You\'re going', whenText(p), p.theatre].filter(Boolean).join(' · ');
+const planText = (p) => [p.started ? 'You planned' : 'You\'re going', whenText(p), p.theatre].filter(Boolean).join(' · ');
 const goingText = (g) => `${g.name} is going ${whenText(g)}${g.theatre ? ` · ${g.theatre}` : ''}`;
 
 // ---- live lines ------------------------------------------------------------
@@ -152,20 +152,20 @@ async function cancel(film, ctx, { quiet = false } = {}) {
 // The showings a sheet offers, per theater: from a Picks entry (this week's
 // days at the theater it's scored at, and each other theater's own) or from
 // the movie page (every published day, per theater).
-export function groupsFromEntry(entry) {
+function groupsFromEntry(entry) {
   const out = [{ theatre: entry.theatre || null, days: entry.showtimesByDay || [] }];
   for (const t of entry.theatres || []) if (t.showtimesByDay) out.push({ theatre: t, days: t.showtimesByDay });
   return out;
 }
-export const groupsFromDetail = (d) => (d.showtimesByTheatre || []).map((g) => ({ theatre: g.theatre, days: g.showtimesByDay || [] }));
+const groupsFromDetail = (d) => (d.showtimesByTheatre || []).map((g) => ({ theatre: g.theatre, days: g.showtimesByDay || [] }));
 const upcoming = (groups) => groups
   .map((g) => ({ ...g, days: g.days.map((d) => ({ ...d, showtimes: (d.showtimes || []).filter((s) => !s.past && s.id) })).filter((d) => d.showtimes.length) }))
   .filter((g) => g.days.length);
-export const hasUpcoming = (groups) => upcoming(groups).length > 0;
+const hasUpcoming = (groups) => upcoming(groups).length > 0;
 
 // "When are you going?": every showing still to come, by theater and day, as
 // buttons. The one planned is pressed; picking another moves the plan.
-export function openPlanPicker(film, groups, ctx) {
+function openPlanPicker(film, groups, ctx) {
   const home = document.activeElement?.closest?.('[data-plan-film]');
   const list = upcoming(groups);
   const multi = list.length > 1;
@@ -365,7 +365,7 @@ export function sendButton(film, ctx, { words = false } = {}) {
 let noteSeq = 0;
 // Owner: any friend (by name). Friend: the owner, the only one they can send
 // to. An optional plain-text note of up to 140 characters.
-export async function openSendSheet(film, ctx) {
+async function openSendSheet(film, ctx) {
   const s = state || await loadSocial(ctx);
   const recips = s?.send?.recipients || [];
   const max = s?.send?.noteMax || 140;

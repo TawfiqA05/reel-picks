@@ -14,7 +14,7 @@ export const MAX_THEATRES = 5;
 
 // Across everyone: the refresh pulls every active user's followed theatres,
 // capped so a refresh stays around ~110 AMC calls.
-export const MAX_SHARED_THEATRES = 8;
+const MAX_SHARED_THEATRES = 8;
 
 // "AMC Castleton Square 14" -> "Castleton"; "AMC Indianapolis 17" -> "Indianapolis".
 // Used wherever a theatre is named inside a sentence or a chip.
@@ -86,7 +86,7 @@ function assertRoomFor(id) {
 // (snapshots, departures) is deliberately KEPT: it can't be rebuilt, the
 // per-theatre queries ignore theatres that aren't followed, and it comes back
 // intact if the theatre is followed again.
-export function purgeTheatreData(theatreId) {
+function purgeTheatreData(theatreId) {
   if (!theatreId) return;
   run('DELETE FROM showtimes WHERE theatre_id = ?', theatreId);
   bustCache(`${amc.SHOWTIMES_CACHE_PREFIX}${theatreId}:`);
@@ -200,14 +200,11 @@ const round2 = (v) => Math.round(v * 100) / 100;
 // of latitude, ~0.9 km of longitude around Indianapolis). Drive times come out
 // the same within a minute or two, and neither OSRM nor any cache key ever
 // carries a street-level home coordinate.
-export function outboundHome(home = homeBase()) {
+function outboundHome(home = homeBase()) {
   return { lat: round2(home.lat), lng: round2(home.lng) };
 }
 
 const geoKey = (theatreId, o) => `geo:drive:${theatreId}:${o.lat.toFixed(2)},${o.lng.toFixed(2)}`;
-// Installs from before the rounding keyed this cache by the precise origin;
-// read those too so existing drive times stay visible until recomputed.
-const legacyGeoKey = (theatreId, home) => `geo:drive:${theatreId}:${home.lat.toFixed(4)},${home.lng.toFixed(4)}`;
 
 function shapeDistance({ miles, minutes, estimated }) {
   const mi = Math.round(miles);
@@ -247,8 +244,7 @@ export async function theatreDistance(theatreId, home = homeBase()) {
 // the network for this; the refresh computes it).
 export function readDistance(theatreId, home = homeBase()) {
   if (!theatreId) return null;
-  const row = get('SELECT value FROM cache WHERE key = ?', geoKey(theatreId, outboundHome(home)))
-    || get('SELECT value FROM cache WHERE key = ?', legacyGeoKey(theatreId, home));
+  const row = get('SELECT value FROM cache WHERE key = ?', geoKey(theatreId, outboundHome(home)));
   if (!row) return null;
   try { return JSON.parse(row.value); } catch { return null; }
 }
@@ -262,7 +258,6 @@ export function refreshDistances(settings = getSettings(), oldHome = null) {
   if (oldHome) {
     const o = outboundHome(oldHome);
     run('DELETE FROM cache WHERE key LIKE ?', `geo:drive:%:${o.lat.toFixed(2)},${o.lng.toFixed(2)}`);
-    run('DELETE FROM cache WHERE key LIKE ?', `geo:drive:%:${oldHome.lat.toFixed(4)},${oldHome.lng.toFixed(4)}`);
   }
   const home = homeBase(settings);
   return Promise.allSettled(

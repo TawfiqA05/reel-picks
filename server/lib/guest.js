@@ -100,7 +100,7 @@ export function guestAllowed(req) {
 
 // ---- owner unlock -------------------------------------------------------
 
-export function ownerToken() {
+function ownerToken() {
   return (process.env.OWNER_TOKEN || '').trim();
 }
 

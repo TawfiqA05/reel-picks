@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { suite } from '../lib/check.mjs';
 import { openWorld, REPO } from '../lib/world.mjs';
-import { launch, open, go, settle, VISIBLE } from '../lib/browser.mjs';
+import { launch, open, go, VISIBLE } from '../lib/browser.mjs';
 import { parse, over, ratio, PNG, platformFonts, extras, waitDialog, realSizePosters } from '../lib/ui-helpers.mjs';
 import { buttonsProbe, outlined, BUZZ, wordScan, wordProblems, paintedColours, paletteNow, inPalette } from '../lib/design-probes.mjs';
 import * as C from '../lib/catalog.mjs';

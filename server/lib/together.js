@@ -27,15 +27,15 @@ import { OWNER_ID, runAs } from './user.js';
 import { ownerName } from './guest.js';
 import { localYMD, addDays, timeLabel } from './util.js';
 
-export const WINDOW_DAYS = 14;
-export const WATCHLIST_MATCH = 70;
-export const BOTH_MATCH = 75;
+const WINDOW_DAYS = 14;
+const WATCHLIST_MATCH = 70;
+const BOTH_MATCH = 75;
 const SHOWTIMES_SHOWN = 3;
 const EVENING_HOUR = 17;
 
 export const NOT_FOUND = { status: 404, body: { error: 'Not found.' } };
 
-export const LABELS = {
+const LABELS = {
   both: 'On both watchlists',
   mine: 'On your watchlist · great match for them',
   theirs: 'On their watchlist · great match for you',

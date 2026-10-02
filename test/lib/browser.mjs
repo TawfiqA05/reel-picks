@@ -11,7 +11,7 @@ import { reqEntries } from './world.mjs';
 
 const FONTS = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'fixtures', 'fonts');
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
-export const HEIGHT = (w) => ({ 320: 568, 375: 812, 390: 844, 430: 932, 768: 1024, 1024: 768, 1280: 800, 1440: 900 }[w] || 844);
+const HEIGHT = (w) => ({ 320: 568, 375: 812, 390: 844, 430: 932, 768: 1024, 1024: 768, 1280: 800, 1440: 900 }[w] || 844);
 
 // Playwright's own browser build when it is installed; otherwise the newest
 // build of that browser in Playwright's cache (installed by another version).
@@ -145,16 +145,6 @@ export async function toastText(page, re = null, timeout = 8000) {
 
 // Visible: laid out and not hidden by any ancestor (for page.evaluate).
 export const VISIBLE = `(el) => { if (!el || el.closest('[hidden]')) return false; const r = el.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return false; for (let a = el; a; a = a.parentElement) { const s = getComputedStyle(a); if (s.display === 'none' || s.visibility === 'hidden' || Number(s.opacity) === 0) return false; } return true; }`;
-
-// WCAG contrast helpers, for page.evaluate (addInitScript) use.
-export const COLOR_LIB = `
-window.__rp = window.__rp || {};
-__rp.parse = (c) => { const m = String(c).match(/rgba?\\(([^)]+)\\)/); if (!m) return null; const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 }; };
-__rp.lum = ({ r, g, b }) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
-__rp.ratio = (a, b) => { const x = __rp.lum(a), y = __rp.lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
-__rp.over = (top, under) => ({ r: top.r * top.a + under.r * (1 - top.a), g: top.g * top.a + under.g * (1 - top.a), b: top.b * top.a + under.b * (1 - top.a), a: 1 });
-__rp.bgOf = (el) => { const stack = []; for (let a = el; a; a = a.parentElement) { const c = __rp.parse(getComputedStyle(a).backgroundColor); if (c && c.a > 0) { stack.push(c); if (c.a >= 1) break; } } let col = { r: 255, g: 255, b: 255, a: 1 }; if (!stack.length || stack[stack.length - 1].a < 1) col = __rp.parse(getComputedStyle(document.body).backgroundColor) || col; for (let i = stack.length - 1; i >= 0; i--) col = __rp.over(stack[i], col); return col; };
-`;
 
 // Picks files in an import input and waits until `done` (a page predicate)
 // holds. Never waits for good and never fails quietly: after `timeout` it

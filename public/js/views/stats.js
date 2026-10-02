@@ -1,6 +1,6 @@
 // Stats: movie-plan usage and savings (or ticket spend), ratings, recommendation hit-rate + tuning tip.
 import { api } from '../api.js';
-import { h, clear, spinner, money, pct, makeStars, toast, openModal, icon, withStars, emptyState } from '../ui.js';
+import { h, clear, spinner, money, pct, makeStars, toast, openModal, icon, withStars, emptyState, thumb } from '../ui.js';
 import { starRater, watchlistButton, opensBadge } from './components.js';
 import { noteSlot, noteLine } from '../notes.js';
 import { filterBox } from '../filter.js';
@@ -191,7 +191,6 @@ function barList(items, id, kind, ctx) {
 }
 
 // A small TMDB thumbnail: the list only ever shows 40px posters.
-const thumb = (url) => (url ? url.replace(/\/w\d+\//, '/w92/') : null);
 
 const thumbOf = (f) => (f.poster
   ? h('img', { class: 'sheet-thumb', loading: 'lazy', decoding: 'async', src: thumb(f.poster), alt: '', width: '40', height: '60' })

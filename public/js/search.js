@@ -9,7 +9,7 @@
 // the same results and the same scroll, per person on this device, for 30
 // minutes. Clearing the box, the close button, Escape or a tap outside end it.
 import { api } from './api.js';
-import { h, clear, toast, icon, openModal, star } from './ui.js';
+import { h, clear, toast, icon, openModal, star, thumb } from './ui.js';
 import { query as prepQuery } from './fuzzy.js';
 import { streamLine, CREDIT } from './stream.js';
 import { openWhatToWatch } from './wsw.js';
@@ -18,7 +18,6 @@ import { keeper, resumable, uidOf, here } from './keep.js';
 const DEBOUNCE_MS = 300;
 const DWELL_MS = 2000; // results looked at this long count as a search, even if typed over later
 const MIN_CHARS = 2;
-const thumb = (url) => (url ? url.replace(/\/w\d+\//, '/w92/') : null);
 // A face for a 44px circle: TMDB's 45px-wide size on a 1x screen, the 185 one on anything sharper.
 const faceUrl = (url) => (url && window.devicePixelRatio > 1 ? url : url?.replace(/\/w\d+\//, '/w45/') || null);
 const yearOf = (y) => (y ? ` ${y}` : '');

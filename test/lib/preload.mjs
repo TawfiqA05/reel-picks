@@ -117,7 +117,7 @@ if (REQ_LOG) {
 // ---------------------------------------------------------------- saved TMDB answers
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const SAVED_DIR = path.join(HERE, '..', 'fixtures', 'tmdb');
-export const savedKey = (u) => {
+const savedKey = (u) => {
   const p = [...u.searchParams.entries()].filter(([k]) => k !== 'api_key').sort(([a], [b]) => a.localeCompare(b));
   return `${u.pathname}?${new URLSearchParams(p)}`;
 };

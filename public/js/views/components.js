@@ -5,7 +5,7 @@ import { api } from '../api.js';
 import { h, clear, poster, matchBadge, badge, makeStars, toast, icon, spinner, openModal, withStars } from '../ui.js';
 import { paintRow, heroPlan, goingLine } from '../social.js';
 
-export function fmtRuntime(min) {
+function fmtRuntime(min) {
   if (!min) return null;
   const hh = Math.floor(min / 60);
   const mm = min % 60;
@@ -28,7 +28,7 @@ export function isOldRelease(m) {
   return Boolean(m?.year) && m.year < new Date().getFullYear() - 1;
 }
 
-export function backBadge(m) {
+function backBadge(m) {
   return isOldRelease(m) ? badge('Back in theaters', 'back') : null;
 }
 
@@ -214,7 +214,7 @@ function showtimeTitle(st) {
 
 // ---- runway -------------------------------------------------------------
 // How much longer a film is on at a theater. The words are the server's.
-export function runwayBadge(runway, { theatre = null } = {}) {
+function runwayBadge(runway, { theatre = null } = {}) {
   if (!runway) return null;
   const text = runway.formats?.text || runway.label;
   return h('span', { class: `runway ${runway.kind}${runway.urgent ? ' urgent' : ''}`, title: runway.detail || runway.label },
@@ -358,7 +358,7 @@ export function ownerTools(entry, ctx, { onHide = null } = {}) {
 // "Not for me": hides the film from every recommendation (never from the full
 // list, never from the scores). `onHide(entry, card)` does the work; the card
 // is the element to fade out. `words` gives it its word (the hero).
-export function notForMeButton(entry, onHide, { words = false } = {}) {
+function notForMeButton(entry, onHide, { words = false } = {}) {
   const btn = h('button', {
     class: words ? 'btn danger not-for-me' : 'icon-btn danger not-for-me', type: 'button',
     'aria-label': `Not for me, hide ${entry.title}`, title: 'Not for me. Hide it from your picks',
@@ -373,14 +373,14 @@ export function notForMeButton(entry, onHide, { words = false } = {}) {
 }
 
 // ---- which showtime -------------------------------------------------------
-export function daySlots(entry, day) {
+function daySlots(entry, day) {
   const days = entry.showtimesByDay || [];
   return (day ? days.find((d) => d.date === day)?.showtimes : null) || [];
 }
 
 // Best showtime still to come on a given day: prefer one inside a preferred
 // window, then IMAX, then whichever starts soonest.
-export function pickBest(list) {
+function pickBest(list) {
   const live = list.filter((s) => !s.past);
   if (!live.length) return null;
   return [...live].sort((a, b) =>
@@ -391,7 +391,7 @@ export function pickBest(list) {
 
 // With nothing left on the chosen day: the best showing on the next day that
 // has one.
-export function nextShowing(entry, day) {
+function nextShowing(entry, day) {
   for (const d of entry.showtimesByDay || []) {
     if (day && d.date <= day) continue;
     const best = pickBest(d.showtimes || []);
@@ -411,7 +411,7 @@ function whenWord(st) {
 
 // The page's one main action: "Book 11:45 AM today · IMAX". Full width, no
 // chip inside. With nothing left that day, the next showing instead.
-export function bookButton(st) {
+function bookButton(st) {
   if (!st) return h('span', { class: 'btn wide book', 'aria-disabled': 'true' }, 'No showtimes listed');
   const fmt = formatName(st);
   return h('a', {
@@ -432,7 +432,7 @@ export function seatLine(st) {
 
 // "Next: Fri 7:00 PM" and its Book link, for a card or row with nothing on
 // the chosen day. With nothing later either, says so.
-export function nextLine(entry, day) {
+function nextLine(entry, day) {
   const st = nextShowing(entry, day);
   if (!st) {
     const when = dayLabel(day);

@@ -4,10 +4,9 @@
 // friends and the guest, js/views/home.js) with a spinner until it's done.
 // Touch only; everyone can also just reopen the page. Reduced motion: the
 // arrow fades in without turning or moving.
-import { h, icon } from './ui.js';
+import { h, icon, reduced } from './ui.js';
 
 const LINE = 72; // px of pull that means "refresh"
-const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let detachCurrent = null;
 

@@ -75,7 +75,7 @@ export function touchLastSeen(user) {
 
 // A usable-looking token: what newToken() makes (base64url, 43 chars). Anything
 // else is never looked up, and never echoed back into a page.
-export const isTokenShape = (t) => typeof t === 'string' && /^[A-Za-z0-9_-]{20,100}$/.test(t);
+const isTokenShape = (t) => typeof t === 'string' && /^[A-Za-z0-9_-]{20,100}$/.test(t);
 
 // Who an invite is for, without using it up (the Join page). Null for an
 // unknown, used or revoked token.

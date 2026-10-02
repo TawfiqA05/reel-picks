@@ -648,7 +648,7 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
 //   showtimes   AMC answered for the primary theater, with no showtimes at all
 // Calls served from the 24h cache prove nothing either way. Without an AMC key
 // the app runs on TMDB alone by design, so showtimes are never checked.
-export function refreshProblems(log) {
+function refreshProblems(log) {
   const out = { refresh: null, showtimes: undefined };
   const amcSrc = log.sources?.amc;
   const primary = amcSrc?.theatres?.find((t) => t.isPrimary) || amcSrc?.theatres?.[0] || null;
@@ -683,7 +683,7 @@ function reportHealth(log) {
 // locks everyone's four (lib/lock.js); if the week's four still hasn't locked
 // after the last retry, it locks from the lineup that was kept.
 const RETRY_EVERY_MS = 3600 * 1000;
-export const RETRY_MAX = 6;
+const RETRY_MAX = 6;
 
 function afterRun(start, log, err) {
   try {

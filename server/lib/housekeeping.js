@@ -14,7 +14,7 @@
 import { db, dataDir, run, getSetting, setSetting } from '../db.js';
 import { volume, roomNeeded } from './backup.js';
 
-export const ALERTS_KEEP_DAYS = 90;
+const ALERTS_KEEP_DAYS = 90;
 
 export function afterNightlyBackup(now = new Date()) {
   try {

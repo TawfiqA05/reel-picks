@@ -149,7 +149,7 @@ export function reqEntries(server) {
 }
 
 // Every outside request the server made, from its network log.
-export function netEntries(server) {
+function netEntries(server) {
   try { return fs.readFileSync(server.netLog, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; }
 }
 
@@ -268,7 +268,7 @@ export async function buildBase(dir = tempDir('base')) {
   }
 }
 
-export function loadBase() {
+function loadBase() {
   const p = process.env.RP_TEST_BASE;
   if (!p) return null;
   try { return JSON.parse(fs.readFileSync(path.join(p, 'base.json'), 'utf8')); } catch { return null; }

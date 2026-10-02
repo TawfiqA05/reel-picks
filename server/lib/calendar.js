@@ -6,7 +6,7 @@
 // user's preview minutes, the same "be there by" the showtime chips show).
 import { get } from '../db.js';
 import { beThereByLabel, endTimeLabel } from './ranking.js';
-import { timeLabel } from './util.js';
+import { timeLabel, pad } from './util.js';
 
 // AMC names a theater's zone in words ("EASTERN TIME") next to its state.
 // Most of Indiana keeps its own zone name; Arizona has no daylight saving.
@@ -21,7 +21,7 @@ const ZONES = {
 
 // The theater's IANA zone, else the server's own (showtime math already
 // assumes the server runs in the theaters' zone; see README, TZ).
-export function theatreZone(record) {
+function theatreZone(record) {
   const word = String(record?.timezone || '').trim().split(/\s+/)[0]?.toUpperCase();
   const zone = ZONES[word]?.(record?.state || '');
   return zone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -38,7 +38,7 @@ export function theatreRecord(id) {
 
 const title = (s) => String(s || '').toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
 
-export function theatreAddress(record) {
+function theatreAddress(record) {
   if (!record) return '';
   return [record.address, title(record.city), title(record.state)].map((x) => String(x || '').trim()).filter(Boolean).join(', ');
 }
@@ -63,7 +63,6 @@ function fold(line) {
   return out.join('\r\n ');
 }
 
-const pad = (n) => String(n).padStart(2, '0');
 // "2026-09-26T19:45:00" -> "20260926T194500" (wall time, no zone).
 const wall = (d) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}`;
 const utcStamp = (d) => `${wall(d)}Z`;
@@ -85,7 +84,7 @@ function zoneAt(zone, instant) {
 // VTIMEZONE for a US zone: the offsets and names in January and July of the
 // event's year, switching on the US rules (second Sunday of March, first
 // Sunday of November, 2am). A zone without daylight time gets one block.
-export function vtimezone(zone, year) {
+function vtimezone(zone, year) {
   const winter = zoneAt(zone, new Date(Date.UTC(year, 0, 15, 12)));
   const summer = zoneAt(zone, new Date(Date.UTC(year, 6, 15, 12)));
   const lines = ['BEGIN:VTIMEZONE', `TZID:${zone}`];

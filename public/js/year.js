@@ -7,10 +7,8 @@
 // drawn on a canvas from this server's own poster copies (/api/year/poster),
 // so the canvas stays readable.
 import { api } from './api.js';
-import { h, clear, openModal, toast, icon, money, poster, withStars } from './ui.js';
+import { h, clear, openModal, toast, icon, money, poster, withStars, reduced, plural } from './ui.js';
 
-const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const monthName = (ym) => { const [y, m] = ym.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long' }); };
 const dayName = (ymd) => { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }); };
 // A rating as the app writes it (4.5★), and in words for a screen reader.
@@ -245,7 +243,7 @@ function fit(g, text, face, weight, size, maxW, min = 40) {
   return t;
 }
 
-export async function drawShare(c, recap, { preview = false } = {}) {
+async function drawShare(c, recap, { preview = false } = {}) {
   const css = getComputedStyle(document.documentElement);
   const v = (k) => css.getPropertyValue(k).trim();
   const display = v('--font-display');

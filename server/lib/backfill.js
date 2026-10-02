@@ -21,7 +21,7 @@ import { upsertFullMovie, upsertLightMovie } from './movies.js';
 import { currentUserId } from './user.js';
 import { DEMO } from '../demo/mode.js';
 
-export const PER_SECOND = 4;
+const PER_SECOND = 4;
 const BATCH = 20;
 const BATCH_PAUSE_MS = 2000;
 // A few ms of margin: Node timers can fire a millisecond early, and four calls
@@ -39,7 +39,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const WAITING = `FROM ratings r LEFT JOIN movies m ON m.tmdb_id = r.tmdb_id
   WHERE (m.tmdb_id IS NULL OR m.details_at IS NULL) AND m.details_missing IS NULL`;
 
-export function pendingCount() {
+function pendingCount() {
   return get(`SELECT COUNT(DISTINCT r.tmdb_id) AS n ${WAITING}`).n;
 }
 

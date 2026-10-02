@@ -40,8 +40,8 @@ export const PLANS = {
   },
 };
 export const PLAN_IDS = Object.keys(PLANS);
-export const DEFAULT_PLAN = 'amc-alist';
-export const PERIODS = ['week', 'month'];
+const DEFAULT_PLAN = 'amc-alist';
+const PERIODS = ['week', 'month'];
 
 // The plan in force for a user's settings, with its terms.
 export function planOf(settings = {}) {

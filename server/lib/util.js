@@ -15,7 +15,10 @@ export function jparse(s, fallback) {
   }
 }
 
-const pad = (n) => String(n).padStart(2, '0');
+// An Error the route answers with `status` as the HTTP status.
+export const status = (code, message) => Object.assign(new Error(message), { status: code });
+
+export const pad = (n) => String(n).padStart(2, '0');
 
 // Local (not UTC) YYYY-MM-DD — matters for "today" in the evening.
 export function localYMD(d = new Date()) {

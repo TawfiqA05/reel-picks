@@ -51,7 +51,7 @@ function unexpected(r) {
 // "Fishers, IN" from a Nominatim record: the most local named place plus the
 // US state code (ISO3166-2 "US-IN" → "IN"); falls back to the first parts of
 // display_name for anything that doesn't fit that mold.
-export function shortLabel(r) {
+function shortLabel(r) {
   const a = r?.address || {};
   const city = a.city || a.town || a.village || a.hamlet || a.municipality || a.suburb || a.county || null;
   const iso = String(a['ISO3166-2-lvl4'] || '');

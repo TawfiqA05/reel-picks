@@ -39,7 +39,7 @@ function hslToHex(h, s, l) {
 }
 
 // The dominant strong colour of an RGBA pixel buffer, or null.
-export function dominantColor({ data, width, height }) {
+function dominantColor({ data, width, height }) {
   const bins = new Map(); // hue bucket -> { n, h (x,y for circular mean), s, l }
   let counted = 0;
   const step = Math.max(1, Math.floor((width * height) / 4000));
@@ -96,7 +96,7 @@ function needing(limit) {
     ORDER BY playing DESC LIMIT ?`, limit);
 }
 
-export function storeColor(tmdbId, poster, color) {
+function storeColor(tmdbId, poster, color) {
   run('UPDATE movies SET poster_color = ?, poster_color_src = ? WHERE tmdb_id = ?', color || '-', poster, tmdbId);
 }
 

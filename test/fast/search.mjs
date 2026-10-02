@@ -23,7 +23,7 @@ const saved = new Map(fs.readdirSync(SAVED).filter((f) => f.endsWith('.json')).m
 }));
 const tmdbSaved = (p, params) => saved.get(`/3${p}?${new URLSearchParams(Object.entries(params).sort(([a], [b]) => a.localeCompare(b)))}`);
 
-export const FILMS = {
+const FILMS = {
   brave: 'Brave', interstelar: 'Interstellar', spiderman: 'Spider-Man', amelie: 'Amélie', 'only the brav': 'Only the Brave',
   dune: 'Dune', batman: 'Batman', godfather: 'The Godfather', 'toy story': 'Toy Story', barbie: 'Barbie',
   oppenheimer: 'Oppenheimer', joker: 'Joker', frozen: 'Frozen', alien: 'Alien', inception: 'Inception',

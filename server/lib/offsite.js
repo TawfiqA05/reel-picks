@@ -34,7 +34,7 @@ import { raiseLater, resolveLater } from './alerts.js';
 import { DEMO } from '../demo/mode.js';
 
 export const KEEP = 8;
-export const PREFIX = 'reel-picks/weekly/';
+const PREFIX = 'reel-picks/weekly/';
 const OURS = /^reel-picks\/weekly\/reelpicks-(\d{4}-\d{2}-\d{2})\.db$/;
 const NIGHTLY = /^reelpicks-(\d{4}-\d{2}-\d{2})\.db$/;
 const WEEKDAY = 0; // Sunday
@@ -43,7 +43,7 @@ const CHECK_MS = 60 * 1000;
 const RETRY_MS = 3600 * 1000;
 const TIMEOUT_MS = 10 * 60 * 1000;
 
-export function offsiteConfig() {
+function offsiteConfig() {
   if (DEMO) return null; // demo mode keeps no backup
   const v = (k) => (process.env[k] || '').trim();
   const endpoint = v('BACKUP_S3_ENDPOINT').replace(/\/+$/, '');
@@ -148,7 +148,7 @@ async function uploadOnce(cfg, dataDir) {
   return { at: new Date().toISOString(), key, bytes: body.length, sha256: sha256(body), backup: b.name, kept: Math.min(ours.length, KEEP), removed };
 }
 
-export const hasNightly = (dataDir) => Boolean(latestNightly(dataDir));
+const hasNightly = (dataDir) => Boolean(latestNightly(dataDir));
 
 // Upload now (the schedule, or the owner's button). Never throws: the result
 // is recorded for Settings, and a failure raises the owner alert. With no
@@ -180,7 +180,7 @@ export function uploadNow(dataDir, { why = 'manual' } = {}) {
 }
 
 // The most recent Sunday 4am (server time) at or before `now`.
-export function lastSlot(now = new Date()) {
+function lastSlot(now = new Date()) {
   const d = new Date(now);
   d.setHours(HOUR, 0, 0, 0);
   d.setDate(d.getDate() - ((d.getDay() - WEEKDAY + 7) % 7));
@@ -189,12 +189,12 @@ export function lastSlot(now = new Date()) {
 }
 
 // Due when the last slot has passed with no upload since (a first upload is due at once).
-export function offsiteDue(now = new Date(), last = getSetting('offsiteLast')) {
+function offsiteDue(now = new Date(), last = getSetting('offsiteLast')) {
   if (!last?.at) return true;
   return Date.parse(last.at) < lastSlot(now).getTime();
 }
 
-export function nextSlot(now = new Date()) {
+function nextSlot(now = new Date()) {
   const d = lastSlot(now);
   d.setDate(d.getDate() + 7);
   return d;

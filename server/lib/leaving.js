@@ -49,7 +49,7 @@ export function lineupExodus({ today = localYMD(), theatreId = null, horizon, mi
   return { exodus: rows.length > 0 && flagged / rows.length > MASS_EXODUS, flagged, lineup: rows.length };
 }
 
-const asDate = (ymd) => new Date(`${ymd}T00:00:00`);
+export const asDate = (ymd) => new Date(`${ymd}T00:00:00`);
 
 // Whole days between two YYYY-MM-DD strings (both parsed as local midnight, so
 // DST never shifts the result).
@@ -180,7 +180,7 @@ export function snapshotLineup({
 
 // Leading indicator: is this movie's schedule at this theatre shrinking while
 // the rest of the lineup moves on? Needs a few refreshes of history first.
-export function movieTrend(tmdbId, theatreId = null) {
+function movieTrend(tmdbId, theatreId = null) {
   const snaps = all(
     'SELECT * FROM lineup_snapshots WHERE tmdb_id = ? AND theatre_id = ? ORDER BY refresh_at DESC LIMIT ?',
     tmdbId, theatreId || '', TREND_REFRESHES,

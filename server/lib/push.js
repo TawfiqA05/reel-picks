@@ -81,7 +81,7 @@ function vapidHeader(endpoint, keys) {
 
 // ---- payload encryption (RFC 8291, aes128gcm, one record) -------------------
 
-export function encrypt(payload, p256dh, auth) {
+function encrypt(payload, p256dh, auth) {
   const uaPublic = unb64u(p256dh);
   const authSecret = unb64u(auth);
   const ecdh = crypto.createECDH('prime256v1');
@@ -115,7 +115,7 @@ function allowedEndpoint(endpoint) {
 
 // Validates a browser PushSubscription (its toJSON()). Returns the clean
 // fields, or throws a 400.
-export function parseSubscription(sub) {
+function parseSubscription(sub) {
   const bad = (msg) => Object.assign(new Error(msg), { status: 400 });
   const endpoint = typeof sub?.endpoint === 'string' ? sub.endpoint : '';
   if (!endpoint || endpoint.length > 2000 || !allowedEndpoint(endpoint)) throw bad('That isn\'t a push subscription this app can use.');

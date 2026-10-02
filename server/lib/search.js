@@ -13,17 +13,17 @@ import { localYMD } from './util.js';
 import { findPeople } from './people.js';
 import { norm, prepare, query as prepQuery, score as fit, EXACT, STARTS, isTypoOnly } from '../../public/js/fuzzy.js';
 
-export const MIN_QUERY = 2;
+const MIN_QUERY = 2;
 const LIMIT = 20;
 const THIN = 3; // fewer TMDB results than this and a corrected / shortened query is tried too
 // A film is well known with this many TMDB votes, or with this much TMDB
 // popularity (an anticipated film that isn't out yet has no votes but plenty
 // of interest). Anything else ranks below every well-known film unless it's
 // playing at the caller's theatres or they rated or watchlisted it.
-export const KNOWN_VOTES = 50;
-export const KNOWN_POPULARITY = 50;
+const KNOWN_VOTES = 50;
+const KNOWN_POPULARITY = 50;
 
-const placeholders = (n) => Array.from({ length: n }, () => '?').join(',');
+export const placeholders = (n) => Array.from({ length: n }, () => '?').join(',');
 
 // Films playing this week at the caller's own theatres. Without AMC the
 // lineup is TMDB's US now-playing list, which has no theatre.
@@ -182,8 +182,8 @@ async function films(q, me) {
 // `poster` their photo). Films and people share one "Recently viewed" list,
 // newest first by `seq`, which each row carries as `at`.
 
-export const MAX_QUERIES = 10;
-export const MAX_MOVIES = 8; // films and people together
+const MAX_QUERIES = 10;
+const MAX_MOVIES = 8; // films and people together
 const VIEWED = "('movie', 'person')";
 const ROLES = new Set(['Director', 'Actor']);
 

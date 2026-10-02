@@ -41,12 +41,11 @@ export const PEOPLE = {
 };
 const P = PEOPLE;
 
-export const GENRE_IDS = {
+const GENRE_IDS = {
   Action: 28, Adventure: 12, Animation: 16, Comedy: 35, Crime: 80, Documentary: 99, Drama: 18, Family: 10751,
   Fantasy: 14, History: 36, Horror: 27, Music: 10402, Mystery: 9648, Romance: 10749, 'Science Fiction': 878,
   Thriller: 53, War: 10752, Western: 37,
 };
-export const GENRE_NAMES = Object.fromEntries(Object.entries(GENRE_IDS).map(([n, id]) => [id, n]));
 
 // Schedules. days: offsets from T0's date; times: local HH:MM; attrs: AMC
 // attribute names on those showings.
@@ -186,7 +185,7 @@ export const STREAMING = Array.from({ length: 10 }, (_, i) => ({
   providers: i % 2 ? [8] : [1899],
 }));
 
-export const PROVIDERS = {
+const PROVIDERS = {
   8: { provider_id: 8, provider_name: 'Netflix', logo_path: '/rp-logo-8.jpg', display_priority: 1 },
   1899: { provider_id: 1899, provider_name: 'Max', logo_path: '/rp-logo-1899.jpg', display_priority: 2 },
   2: { provider_id: 2, provider_name: 'Apple TV', logo_path: '/rp-logo-2.jpg', display_priority: 3 },
@@ -262,7 +261,7 @@ export const ymdLocal = (d) => {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
   return parts;
 };
-export const dayOffset = (ymd) => Math.round((Date.parse(`${ymd}T12:00:00Z`) - Date.parse(`${ymdLocal(new Date(T0_MS))}T12:00:00Z`)) / 864e5);
+const dayOffset = (ymd) => Math.round((Date.parse(`${ymd}T12:00:00Z`) - Date.parse(`${ymdLocal(new Date(T0_MS))}T12:00:00Z`)) / 864e5);
 
 // A showtime id that stays inside Number.MAX_SAFE_INTEGER (AMC's ids are
 // numbers): theater, year digit, day of the year, film, block and time.

@@ -52,7 +52,7 @@ const origin = () => (process.env.RP_LETTERBOXD_ORIGIN || '').trim() || 'https:/
 
 // Letterboxd usernames are letters, numbers and underscores. Accepts "@name"
 // and a pasted profile or RSS link. Returns the name, or null.
-export function cleanUsername(input) {
+function cleanUsername(input) {
   let s = String(input ?? '').trim();
   const m = s.match(/letterboxd\.com\/([^/?#\s]+)/i);
   if (m) s = m[1];
@@ -83,7 +83,7 @@ function tag(xml, name) {
 
 // The diary entries in a feed, oldest first (so a later rewatch's rating wins).
 // { guid, title, year, rating (0.5-5 | null), watchedDate, loggedAt, tmdbId, review (plain text | null) }
-export function parseFeed(xml) {
+function parseFeed(xml) {
   const out = [];
   for (const m of String(xml).matchAll(/<item>([\s\S]*?)<\/item>/g)) {
     const it = m[1];
@@ -112,7 +112,7 @@ class SyncError extends Error {
   constructor(message, kind) { super(message); this.kind = kind; }
 }
 
-export async function fetchFeed(username) {
+async function fetchFeed(username) {
   const url = `${origin()}/${encodeURIComponent(username)}/rss/`;
   let res;
   try {
@@ -301,7 +301,7 @@ export async function syncUser(userId, { manual = false } = {}) {
 // Due once a day: nothing synced yet today. A failure other than a bad
 // username is retried after RETRY_MS; a bad username waits for a new day (or
 // for the person to fix it, which syncs straight away).
-export function syncDue(r, now = new Date()) {
+function syncDue(r, now = new Date()) {
   if (!r.last_sync_at) return true;
   const last = new Date(r.last_sync_at);
   if (r.last_ok_at && localYMD(new Date(r.last_ok_at)) === localYMD(now)) return false;

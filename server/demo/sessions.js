@@ -19,10 +19,10 @@ import { installDemoNet } from './net.js';
 import { localYMD } from '../lib/util.js';
 import { readCookie } from '../lib/guest.js';
 
-export const COOKIE = 'rp_demo';
-export const MAX_AGE_MS = 60 * 60 * 1000;
-export const IDLE_MS = 30 * 60 * 1000;
-export const MAX_VISITORS = 150;
+const COOKIE = 'rp_demo';
+const MAX_AGE_MS = 60 * 60 * 1000;
+const IDLE_MS = 30 * 60 * 1000;
+const MAX_VISITORS = 150;
 const SWEEP_MS = 60 * 1000;
 
 const visitors = new Map(); // id -> { id, handle, file, created, last, busy }
@@ -40,9 +40,6 @@ function open(file) {
   return h;
 }
 const remove = (file) => { for (const f of [file, `${file}-journal`]) fs.rmSync(f, { force: true }); };
-
-export const sampleReady = () => Boolean(sample);
-export const visitorCount = () => visitors.size;
 
 // Build the sample from the empty schema, then swap it in.
 function rebuild() {

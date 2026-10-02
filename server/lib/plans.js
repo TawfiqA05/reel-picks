@@ -26,17 +26,16 @@ import { ownerName } from './guest.js';
 import { pushEnabled, sendToUser } from './push.js';
 import { logWatchedOn } from './alist.js';
 import { wasWeekly4Pick, getRecommendations } from './recommend.js';
-import { localYMD, addDays, timeLabel, weekStartFriday } from './util.js';
+import { localYMD, addDays, timeLabel, weekStartFriday, status } from './util.js';
 
-export const REMIND_BEFORE_MS = 2 * 3600 * 1000;
-export const ASK_HOUR = 10;
-export const ASK_DAYS = 3;
+const REMIND_BEFORE_MS = 2 * 3600 * 1000;
+const ASK_HOUR = 10;
+const ASK_DAYS = 3;
 const DAY_MS = 24 * 3600 * 1000;
 
-const status = (code, message) => Object.assign(new Error(message), { status: code });
 
 // 10am local on the day after the showing's listed day.
-export function askAt(date) {
+function askAt(date) {
   const next = localYMD(addDays(new Date(`${date}T12:00:00`), 1));
   return new Date(`${next}T${String(ASK_HOUR).padStart(2, '0')}:00:00`).getTime();
 }

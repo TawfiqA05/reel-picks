@@ -24,10 +24,10 @@
    up) take the soft accent; plain facts sit on the chip colour. */
 .tag { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: var(--fs-xs); font-weight: 600; line-height: var(--lh-tight); padding: 3px 9px; border-radius: 999px; background: var(--chip); color: var(--text); }
 .tag:is(.accent, .watch, .moved) { background: var(--accent-soft); color: var(--accent-text); }
-.tag:is(.blue, .imax) { background: var(--blue-soft); color: var(--blue); }
-.tag:is(.purple, .dolby) { background: var(--purple-soft); color: var(--purple); }
-.tag:is(.teal, .reald, .back) { background: var(--teal-soft); color: var(--teal); }
-.tag:is(.amber, .fmt, .new, .opens) { background: var(--amber-soft); color: var(--amber); }
+.tag:is(.imax) { background: var(--blue-soft); color: var(--blue); }
+.tag:is(.dolby) { background: var(--purple-soft); color: var(--purple); }
+.tag:is(.reald, .back) { background: var(--teal-soft); color: var(--teal); }
+.tag:is(.fmt, .new, .opens) { background: var(--amber-soft); color: var(--amber); }
 .tag:is(.bad, .hidden, .last) { background: var(--bad-soft); color: var(--bad); }
 .tag-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 

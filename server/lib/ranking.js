@@ -40,7 +40,7 @@ export function finalScore({ publicCombined, tasteScore, conf, weights, boosts =
 // to see it, so "it's leaving" matters more.
 export const URGENCY_WINDOW_DAYS = 7;
 
-export function urgencyFactor(daysLeft) {
+function urgencyFactor(daysLeft) {
   if (!Number.isFinite(daysLeft)) return 0;
   const d = Math.max(0, daysLeft);
   if (d >= URGENCY_WINDOW_DAYS) return 0;
@@ -55,7 +55,7 @@ export function urgencyBoost({ runway, watchlisted = false, max = 0, watchlistMu
   return m * mult * urgencyFactor(runway.daysLeft);
 }
 
-export function parseLocalDate(startLocal) {
+function parseLocalDate(startLocal) {
   if (!startLocal) return null;
   const t = new Date(startLocal);
   return Number.isNaN(t.getTime()) ? null : t;

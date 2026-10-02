@@ -36,11 +36,11 @@ function toNum(s) {
 const PAUSE_MS = 60 * 60 * 1000;
 // Module-wide: once OMDb says the key is exhausted or invalid, every lookup
 // short-circuits until `pausedUntil` (the cache still serves fresh rows).
-export const omdbState = { pausedUntil: 0, reason: null };
+const omdbState = { pausedUntil: 0, reason: null };
 
 const LIMIT_RE = /request limit|limit reached|daily limit|too many requests|invalid api key|api key|unauthorized|not authorized/i;
 
-export class OmdbUnavailableError extends Error {
+class OmdbUnavailableError extends Error {
   constructor(message) {
     super(message);
     this.name = 'OmdbUnavailableError';
@@ -50,7 +50,7 @@ export class OmdbUnavailableError extends Error {
 
 // Why a response means "OMDb is unavailable to us", or null if it's a normal
 // answer (including a normal "no such movie").
-export function unavailableReason(raw, httpStatus = null) {
+function unavailableReason(raw, httpStatus = null) {
   if (httpStatus === 401 || httpStatus === 429 || httpStatus === 503) return `HTTP ${httpStatus}`;
   if (raw && raw.Response === 'False' && LIMIT_RE.test(raw.Error || '')) return raw.Error;
   return null;
@@ -61,7 +61,7 @@ function pause(reason) {
   omdbState.reason = reason;
 }
 
-export function omdbPaused() {
+function omdbPaused() {
   return Date.now() < omdbState.pausedUntil ? omdbState.reason : null;
 }
 

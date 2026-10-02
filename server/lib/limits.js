@@ -11,11 +11,11 @@
 // a second line). The owner has none. Kept in memory: a restart starts every
 // count again, which is fine for a limit meant to stop runaway use.
 // No imports, so a test can load it without a database.
-export const LIMITS = {
+const LIMITS = {
   friend: { newFilm: 200, search: 300, place: 30, note: 300 },
   guest: { newFilm: 20, search: 30, place: 3, note: 0 },
 };
-export const WINDOW_MS = 3600 * 1000;
+const WINDOW_MS = 3600 * 1000;
 export const LIMIT_MESSAGE = 'Slow down a bit, try again in a few minutes.';
 
 const hits = new Map(); // "kind|who" -> request times in the last hour, oldest first

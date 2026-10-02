@@ -12,7 +12,7 @@ export const DEMO = on(process.env.DEMO_MODE);
 
 // The visitor is the sample owner. Set before server/db.js creates the owner
 // row, so the sample database never carries anyone's real name.
-export const DEMO_OWNER = 'Sam';
+const DEMO_OWNER = 'Sam';
 if (DEMO) process.env.OWNER_NAME = DEMO_OWNER;
 // The made-up theaters' clock, unless the host sets one.
 if (DEMO && !process.env.TZ) process.env.TZ = 'America/Chicago';

@@ -94,7 +94,7 @@ export async function pushMock() {
 }
 
 // RFC 8291 (aes128gcm, one record) decryption with the subscription's keys.
-export function decrypt(body, sub) {
+function decrypt(body, sub) {
   const salt = body.subarray(0, 16);
   const idlen = body[20];
   const asPublic = body.subarray(21, 21 + idlen);
@@ -136,7 +136,7 @@ function lbDescription(e) {
   return `<description><![CDATA[ ${img} ${body} ]]></description>`;
 }
 
-export function rssFeed(entries) {
+function rssFeed(entries) {
   const items = entries.map((e, i) => `<item><title>${e.title}, ${e.year}${e.rating ? ` - ${'★'.repeat(Math.floor(e.rating))}` : ''}${e.spoiler ? ' (contains spoilers)' : ''}</title>
 <guid isPermaLink="false">letterboxd-review-${e.guid || i}</guid><pubDate>${new Date(C.T0_MS - (entries.length - i) * 3600e3).toUTCString()}</pubDate>
 <letterboxd:watchedDate>${e.watched || '2026-09-20'}</letterboxd:watchedDate><letterboxd:filmTitle>${e.title}</letterboxd:filmTitle>

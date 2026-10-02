@@ -16,10 +16,10 @@ import { tmdbThrottle } from './backfill.js';
 import { isFeature, isActing } from './statsMore.js';
 import { norm, query as prepQuery, distance } from '../../public/js/fuzzy.js';
 
-export const MAX_PEOPLE = 2;
+const MAX_PEOPLE = 2;
 // TMDB popularity below this and a name match is someone few have heard of
 // ("Spiderman", an extra; "Alan Oppenheimer" for "oppenheimer").
-export const MIN_POPULARITY = 1;
+const MIN_POPULARITY = 1;
 // A second person shows only with at least this share of the first's popularity.
 const SECOND_SHARE = 1 / 3;
 export const ROLE = { Directing: 'Director', Acting: 'Actor' };
@@ -32,7 +32,7 @@ const typosFor = (len) => (len >= 8 ? 2 : len >= 5 ? 1 : 0);
 
 // How a query fits a name: { how: 'full' | 'last', d } (d = letters off), or
 // null. The last name may carry a particle ("villeneuve", "del toro").
-export function nameFit(q, name) {
+function nameFit(q, name) {
   const words = norm(name).split(' ').filter(Boolean);
   if (!words.length || !q.c) return null;
   const k = typosFor(q.c.length);

@@ -18,7 +18,7 @@ import { restoreWatched } from './alist.js';
 import { currentUserId, currentUser } from './user.js';
 import { exportNotes, importNotes } from './notes.js';
 
-export const STATE_VERSION = 1;
+const STATE_VERSION = 1;
 
 // Instance-local bookkeeping that must NOT travel between instances.
 const SKIP_SETTINGS = new Set(['lastRefresh', 'lastRefreshLog']);

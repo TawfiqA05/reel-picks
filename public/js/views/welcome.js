@@ -6,7 +6,7 @@
 import { api } from '../api.js';
 import { h, clear, spinner, toast, makeStars, icon } from '../ui.js';
 
-export const MIN_RATINGS = 5; // under this many ratings, the setup opens on its own
+const MIN_RATINGS = 5; // under this many ratings, the setup opens on its own
 const GOAL = 10;
 
 export function needsSetup(status) {

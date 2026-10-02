@@ -13,7 +13,7 @@
 import { all } from '../db.js';
 import * as tmdb from './tmdb.js';
 import { tmdbThrottle } from './backfill.js';
-import { playingIds } from './search.js';
+import { playingIds, placeholders } from './search.js';
 import { isFeature, isActing, countedRating, SMALL_FILM_VOTES } from './statsMore.js';
 import { usReleaseDate } from './scoring.js';
 import { currentUserId } from './user.js';
@@ -22,7 +22,6 @@ import { localYMD, yearOf as year } from './util.js';
 // What they're known for, in the words the page uses.
 const ROLE = { Directing: 'Director', Acting: 'Actor', Writing: 'Writer', Production: 'Producer' };
 
-const placeholders = (n) => Array.from({ length: n }, () => '?').join(',');
 
 // Both TMDB answers already cached and fresh: opening the page asks TMDB
 // nothing, so it doesn't count against the hourly limit.

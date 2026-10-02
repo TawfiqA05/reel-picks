@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { suite } from '../lib/check.mjs';
 import { openWorld, makeFriend } from '../lib/world.mjs';
-import { launch, open, go, settle, toastText, importFiles } from '../lib/browser.mjs';
+import { launch, open, go, toastText, importFiles } from '../lib/browser.mjs';
 import { measure, contrastProbe, textPalette, waitDialog, ROUTES } from '../lib/ui-helpers.mjs';
 import * as C from '../lib/catalog.mjs';
 

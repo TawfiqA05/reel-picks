@@ -49,7 +49,7 @@ export function stripQualifiers(t) {
 }
 
 // "10th Anniversary" → 10, so the original release year can be inferred.
-export function anniversaryYears(t) {
+function anniversaryYears(t) {
   const m = String(t || '').match(/\b(\d+)(?:st|nd|rd|th)[\s-]*anniversary\b/i);
   return m ? Number(m[1]) : null;
 }

@@ -15,13 +15,13 @@
 // A note belongs to a rating: saving one needs the rating, and clearing the
 // rating takes its note (and any Delete marker) with it. Notes change no score.
 import { get, run, all } from '../db.js';
+import { status } from './util.js';
 
 export const NOTE_MAX = 280;
 // A review longer than this isn't kept whole (Letterboxd reviews run long,
 // but a novel in the database helps no one).
 const FULL_MAX = 20000;
 
-const status = (code, message) => Object.assign(new Error(message), { status: code });
 const chars = (s) => [...s].length;
 
 // Invisible and direction-changing characters, and control characters.
@@ -72,7 +72,7 @@ export function htmlToText(html) {
 // The whole review text -> { note, full }: the note on one line, cut at
 // NOTE_MAX (at a word where there is one close by) with an ellipsis; `full`
 // is the review itself when it was cut, else null.
-export function shortNote(text) {
+function shortNote(text) {
   const whole = String(text ?? '').replace(INVISIBLE, (c) => (c === '\n' ? c : '')).trim();
   if (!whole) return null;
   const line = whole.replace(/\s+/g, ' ');

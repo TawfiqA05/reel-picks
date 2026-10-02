@@ -4,13 +4,11 @@
 // be rated and saved right there, with the same controls as a Stats sheet. The
 // guest link only reads: no stars, no Save, and no one's ratings.
 import { api } from '../api.js';
-import { h, clear, spinner, icon, emptyState } from '../ui.js';
+import { h, clear, spinner, icon, emptyState, thumb, plural as count } from '../ui.js';
 import { starRater, watchlistButton, opensBadge } from './components.js';
 import { streamLine, CREDIT } from '../stream.js';
 import { noteSlot, noteLine } from '../notes.js';
 
-const thumb = (url) => (url ? url.replace(/\/w\d+\//, '/w92/') : null);
-const count = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 export async function render(root, params, ctx) {
   clear(root);

@@ -40,10 +40,10 @@ import { pushEnabled, sendToUser } from './push.js';
 import { localYMD } from './util.js';
 
 export const TZ = 'America/Indianapolis';
-export const QUIET_FROM = 21; // 9pm
-export const QUIET_UNTIL = 9; // 9am
-export const RETURN_DAYS = 14;
-export const MAX_NAMED = 3;
+const QUIET_FROM = 21; // 9pm
+const QUIET_UNTIL = 9; // 9am
+const RETURN_DAYS = 14;
+const MAX_NAMED = 3;
 const DAY_MS = 24 * 3600 * 1000;
 const KEEP_DONE_DAYS = 90;
 
@@ -74,7 +74,7 @@ function instant(y, m, d, hh) {
 export const quiet = (ms) => { const h = wall(ms).h; return h >= QUIET_FROM || h < QUIET_UNTIL; };
 
 // When an alert found at `ms` may go out: then, or the next 9am.
-export function dueAt(ms) {
+function dueAt(ms) {
   if (!quiet(ms)) return ms;
   const w = wall(ms);
   if (w.h < QUIET_UNTIL) return instant(w.y, w.m, w.d, QUIET_UNTIL);

@@ -9,9 +9,8 @@
 // there shows its card in the middle with no spotlight. Tapping outside the
 // card does nothing; Escape skips, arrow keys and Enter move.
 import { api } from './api.js';
-import { h } from './ui.js';
+import { h, reduced } from './ui.js';
 
-const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // A tab, wherever it is showing: the bottom bar on phones, the header on wide screens.
 const tab = (name) => [`#bottom-nav .nav-item[data-name="${name}"]`, `.seg .seg-item[data-name="${name}"]`];

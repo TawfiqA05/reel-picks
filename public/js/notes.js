@@ -23,7 +23,7 @@ const chars = (s) => [...s].length;
 let seq = 0;
 
 // What the server would say about a note, said before sending it.
-export function noteProblem(raw) {
+function noteProblem(raw) {
   const s = String(raw ?? '').replace(/\s+/g, ' ').trim();
   if (!s) return 'Write something first, or press Cancel.';
   if (LOOKS_LIKE_HTML.test(s)) return 'Notes are plain text. Take out the HTML tags.';
@@ -35,7 +35,7 @@ export function noteProblem(raw) {
 // the first SHORT characters, cut at a word; a screen reader hears it whole,
 // and the film's page shows all of it.
 const SHORT = 90;
-export function shortLine(text) {
+function shortLine(text) {
   const cp = [...String(text)];
   if (cp.length <= SHORT) return String(text);
   let cut = cp.slice(0, SHORT).join('');

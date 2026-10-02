@@ -36,7 +36,7 @@ const offline = (url) => Object.assign(new TypeError('fetch failed'), {
   cause: new Error(`Demo mode makes no network requests (${new URL(url).hostname})`),
 });
 
-export async function demoFetch(input) {
+async function demoFetch(input) {
   const url = typeof input === 'string' ? input : input?.url || String(input);
   let u;
   try { u = new URL(url); } catch { throw offline('http://invalid'); }

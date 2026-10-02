@@ -2,7 +2,7 @@
 // once-per-day style refresh windows and serves stale data if a fetch fails.
 import { get, run } from '../db.js';
 
-export function redact(url) {
+function redact(url) {
   return String(url).replace(/(api_?key|apikey)=([^&]+)/gi, '$1=***');
 }
 

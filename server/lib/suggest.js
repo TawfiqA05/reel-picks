@@ -77,7 +77,7 @@ const MEMORY_MS = 7 * 864e5;
 const TEMPER = 6;
 
 // Validates the request body. Returns { where, time, mood, exclude } or throws a 400.
-export function parseAsk(body = {}) {
+function parseAsk(body = {}) {
   const bad = (m) => Object.assign(new Error(m), { status: 400 });
   const where = body.where ?? 'either';
   const time = body.time ?? 'any';

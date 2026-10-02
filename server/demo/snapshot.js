@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-export const SNAPSHOT_PATH = fileURLToPath(new URL('./snapshot.json', import.meta.url));
+const SNAPSHOT_PATH = fileURLToPath(new URL('./snapshot.json', import.meta.url));
 
 let loaded = null;
 export function snapshot() {

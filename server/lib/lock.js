@@ -39,7 +39,7 @@ export function initLockWeek() {
   if (last) setSetting('lockWeek', weekStartFriday(new Date(last)));
 }
 
-export function openWeek(week) {
+function openWeek(week) {
   const open = getSetting('lockWeek');
   if (!open || open < week) setSetting('lockWeek', week);
 }

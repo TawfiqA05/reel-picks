@@ -20,14 +20,13 @@ import { get, all, run, db } from '../db.js';
 import { OWNER_ID } from './user.js';
 import { ownerName } from './guest.js';
 import { pushEnabled, sendToUser } from './push.js';
-import { localYMD } from './util.js';
+import { localYMD, status } from './util.js';
 
 export const NOTE_MAX = 140;
 export const DAILY_LIMIT = 10;
 export const NOT_FOUND = { status: 404, body: { error: 'Not found.' } };
 export const LIMIT_MESSAGE = `You've sent ${DAILY_LIMIT} picks today. You can send more tomorrow.`;
 
-const status = (code, message) => Object.assign(new Error(message), { status: code });
 
 const nameOf = (userId) => (userId === OWNER_ID ? ownerName() : get('SELECT name FROM users WHERE id = ?', userId)?.name || 'A friend');
 

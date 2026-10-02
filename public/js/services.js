@@ -19,7 +19,7 @@ export const SERVICES = [
   { key: 'paramount', name: 'Paramount+', providers: [2303, 2616, 582, 633] },
   { key: 'free', name: 'Free with ads', note: 'Tubi, Pluto TV, The Roku Channel, Plex', providers: [73, 300, 207, 613, 538], free: true },
 ];
-export const SERVICE_KEYS = SERVICES.map((s) => s.key);
+const SERVICE_KEYS = SERVICES.map((s) => s.key);
 export const serviceByKey = (key) => SERVICES.find((s) => s.key === key) || null;
 
 // Only known keys, each once, in the list's order.

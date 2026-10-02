@@ -29,8 +29,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { localYMD as ymd } from './util.js';
 
-export const KEEP_NIGHTLY = 7;
-export const KEEP_PRE_MIGRATION = 3;
+const KEEP_NIGHTLY = 7;
+const KEEP_PRE_MIGRATION = 3;
 const NIGHTLY_HOUR = 3;
 const CHECK_MS = 60 * 1000;
 const NIGHTLY = /^reelpicks-(\d{4}-\d{2}-\d{2})\.db$/;
@@ -47,7 +47,7 @@ const OLD_TOP_LEVEL = /^reelpicks\.pre-[a-z-]+-[\dT:.Z-]+\.db$/;
 const DB_FILE = 'reelpicks.db';
 const MB = 1024 * 1024;
 
-export const backupState = { lastError: null };
+const backupState = { lastError: null };
 
 
 export const backupsDir = (dataDir) => path.join(dataDir, 'backups');
@@ -55,7 +55,7 @@ export const nightlyName = (now = new Date()) => `reelpicks-${ymd(now)}.db`;
 
 // VACUUM INTO a temp file beside the target, then rename over it. Returns
 // { name, file, bytes }, or null after logging the failure.
-export function writeBackup(db, dir, name) {
+function writeBackup(db, dir, name) {
   const file = path.join(dir, name);
   // Per process: two servers on one database (a dev setup) never share a temp file.
   const tmp = `${file}.${process.pid}.tmp`;
@@ -118,7 +118,7 @@ function remove(dir, name) {
 
 // Keep the newest 7 nightly and 3 pre-migration copies. Oldest go first, and
 // `enough` (when given) stops the pruning as soon as it says there is room.
-export function pruneBackups(dir, { nightly = KEEP_NIGHTLY, pre = KEEP_PRE_MIGRATION, enough = null } = {}) {
+function pruneBackups(dir, { nightly = KEEP_NIGHTLY, pre = KEEP_PRE_MIGRATION, enough = null } = {}) {
   const kinds = byKind(dir);
   if (!kinds) return [];
   const extra = [...kinds.nightly.slice(nightly), ...kinds.pre.slice(pre)].sort(oldestFirst);
@@ -131,7 +131,7 @@ export function pruneBackups(dir, { nightly = KEEP_NIGHTLY, pre = KEEP_PRE_MIGRA
 }
 
 // Half-written copies from a process that died mid-VACUUM, an hour old or more.
-export function clearStaleTemps(dir, now = Date.now()) {
+function clearStaleTemps(dir, now = Date.now()) {
   let names;
   try { names = fs.readdirSync(dir); } catch { return []; }
   const gone = [];
@@ -161,7 +161,7 @@ export function volume(dataDir) {
 
 const sizeOf = (file) => { try { return fs.statSync(file).size; } catch { return 0; } };
 // The live database with its WAL (and the WAL index), as it sits on disk.
-export function liveBytes(dataDir) {
+function liveBytes(dataDir) {
   const f = path.join(dataDir, DB_FILE);
   return { db: sizeOf(f), wal: sizeOf(`${f}-wal`), shm: sizeOf(`${f}-shm`) };
 }
@@ -178,7 +178,7 @@ export function roomNeeded(dataDir) {
 
 const mbText = (n) => `${Math.round(n / MB)} MB`;
 // Sizes for people: MB under a gigabyte, GB with one decimal above.
-export const sizeText = (n) => (n >= 1024 * MB ? `${(n / (1024 * MB)).toFixed(1)} GB` : mbText(n));
+const sizeText = (n) => (n >= 1024 * MB ? `${(n / (1024 * MB)).toFixed(1)} GB` : mbText(n));
 
 // The owner alert above 80% full (index.js), and the line it sends.
 export const DISK_ALERT_PCT = 80;
@@ -190,7 +190,7 @@ export const diskAlertLine = (d) => `The data volume is ${Math.round(d.pct)}% fu
 // oldest remaining copies except the newest of each kind, stopping as soon as
 // there is room. Returns { ok, removed, free, needed } (ok with no volume
 // figures: nothing is pruned beyond the usual limits then).
-export function makeRoom(dataDir) {
+function makeRoom(dataDir) {
   const dir = backupsDir(dataDir);
   clearStaleTemps(dir);
   const need = roomNeeded(dataDir);
@@ -236,11 +236,11 @@ export function preMigrationBackup(db, dataDir, what) {
 }
 
 // Today's nightly copy, if it is 3am or later and there isn't one yet.
-export function nightlyDue(dir, now = new Date()) {
+function nightlyDue(dir, now = new Date()) {
   return now.getHours() >= NIGHTLY_HOUR && !fs.existsSync(path.join(dir, nightlyName(now)));
 }
 
-export function runNightlyBackup(db, dataDir, now = new Date()) {
+function runNightlyBackup(db, dataDir, now = new Date()) {
   const dir = backupsDir(dataDir);
   const name = nightlyName(now);
   if (!roomOrFail(dataDir, name)) return null;

@@ -371,6 +371,11 @@ export function openModal(contentNode, { title, onClose, cls = '' } = {}) {
   return { close, card, overlay };
 }
 
+// Small helpers several pages share.
+export const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+export const thumb = (url) => (url ? url.replace(/\/w\d+\//, '/w92/') : null);
+export const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
 export function labeled(label, node) {
   return h('label', { class: 'field' }, h('span', { class: 'field-label' }, label), node);
 }

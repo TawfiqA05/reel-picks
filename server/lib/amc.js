@@ -65,7 +65,7 @@ async function allTheatres() {
   });
 }
 
-export function normalizeTheatre(t) {
+function normalizeTheatre(t) {
   const loc = t.location || {};
   return {
     id: String(t.id),
@@ -151,7 +151,7 @@ function attrNames(raw) {
 }
 
 // Convert one AMC showtime into our canonical showtime row shape.
-export function normalizeShowtime(raw, theatre) {
+function normalizeShowtime(raw, theatre) {
   const names = attrNames(raw);
   const joined = names.join(' ');
   const isImax = /imax/i.test(joined);
