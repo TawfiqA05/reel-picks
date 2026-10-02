@@ -24,6 +24,8 @@ const dbPath = path.join(dataDir, 'reelpicks.db');
 // the first question on a deployment whose volume may not be mounted.
 export { dataDir, dbPath };
 
+// A database created by this start: no one in it has read anything yet.
+const isNewDb = !fs.existsSync(dbPath);
 // In demo mode each request reads and writes its visitor's own copy
 // (server/demo/scope.js); `db` forwards there.
 const opened = new DatabaseSync(dbPath);
@@ -1034,3 +1036,36 @@ export function updateSettings(patch, { userId } = {}) {
 function structuredCloneish(v) {
   return v === undefined ? undefined : JSON.parse(JSON.stringify(v));
 }
+
+// ---- theater names -----------------------------------------------------
+
+// Anyone with a theater but no saved theater name of their own has been
+// reading the app's built-in default name at run time. That default is going
+// away: a fresh install will start with no theater picked. So first, the
+// default is saved as their own for each of them, and nothing changes for
+// them. Someone with no theater id at all hasn't picked a theater, and gets
+// the new empty default. Idempotent: a database where everyone with a theater
+// has a saved name writes nothing. A copy of the database is written first.
+function saveDefaultTheatreNames() {
+  if (isNewDb) return;
+  const name = DEFAULT_SETTINGS.theatreName;
+  if (!name) return;
+  const missing = db.prepare(`SELECT id FROM users u
+    WHERE NOT EXISTS (SELECT 1 FROM user_settings s WHERE s.user_id = u.id AND s.key = 'theatreName')
+      AND EXISTS (SELECT 1 FROM user_settings s WHERE s.user_id = u.id AND s.key = 'theatreId' AND s.value NOT IN ('""', 'null'))
+    ORDER BY id`).all().map((u) => u.id);
+  if (!missing.length) return;
+  const backup = preMigrationBackup(db, dataDir, 'theatre-names');
+  const save = db.prepare("INSERT INTO user_settings(user_id, key, value) VALUES(?, 'theatreName', ?) ON CONFLICT(user_id, key) DO NOTHING");
+  db.exec('BEGIN');
+  try {
+    for (const id of missing) save.run(id, JSON.stringify(name));
+    db.exec('COMMIT');
+    console.log(`[db] theatres: saved the theater ${missing.length} person(s) read from the app default (backup: ${backup})`);
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+saveDefaultTheatreNames();
