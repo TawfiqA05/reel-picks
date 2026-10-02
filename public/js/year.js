@@ -12,7 +12,7 @@ import { h, clear, openModal, toast, icon, money, poster, withStars, reduced, pl
 const monthName = (ym) => { const [y, m] = ym.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long' }); };
 const dayName = (ymd) => { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }); };
 // A rating as the app writes it (4.5★), and in words for a screen reader.
-const stars = (r) => h('span', { class: 'yr-stars' }, h('span', { 'aria-hidden': 'true' }, withStars(`${r}★`)), h('span', { class: 'sr-only' }, `${r} stars`));
+const stars = (r) => h('span', { class: 'yr-stars' }, h('span', { 'aria-hidden': 'true' }, withStars(`${r}★`)), h('span', { class: 'sr-only' }, `${r} star${r === 1 ? '' : 's'}`));
 
 // Each card's colour: the opening card is a solid marquee panel (the accent,
 // its text in the accent's own ink, the pair buttons use), the rest take the
@@ -149,7 +149,7 @@ function buildCard(c, recap, { ctx, close, preview }) {
         h('a', { class: 'btn yr-cta', href: '#/rate', onClick: () => close() }, 'Rate films'));
     case 'numbers':
       return sec(kicker(`In ${Y}`), heading(c.seen ? `${plural(c.seen, 'film')} in theaters` : `${plural(c.rated, 'film')} rated`),
-        h('div', { class: 'yr-bigs' }, big(c.seen, 'seen in theaters'), big(c.rated, 'films rated')),
+        h('div', { class: 'yr-bigs' }, big(c.seen, 'seen in theaters'), big(c.rated, c.rated === 1 ? 'film rated' : 'films rated')),
         h('p', { class: 'yr-text' }, c.seen && c.rated ? `${plural(c.films, 'film')} in all, seen or rated.`
           : c.seen ? 'Rate them and your recap knows your favorites too.' : 'Mark seen after a showing and those count here too.'));
     case 'tops': {
@@ -196,7 +196,7 @@ function summaryCard(c, recap, { sec, heading, kicker, preview }) {
   // A zero isn't a fact worth sharing: someone who only rated gets just that.
   const facts = [
     c.seen ? [String(c.seen), 'seen in theaters'] : null,
-    c.rated ? [String(c.rated), 'films rated'] : null,
+    c.rated ? [String(c.rated), c.rated === 1 ? 'film rated' : 'films rated'] : null,
     c.genre ? [c.genre, 'top genre'] : null,
     c.director ? [c.director, 'top director'] : null,
   ].filter(Boolean);
@@ -269,7 +269,7 @@ async function drawShare(c, recap, { preview = false } = {}) {
   g.fillText('in movies', 96, 690);
 
   // The numbers.
-  const facts = [c.seen ? [String(c.seen), 'seen in theaters'] : null, c.rated ? [String(c.rated), 'films rated'] : null].filter(Boolean);
+  const facts = [c.seen ? [String(c.seen), 'seen in theaters'] : null, c.rated ? [String(c.rated), c.rated === 1 ? 'film rated' : 'films rated'] : null].filter(Boolean);
   facts.forEach(([n, label], i) => {
     const x = 96 + i * 460;
     g.fillStyle = v('--text'); g.font = `700 150px ${display}`; g.fillText(n, x, 1000);

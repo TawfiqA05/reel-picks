@@ -47,9 +47,9 @@ export async function render(root, params, ctx, { quiet = false } = {}) {
       : monthly ? `Resets on the 1st · ${monthName}` : `Resets Friday · week of ${weekOf}`,
     h('div', { class: 'stat-grid' }, ...(plan.subscription ? [
     plan.unlimited
-      ? bigStat(String(week.used), `${plan.units} this ${plan.period}`, 'no limit')
-      : bigStat(`${week.used}/${week.limit}`, `${plan.units} used`, `${week.remaining} left`),
-    bigStat(money(week.savings.saved), 'saved this month', `${week.savings.monthTickets} tickets vs ${money(week.savings.alistFee)} fee`),
+      ? bigStat(String(week.used), `${week.used === 1 ? plan.unit : plan.units} this ${plan.period}`, 'no limit')
+      : bigStat(`${week.used}/${week.limit}`, `${week.limit === 1 ? plan.unit : plan.units} used`, `${week.remaining} left`),
+    bigStat(money(week.savings.saved), 'saved this month', `${week.savings.monthTickets} ticket${week.savings.monthTickets === 1 ? '' : 's'} vs ${money(week.savings.alistFee)} fee`),
     bigStat(money(week.savings.ticketValue), 'ticket value seen', 'this month'),
   ] : [
     bigStat(String(week.used), `ticket${week.used === 1 ? '' : 's'} this week`, 'logged with Mark seen'),
@@ -61,9 +61,9 @@ export async function render(root, params, ctx, { quiet = false } = {}) {
   page.appendChild(group('Your year', String(s.year), h('div', { class: 'stat-grid' },
     // Only films logged as seen (Mark seen), not imported ratings.
     bigStat(s.seenThisYear, 'seen in theaters', 'logged this year'),
-    bigStat(s.totalRatings, 'ratings', 'in your profile'),
+    bigStat(s.totalRatings, s.totalRatings === 1 ? 'rating' : 'ratings', 'in your profile'),
     bigStat(s.avgRating != null ? withStars(`${s.avgRating}★`) : '–', 'average rating', ''),
-    bigStat(s.hitRate != null ? pct(s.hitRate) : '–', 'pick hit-rate', s.ratedPicks ? `of ${s.ratedPicks} picks watched` : 'rate your picks'),
+    bigStat(s.hitRate != null ? pct(s.hitRate) : '–', 'pick hit-rate', s.ratedPicks ? `of ${s.ratedPicks} pick${s.ratedPicks === 1 ? '' : 's'} watched` : 'rate your picks'),
   )));
 
   if (s.suggestion) {
@@ -259,7 +259,7 @@ function openGroup(kind, it, ctx) {
           h('span', { class: 'more-text' },
             h('span', { class: 'sheet-title' }, f.title, f.year ? h('span', { class: 'sheet-year' }, ` ${f.year}`) : null),
             noteLine(f.note)),
-          h('span', { class: 'sheet-rating', 'aria-label': `your rating ${f.rating} stars` },
+          h('span', { class: 'sheet-rating', 'aria-label': `your rating ${f.rating} star${f.rating === 1 ? '' : 's'}` },
             makeStars({ value: f.rating, size: 13 }), h('span', { 'aria-hidden': 'true' }, withStars(`${f.rating}★`))),
         ),
         slot?.el));
