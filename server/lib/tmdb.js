@@ -80,7 +80,8 @@ export async function search(title, year, { gate = null } = {}) {
 // `force` bypasses the 7-day cache (used while a release is settling).
 // Videos come back in English plus those with no language set. A film with
 // no YouTube video among those (a foreign film with only its own-language
-// trailers) gets one more call for its videos in every language.
+// trailers) gets one more call for its videos in every language. What comes
+// back, and what the cache keeps, is slimDetails() of the answer.
 export async function details(tmdbId, { force = false, gate = null } = {}) {
   return req(`movie:${tmdbId}`, 7 * DAY, `/movie/${tmdbId}`, {
     append_to_response: 'videos,credits,release_dates',
@@ -90,14 +91,44 @@ export async function details(tmdbId, { force = false, gate = null } = {}) {
     force,
     gate,
     more: async (d, live) => {
-      if ((d?.videos?.results || []).some((v) => v.site === 'YouTube')) return d;
+      if ((d?.videos?.results || []).some((v) => v.site === 'YouTube')) return slimDetails(d);
       try {
         const all = await live(`/movie/${tmdbId}/videos`, {});
         if (all?.results?.length) d.videos = all;
       } catch { /* no trailer is fine; the film itself loaded */ }
-      return d;
+      return slimDetails(d);
     },
   });
+}
+
+// The parts of a TMDB detail answer the app reads: normalizeDetails() and its
+// pickers, the collection id (lib/home.js), and the two migrations in db.js
+// that read cached answers. That is the director (crew with job Director),
+// the six billed actors, the YouTube videos and the first US release entry;
+// a full answer's crew, cast and release lists are about twenty times bigger.
+// The nightly cleanup (lib/housekeeping.js) slims rows saved before this.
+// Slimming a slim answer gives it back unchanged.
+const keep = (o, keys) => Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, o[k]]));
+export function slimDetails(d) {
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return d;
+  const out = keep(d, ['id', 'imdb_id', 'title', 'release_date', 'poster_path', 'backdrop_path', 'runtime', 'overview', 'vote_average', 'vote_count']);
+  if ('genres' in d) out.genres = Array.isArray(d.genres) ? d.genres.map((g) => keep(g || {}, ['id', 'name'])) : d.genres;
+  if ('belongs_to_collection' in d) out.belongs_to_collection = d.belongs_to_collection && typeof d.belongs_to_collection === 'object' ? keep(d.belongs_to_collection, ['id']) : d.belongs_to_collection;
+  if (d.videos && typeof d.videos === 'object') {
+    out.videos = { results: (d.videos.results || []).filter((v) => v && v.site === 'YouTube' && v.key)
+      .map((v) => keep(v, ['site', 'key', 'type', 'iso_639_1', 'official', 'published_at'])) };
+  }
+  if (d.credits && typeof d.credits === 'object') {
+    out.credits = {
+      cast: (d.credits.cast || []).slice().sort((a, b) => (a.order ?? 99) - (b.order ?? 99)).slice(0, 6).map((c) => keep(c, ['id', 'name', 'order'])),
+      crew: (d.credits.crew || []).filter((c) => c && c.job === 'Director').map((c) => keep(c, ['id', 'name', 'job'])),
+    };
+  }
+  if (d.release_dates && typeof d.release_dates === 'object') {
+    const us = (d.release_dates.results || []).find((r) => r && r.iso_3166_1 === 'US');
+    out.release_dates = { results: us ? [{ iso_3166_1: 'US', release_dates: (us.release_dates || []).map((x) => keep(x || {}, ['certification', 'type', 'release_date'])) }] : [] };
+  }
+  return out;
 }
 
 export async function nowPlaying(page = 1) {
