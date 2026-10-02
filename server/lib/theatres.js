@@ -16,7 +16,7 @@ export const MAX_THEATRES = 5;
 // capped so a refresh stays around ~110 AMC calls.
 const MAX_SHARED_THEATRES = 8;
 
-// "AMC Castleton Square 14" -> "Castleton"; "AMC Indianapolis 17" -> "Indianapolis".
+// "AMC Riverside Square 12" -> "Riverside"; "AMC Northgate 8" -> "Northgate".
 // Used wherever a theatre is named inside a sentence or a chip.
 export function shortName(name) {
   let s = String(name || '')
@@ -195,7 +195,7 @@ export function homeBase(settings = getSettings()) {
 const round2 = (v) => Math.round(v * 100) / 100;
 
 // The origin as it is allowed to LEAVE the app: rounded to 2 decimals (~1.1 km
-// of latitude, ~0.9 km of longitude around Indianapolis). Drive times come out
+// of latitude, ~0.9 km of longitude at 40° north). Drive times come out
 // the same within a minute or two, and neither OSRM nor any cache key ever
 // carries a street-level home coordinate.
 function outboundHome(home = homeBase()) {

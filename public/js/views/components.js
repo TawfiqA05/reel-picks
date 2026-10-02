@@ -237,7 +237,7 @@ export function runwayLine(runway, { theatre = null, compact = false } = {}) {
 }
 
 // Where a film plays, only when that's news: a film at every followed theater
-// says nothing; one that isn't names where it is ("Only at Castleton · 24 min").
+// says nothing; one that isn't names where it is ("Only at Riverside · 24 min").
 export function theatreChips(entry, { multi = 0 } = {}) {
   const at = entry.theatres || [];
   if (!multi || !at.length || at.length >= multi) return null;
@@ -249,7 +249,7 @@ export function theatreChips(entry, { multi = 0 } = {}) {
     }, t.short, t.distance ? ` · ${t.distance.minutes} min` : null)));
 }
 
-// "Last week at Castleton. Still at Indianapolis through Sep 4."
+// "Last week at Riverside. Still at Northgate through Sep 4."
 export function handoffLine(entry) {
   return entry.handoff ? h('div', { class: 'handoff' }, icon('handoff', { size: 14 }), ' ', entry.handoff.text) : null;
 }

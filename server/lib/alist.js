@@ -74,8 +74,8 @@ export function restoreWatched({ tmdb_id, title, watched_at, in_weekly4 = false,
   return added;
 }
 
-// Months are local calendar months (the server's TZ, America/Indianapolis
-// deployed), read from watched_date, the local day each film was logged on.
+// Months are local calendar months (the server's TZ, the TZ variable where
+// it's deployed), read from watched_date, the local day each film was logged on.
 // watched_at is UTC, so a film logged on the evening of the 31st used to
 // count toward the next month.
 const localMonth = () => localYMD().slice(0, 7);

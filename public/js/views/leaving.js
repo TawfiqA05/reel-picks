@@ -172,7 +172,7 @@ function filmRow(e, ctx, { date = null, showDate = false } = {}) {
       h('div', { class: 'lv-meta' }, matchBadge(e.final), h('span', { class: `lv-when ${tier}` }, e.runway.label)),
       showDate && e.runway.lastDate ? h('div', { class: 'lv-sub' }, e.runway.lastDate) : null,
       e.runway.detail ? h('div', { class: 'lv-sub' }, e.runway.detail) : null,
-      // "Still at Indianapolis through Sep 4": leaving here, not gone.
+      // "Still at Northgate through Sep 4": leaving here, not gone.
       e.handoff ? h('div', { class: 'lv-handoff' }, icon('handoff', { size: 13 }), ' ', e.handoff.text) : null,
     ),
     // That day's showtimes: beside the poster, or across the row under it on

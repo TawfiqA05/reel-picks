@@ -132,7 +132,7 @@ export function runwayDates(rows) {
   return { lastDate, firstDate, imaxLastDate, regularLastDate };
 }
 
-// "Last week at Castleton — still at Indianapolis through Sep 4."
+// "Last week at Riverside — still at Northgate through Sep 4."
 // Only when the primary run is genuinely ending and another followed theatre
 // has it strictly later. `others` are { short, runway } for non-primary theatres.
 export function handoffLine({ primaryShort, primaryRunway, others, today }) {
