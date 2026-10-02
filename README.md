@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/TawfiqA05/reel-picks/actions/workflows/tests.yml/badge.svg)](https://github.com/TawfiqA05/reel-picks/actions/workflows/tests.yml)
 
-**Try the demo:** [satisfied-dream-production-6401.up.railway.app](https://satisfied-dream-production-6401.up.railway.app).
+**Try the demo:** [reel-picks-demo.up.railway.app](https://reel-picks-demo.up.railway.app).
 It runs on made-up people and made-up theaters with real films, and whatever you change there
 is yours alone and gone within the hour.
 
