@@ -22,7 +22,7 @@
 // Only films on the watchlist right then, not rated, marked seen, hidden with
 // Not for me or with a live "I'm going" plan, and only with the switch on.
 // Each alert is queued in watch_alerts, due right away, or at 9am when it was
-// found between 9pm and 9am America/Indianapolis time.
+// found between 9pm and 9am Eastern time (America/New_York).
 //
 // sendDue() runs after the scan and every minute (server/index.js). It checks
 // each due alert again (switch, watchlist, rated, seen, hidden, plan), claims
@@ -39,7 +39,7 @@ import { lastChanceNow } from './recommend.js';
 import { pushEnabled, sendToUser } from './push.js';
 import { localYMD } from './util.js';
 
-export const TZ = 'America/Indianapolis';
+export const TZ = 'America/New_York';
 const QUIET_FROM = 21; // 9pm
 const QUIET_UNTIL = 9; // 9am
 const RETURN_DAYS = 14;
@@ -47,7 +47,7 @@ const MAX_NAMED = 3;
 const DAY_MS = 24 * 3600 * 1000;
 const KEEP_DONE_DAYS = 90;
 
-// ---- the clock, in Indianapolis --------------------------------------------
+// ---- the clock, in Eastern time --------------------------------------------
 
 const PARTS = new Intl.DateTimeFormat('en-US', {
   timeZone: TZ, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric',
@@ -58,7 +58,7 @@ function wall(ms) {
   return { y: p.year, m: p.month, d: p.day, h: p.hour, min: p.minute };
 }
 
-// The instant it is hh:00 on y-m-d in Indianapolis.
+// The instant it is hh:00 on y-m-d in that zone.
 function instant(y, m, d, hh) {
   const want = Date.UTC(y, m - 1, d, hh);
   let t = want;

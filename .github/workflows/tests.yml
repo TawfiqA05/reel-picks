@@ -11,8 +11,8 @@ on:
     branches: [main]
 
 env:
-  # The dev machine's zone, so every date the tests work out matches it.
-  TZ: America/Indianapolis
+  # The dev machine's clock (Eastern time), so every date the tests work out matches it.
+  TZ: America/New_York
 
 permissions:
   contents: read

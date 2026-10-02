@@ -1,5 +1,5 @@
 // Watchlist alerts on a mocked clock (server/lib/watchalerts.js), with the
-// server in America/Indianapolis time and sample refreshes from the AMC
+// server in America/New_York time and sample refreshes from the AMC
 // stand-in (films held back and let in, one film's run cut short, the whole
 // schedule moved weeks ahead):
 //
@@ -32,8 +32,8 @@ import * as C from '../lib/catalog.mjs';
 const S = suite('alerts');
 const K = (k) => C.PLAYING.find((f) => f.k === k);
 const NEW = [3, 5, 6, 8, 9, 10, 12].map(K);
-const TZ = 'America/Indianapolis';
-const L = (s) => `${s}-04:00`; // Indianapolis is on EDT through Nov 1
+const TZ = 'America/New_York';
+const L = (s) => `${s}-04:00`; // New York is on EDT through Nov 1
 const NAMES = [C.OWNER_NAME, 'Robin', 'Casey', 'Jordan'];
 const ENV = { RP_TIMER_SCALE: '0.004', TZ };
 
@@ -288,7 +288,7 @@ await S.step('world B: found at 10 PM, held until 9 AM, through a restart', asyn
   await b.settle();
   const due = Date.parse(L('2026-09-24T09:00:00'));
   const rows = B.q('SELECT user_id, tmdb_id, due_at, done_at FROM watch_alerts ORDER BY id');
-  S.check('hold: found at 10 PM, each alert is due at 9 AM Indianapolis time', rows.length === 7 && rows.every((r) => r.due_at === due && r.done_at == null), JSON.stringify(rows.map((r) => [r.user_id, r.tmdb_id, new Date(r.due_at).toISOString()])));
+  S.check('hold: found at 10 PM, each alert is due at 9 AM Eastern time', rows.length === 7 && rows.every((r) => r.due_at === due && r.done_at == null), JSON.stringify(rows.map((r) => [r.user_id, r.tmdb_id, new Date(r.due_at).toISOString()])));
   S.check('hold: nothing is sent at 10 PM', b.pushes().length === 0, JSON.stringify(b.pushes().map((h) => h.msg)));
 
   await B.jump(L('2026-09-23T22:30:00'));
