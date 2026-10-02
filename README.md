@@ -750,7 +750,9 @@ hasn't started 12 seconds after a launch from the Home Screen, a tiny script at 
 of `index.html` loads the page again, at most twice a minute.
 
 Bump `CACHE` in `public/sw.js` with every frontend change, and add any new file under
-`public/js/` to its `CORE` list, so offline has it too.
+`public/js/` to its `CORE` list, so offline has it too. A new part of the stylesheet goes
+in `public/css/` and in the list in `server/lib/styles.js`, whose order is the cascade
+order; the page still loads the one `/styles.css`.
 
 ## Settings
 
@@ -956,7 +958,9 @@ For test servers only. Never set these on a real deployment:
 ```
 server/
   index.js            Express app (API + static PWA), invite Join flow
-  routes.js           all /api endpoints
+  routes.js           the /api router; it mounts one file per area from routes/
+  routes/             the /api endpoints: status and picks, settings, ratings, lists,
+                      social, stats and people, owner only, notifications
   db.js               node:sqlite schema, migrations, settings
   env.js              the .env loader
   demo/               demo mode: the made-up world, the film snapshot, visitor copies
@@ -965,7 +969,9 @@ server/
                       push, Letterboxd, At home, Together, search, people,
                       I'm going plans and sent picks, notes on ratings,
                       your year in movies
-public/               buildless frontend (vanilla ESM + CSS, PWA)
+public/               buildless frontend (vanilla ESM + CSS, PWA); styles.css holds the
+                      theme tokens and the base, css/ the rest by area (the server
+                      sends them as one /styles.css), js/views/settings/ the Settings cards
 scripts/              share tunnel, icon generation, the demo's film snapshot
 test/                 the fast and browser test suites and their made-up sample data
 data/                 SQLite db + backups (git-ignored)

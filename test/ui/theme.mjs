@@ -36,6 +36,7 @@ import { openWorld, REPO } from '../lib/world.mjs';
 import { launch, open, go, settle } from '../lib/browser.mjs';
 import { parse, over, ratio, PNG, waitDialog } from '../lib/ui-helpers.mjs';
 import * as C from '../lib/catalog.mjs';
+import { CSS_FILES, readAll } from '../lib/sources.mjs';
 
 const S = suite('theme');
 const read = (p) => fs.readFileSync(path.join(REPO, p), 'utf8');
@@ -98,7 +99,7 @@ const barOk = (st) => st.bar.length === 1 && st.bar[0].toLowerCase() === hex(st.
 const want = (system, choice) => (choice === 'system' ? system : choice);
 
 // Every custom property the palettes set, and color-scheme, as the page has them.
-const TOKEN_NAMES = [...new Set([...read('public/styles.css').matchAll(/^\s*(--[\w-]+):/gm)].map((m) => m[1]))];
+const TOKEN_NAMES = [...new Set([...readAll(CSS_FILES).matchAll(/^\s*(--[\w-]+):/gm)].map((m) => m[1]))];
 const tokens = (page) => page.evaluate((names) => {
   const cs = getComputedStyle(document.documentElement);
   return Object.fromEntries([['color-scheme', cs.colorScheme], ...names.map((n) => [n, cs.getPropertyValue(n).trim()])]);
@@ -373,7 +374,7 @@ await S.step('flash: the chosen theme is set before the first paint', async () =
 await S.step('follow: tokens, glow, browser bar, status bar, live system changes', async () => {
   // Static: one guarded media block, two dark blocks with the same values,
   // and nothing in the app's code asks for the system's scheme itself.
-  const css = read('public/styles.css');
+  const css = readAll(CSS_FILES);
   const media = [...css.matchAll(/@media[^{]*prefers-color-scheme[^{]*\{\s*([^{]*)\{/g)];
   S.check('follow: styles.css has one prefers-color-scheme block, and it yields to a chosen Light',
     media.length === 1 && media[0][1].trim() === ':root:not([data-theme="light"])', media.map((m) => m[0].replace(/\s+/g, ' ')).join(' || '));

@@ -20,6 +20,8 @@ const CORE = [
   '/js/views/components.js', '/js/views/home.js', '/js/views/detail.js', '/js/views/person.js', '/js/views/schedule.js',
   '/js/views/coming.js', '/js/views/leaving.js', '/js/views/rate.js', '/js/views/onboarding.js', '/js/views/welcome.js',
   '/js/views/watchlist.js', '/js/views/stats.js', '/js/views/settings.js', '/js/views/together.js',
+  '/js/views/settings/parts.js', '/js/views/settings/appearance.js', '/js/views/settings/notifications.js',
+  '/js/views/settings/letterboxd.js', '/js/views/settings/owner.js',
   '/js/views/you.js', '/js/views/help.js', '/js/notes.js', '/js/place.js', '/js/keep.js', '/js/year.js', '/js/demo.js',
   '/icons/icon.svg',
 ];

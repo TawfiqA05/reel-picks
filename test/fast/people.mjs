@@ -18,6 +18,7 @@ import path from 'node:path';
 import { suite } from '../lib/check.mjs';
 import { openWorld, REPO } from '../lib/world.mjs';
 import * as C from '../lib/catalog.mjs';
+import { ROUTE_FILES } from '../lib/sources.mjs';
 
 const S = suite('people');
 
@@ -126,7 +127,7 @@ await S.step('rating and saving from a person page writes only that user\'s row'
 // ---------------------------------------------------------------- S4: the shared cache
 await S.step('code: one place asks TMDB for movie credits, always behind the throttle', async () => {
   const lib = path.join(REPO, 'server/lib');
-  const files = fs.readdirSync(lib).map((f) => path.join(lib, f)).concat([path.join(REPO, 'server/routes.js'), path.join(REPO, 'server/index.js')]);
+  const files = fs.readdirSync(lib).map((f) => path.join(lib, f)).concat([...ROUTE_FILES, 'server/index.js'].map((f) => path.join(REPO, f)));
   const hits = []; const calls = [];
   for (const f of files) {
     const src = fs.readFileSync(f, 'utf8');

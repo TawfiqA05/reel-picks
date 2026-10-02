@@ -22,6 +22,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { ROUTE_FILES, readAll } from '../lib/sources.mjs';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const REPO_ROOT = path.resolve(HERE, '..', '..');
@@ -125,6 +126,7 @@ export const APP_ROUTES = [
   ['POST', '/invite/join', 'invite join'],
   ['GET', '/', 'the page'],
   ['GET', '/index.html', 'the page'],
+  ['GET', '/styles.css', 'the stylesheet, its parts joined (server/lib/styles.js); checked with the static files'],
   ['GET', 'static files', 'static'],
   ['GET', '*', 'SPA fallback'],
 ];
@@ -167,7 +169,7 @@ async function main() {
 
   // ---- coverage: every route is in the table
   await S.step('the route table covers every route', async () => {
-    const routesSrc = fs.readFileSync(path.join(REPO_ROOT, 'server/routes.js'), 'utf8');
+    const routesSrc = readAll(ROUTE_FILES);
     const indexSrc = fs.readFileSync(path.join(REPO_ROOT, 'server/index.js'), 'utf8');
     const declared = declaredRoutes(routesSrc, indexSrc);
     S.check('the source declares routes (the parser finds them)', declared.length > 70 && declared.includes('GET /version') && declared.includes('GET /person/:id'), `${declared.length}`);

@@ -24,6 +24,7 @@ import { activeUserIds } from './lib/theatres.js';
 import { initLockWeek } from './lib/lock.js';
 import { afterNightlyBackup } from './lib/housekeeping.js';
 import { sendIndex } from './lib/version.js';
+import { sendStyles } from './lib/styles.js';
 import { backfillPosterColors } from './lib/posterColor.js';
 import { warmPeople } from './lib/people.js';
 import { runPlanJobs } from './lib/plans.js';
@@ -189,6 +190,7 @@ const publicDir = fileURLToPath(new URL('../public/', import.meta.url));
 // The page itself carries the app version (lib/version.js), so it is never
 // served as a plain file.
 app.get(['/', '/index.html'], sendIndex);
+app.get('/styles.css', sendStyles);
 app.use(express.static(publicDir, { extensions: ['html'], index: false }));
 
 // SPA fallback: send index.html for any non-API, non-file route.

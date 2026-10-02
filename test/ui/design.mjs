@@ -15,10 +15,11 @@ import { launch, open, go, settle, VISIBLE } from '../lib/browser.mjs';
 import { parse, over, ratio, PNG, platformFonts, extras, waitDialog, realSizePosters } from '../lib/ui-helpers.mjs';
 import { buttonsProbe, outlined, BUZZ, wordScan, wordProblems, paintedColours, paletteNow, inPalette } from '../lib/design-probes.mjs';
 import * as C from '../lib/catalog.mjs';
+import { CSS_FILES, ROUTE_FILES, readAll } from '../lib/sources.mjs';
 
 const S = suite('design');
 const read = (p) => fs.readFileSync(path.join(REPO, p), 'utf8');
-const css = read('public/styles.css');
+const css = readAll(CSS_FILES);
 const MOVIE = C.PLAYING[0].id;
 
 // ---------------------------------------------------------------- tokens (static)
@@ -94,7 +95,7 @@ await S.step('clean: nothing old left in the stylesheet', async () => {
   S.check('the helpers and rules the redesign replaced are gone', !still.length, still.join(', '));
   const old = [];
   for (const hex of ['#1C1A18', '#252220', '#2E2B28', '#3F3A35', '#F0A43A', '#F3AE4C', '#FF939C', '#F56B78', '#0b0b0f', '#ffb03a']) {
-    for (const f of ['public/styles.css', 'public/index.html', 'public/manifest.webmanifest', 'public/icons/icon.svg', 'server/lib/invitePage.js']) if (read(f).toLowerCase().includes(hex.toLowerCase())) old.push(`${hex} in ${f}`);
+    for (const f of [...CSS_FILES, 'public/index.html', 'public/manifest.webmanifest', 'public/icons/icon.svg', 'server/lib/invitePage.js']) if (read(f).toLowerCase().includes(hex.toLowerCase())) old.push(`${hex} in ${f}`);
   }
   S.check('no colour of the old Projector palette is left', !old.length, old.join('; '));
   S.check('Zilla Slab and Work Sans are named nowhere', !/Zilla|Work Sans|Work\+Sans/.test(`${all}\n${read('server/lib/invitePage.js')}`));
@@ -333,7 +334,7 @@ async function words() {
   }
   S.check('words: the Join and expired pages have no em dash, "theatre" or buzzword', !pagesBad.length, pagesBad.join(', '));
   const srcBad = [];
-  for (const f of ['server/lib/theatres.js', 'server/lib/runway.js', 'server/lib/leaving.js', 'server/routes.js']) {
+  for (const f of ['server/lib/theatres.js', 'server/lib/runway.js', 'server/lib/leaving.js', ...ROUTE_FILES]) {
     for (const l of read(f).split('\n').filter((x) => !/^\s*(\/\/|\*)/.test(x) && !/console\./.test(x))) {
       for (const s of l.match(/'[^']*'|`[^`]*`|"[^"]*"/g) || []) {
         if (/—/.test(s)) srcBad.push(`${f}: em dash in "${s.slice(0, 60)}"`);

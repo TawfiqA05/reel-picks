@@ -11,11 +11,12 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { suite } from '../lib/check.mjs';
 import { openWorld, REPO } from '../lib/world.mjs';
+import { CSS_FILES, SETTINGS_FILES, readAll } from '../lib/sources.mjs';
 
 const S = suite('theme');
 const read = (p) => fs.readFileSync(path.join(REPO, p), 'utf8');
 const html = read('public/index.html');
-const css = read('public/styles.css');
+const css = readAll(CSS_FILES);
 
 await S.step('index.html: the script comes first and does what it says', async () => {
   const script = html.match(/<script id="rp-theme">([\s\S]*?)<\/script>/);
@@ -83,7 +84,7 @@ await S.step('styles.css: one guarded dark block, a forced-Dark twin, palette-dr
 });
 
 await S.step('Settings, Help and the README; the server never hears of it', async () => {
-  const settings = read('public/js/views/settings.js');
+  const settings = readAll(SETTINGS_FILES);
   S.check('Settings has the Appearance group with the Theme control', /card\('Appearance'/.test(settings) && /role: 'radiogroup', 'aria-labelledby': 'theme-label'/.test(settings) && /'Theme'/.test(settings));
   S.check('each part is named Match system, Light and Dark', /name: 'Match system'/.test(settings) && /name: 'Light'/.test(settings) && /name: 'Dark'/.test(settings));
   const server = fs.readdirSync(path.join(REPO, 'server'), { recursive: true }).filter((f) => f.endsWith('.js')).filter((f) => /rp\.theme|rpTheme|data-theme/.test(read(path.join('server', f))));

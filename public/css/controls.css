@@ -1,0 +1,221 @@
+/* Reel Picks styles, after styles.css: posters, tags, choices, buttons, stars,
+   inputs, banners, empty states, the match pill, the reason line, runway. */
+
+/* ---- posters ---- */
+.poster { aspect-ratio: 2 / 3; border-radius: var(--r-poster); overflow: hidden; background: var(--chip); box-shadow: var(--shadow); }
+.poster-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.poster-fallback {
+  width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: var(--sp-1);
+  padding: 12%; text-align: left; overflow: hidden; container-type: inline-size;
+  background:
+    radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--text) 8%, transparent), transparent 60%),
+    linear-gradient(165deg, var(--chip), var(--raised) 70%);
+}
+.poster-fallback-title { font-family: var(--font-display); font-weight: var(--display-weight); font-size: clamp(var(--fs-xs), 16cqi, var(--fs-xl)); line-height: 1; letter-spacing: -0.02em; color: var(--text); overflow-wrap: anywhere; }
+.poster-fallback-year { font-size: var(--fs-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
+.poster-sm { width: 54px; flex: 0 0 54px; border-radius: 7px; box-shadow: none; }
+.poster-grid { width: 100%; }
+.poster-xl { width: min(60vw, 240px); }
+
+/* ---- tags: small soft-filled labels, never outlined ----
+   Format tints say which format (IMAX blue, Dolby purple, RealD 3D teal,
+   anything else amber); status tints say what's going on (back in theaters
+   teal, last chance red, new this week amber); positive ones (Primary, Moved
+   up) take the soft accent; plain facts sit on the chip colour. */
+.tag { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: var(--fs-xs); font-weight: 600; line-height: var(--lh-tight); padding: 3px 9px; border-radius: 999px; background: var(--chip); color: var(--text); }
+.tag:is(.accent, .watch, .moved) { background: var(--accent-soft); color: var(--accent-text); }
+.tag:is(.blue, .imax) { background: var(--blue-soft); color: var(--blue); }
+.tag:is(.purple, .dolby) { background: var(--purple-soft); color: var(--purple); }
+.tag:is(.teal, .reald, .back) { background: var(--teal-soft); color: var(--teal); }
+.tag:is(.amber, .fmt, .new, .opens) { background: var(--amber-soft); color: var(--amber); }
+.tag:is(.bad, .hidden, .last) { background: var(--bad-soft); color: var(--bad); }
+.tag-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+/* ---- choices: plain until picked, then filled accent ---- */
+.chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.chip {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 14px;
+  border: none; border-radius: var(--r-btn); background: var(--chip); color: var(--text);
+  font-size: var(--fs-sm); font-weight: 500; cursor: pointer;
+}
+.chip:hover { background: color-mix(in srgb, var(--chip) 85%, var(--text)); }
+.chip.active { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+/* Inside a group the chip colour is the group's own, so unpicked chips sit on the page colour. */
+.group-body .chip:not(.active) { background: var(--bg); }
+.group-body .chip:not(.active):hover { background: color-mix(in srgb, var(--bg) 85%, var(--text)); }
+
+/* ---- buttons: one shape, coloured by job ----
+   Filled accent: the main action. Soft accent: secondary actions and
+   choices. Soft red: remove, revoke, Not for me. Every one is the same
+   rounded rectangle; icon buttons are 44px squares of it. */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px;
+  border: none; border-radius: var(--r-btn); background: var(--accent); color: var(--on-accent);
+  font-size: var(--fs-base); font-weight: 600; line-height: var(--lh-tight); text-align: center; cursor: pointer;
+}
+.btn:hover { background: color-mix(in srgb, var(--accent) 88%, var(--text)); }
+.btn.soft, .icon-btn.soft { background: var(--accent-soft); color: var(--accent-text); }
+.btn.soft:hover, .icon-btn.soft:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+.btn.danger, .icon-btn.danger { background: var(--bad-soft); color: var(--bad); }
+/* A light wash, so the red label keeps 4.5:1: on a dark chip 4.6:1, on the
+   cream page 4.5:1 (22% gave 4.2:1 in both). */
+.btn.danger:hover, .icon-btn.danger:hover { background: color-mix(in srgb, var(--bad) 17%, transparent); }
+/* On a What should I watch? film (the chip fill) the light wash would let the
+   label drop to 4.1:1, so there it's laid over the card colour instead: the
+   same colour the hover has on a Settings group, 5.0:1. In dark
+   --bad-hover-under is transparent, so dark is the plain wash (4.6:1). */
+.wsw-film :is(.btn, .icon-btn).danger:hover { background: color-mix(in srgb, var(--bad) 17%, var(--bad-hover-under)); }
+.btn.small { padding: 0 12px; font-size: var(--fs-sm); }
+.btn.wide { width: 100%; }
+/* Disabled looks disabled: no colour, a dashed edge, not just fainter text. */
+:is(.btn, .icon-btn, .chip):is(:disabled, [aria-disabled="true"]) {
+  background: transparent; color: var(--muted); outline: 1px dashed var(--field-edge); outline-offset: -1px; cursor: not-allowed;
+}
+/* Saved to the watchlist: the bookmark fills in gold, and so does its word
+   (aria-pressed and the button's name say the same). */
+:is(.btn, .icon-btn).wl-btn.active { background: color-mix(in srgb, var(--gold) 16%, transparent); color: var(--gold); }
+.wl-btn.active .icon { fill: currentColor; }
+/* Text buttons: accent words, no box (Undo, Skip, Fix, Clear). */
+.link-btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 4px;
+  background: none; border: none; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
+}
+.link-btn:hover { text-decoration: underline; text-underline-offset: 3px; }
+.row-gap { display: flex; gap: 10px; align-items: center; }
+.row-gap.wrap { flex-wrap: wrap; }
+/* A field with buttons beside it: the buttons take the field's height and
+   keep their label on one line; the field gives up the width. */
+.row-gap:has(> .input) { align-items: stretch; }
+.row-gap:has(> .input) > .input { flex: 1 1 auto; min-width: 0; }
+.row-gap:has(> .input) > .btn { flex: 0 0 auto; white-space: nowrap; }
+/* 320: the field takes its own line and its button goes under it. */
+@media (max-width: 359px) {
+  .row-gap:has(> .input) { flex-wrap: wrap; }
+  .row-gap:has(> .input) > .input { flex-basis: 100%; }
+}
+
+/* ---- stars ---- */
+.stars { position: relative; display: inline-block; line-height: 1; white-space: nowrap; }
+.stars-base, .stars-fill { display: flex; }
+.stars-base { color: var(--field-edge); }
+.stars-fill { position: absolute; top: 0; left: 0; overflow: hidden; white-space: nowrap; color: var(--gold); }
+/* Drawn stars (ui.js): a row of five 1em cells in one SVG, and single ones
+   in running text, filled with their colour. */
+.star-row { flex: 0 0 auto; width: 5em; height: 1em; fill: currentColor; }
+.star-glyph { flex: 0 0 auto; fill: currentColor; stroke: none; }
+.inline-star { vertical-align: -0.08em; margin: 0 0.06em; color: var(--gold); }
+.stars.interactive { cursor: pointer; }
+
+/* ---- inputs ---- */
+.input { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--field-edge); border-radius: var(--r-btn); color: var(--text); font-size: var(--fs-base); line-height: 22px; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+.input:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+.input.big { padding: 13px 15px; font-size: var(--fs-md); line-height: 24px; }
+/* iPhone gives a time field a wide width of its own; this keeps it in its column. */
+.input.time { -webkit-appearance: none; appearance: none; display: block; text-align: left; }
+.input.time::-webkit-date-and-time-value { text-align: left; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+input[type="checkbox"] { accent-color: var(--accent); width: 20px; height: 20px; flex: 0 0 auto; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field-label { font-size: var(--fs-sm); color: var(--muted); }
+/* A value Settings won't save: the field turns red and its message sits under the row. */
+.input[aria-invalid="true"] { border-color: var(--bad); }
+.form-error { margin: 0; color: var(--bad); font-size: var(--fs-sm); }
+.alert-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+.alert-item { display: flex; gap: 10px; align-items: flex-start; }
+.alert-item > svg { flex: 0 0 auto; margin-top: 2px; }
+.alert-item.problem > svg { color: var(--bad); }
+.alert-item.recovered > svg { color: var(--good); }
+.alert-main { min-width: 0; overflow-wrap: anywhere; }
+.offsite { display: flex; flex-direction: column; gap: 10px; }
+.offsite > p { margin: 0; }
+/* At home (js/views/athome.js) */
+.home-picks { display: flex; flex-direction: column; gap: var(--sp-3); }
+.home-picks .section-head { align-items: baseline; }
+.home-body { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.home-status { margin: 0; }
+.service-tag { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--muted); }
+.service-logo { width: 20px; height: 20px; border-radius: 5px; flex: 0 0 auto; }
+.home-setup { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3); background: var(--raised); border-radius: var(--r-card); padding: var(--sp-4); }
+.home-setup > div { flex: 1 1 260px; min-width: 0; }
+.home-setup p { margin: 4px 0 0; }
+.services-sheet { display: flex; flex-direction: column; gap: var(--sp-3); }
+.services-sheet p { margin: 0; }
+/* What should I watch? (js/wsw.js) */
+.search-wsw { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; }
+.wsw { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.wsw-step { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
+.wsw-q { margin: 0; font-size: var(--fs-lg); }
+.wsw-q:focus { outline: none; }
+.wsw-nav { display: flex; justify-content: space-between; align-items: center; }
+.wsw-list { display: flex; flex-direction: column; gap: var(--sp-3); }
+.wsw-film { display: flex; flex-direction: column; gap: var(--sp-3); background: var(--chip); border-radius: var(--r-card); padding: var(--sp-3); min-width: 0; }
+.wsw-film.is-hidden .wsw-top, .wsw-film.is-hidden .wsw-tools > :not(.wsw-hide) { opacity: .45; }
+.wsw-top { display: flex; gap: var(--sp-3); min-width: 0; }
+.wsw-poster { flex: 0 0 auto; align-self: flex-start; }
+.wsw-poster .poster-card { width: 72px; height: 108px; }
+.wsw-body { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.wsw-body .pick-head { font-size: inherit; }
+.wsw-tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); padding-top: var(--sp-3); border-top: 1px solid var(--divider); }
+.wsw-tools > .btn { padding-inline: 6px; gap: 5px; min-width: 0; white-space: nowrap; }
+@media (max-width: 400px) { .wsw-tools > .btn { font-size: var(--fs-xs); } .wsw-tools > .btn svg { width: 14px; height: 14px; } }
+.wsw-rate { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); }
+.wsw-hidden-note { margin: 0; font-size: var(--fs-sm); }
+/* The match pill and the public score beside it; on a narrow card the score
+   moves under the pill instead of running past the edge. */
+.wsw-score { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; row-gap: 2px; }
+.wsw-public { white-space: nowrap; font-size: var(--fs-sm); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.wsw-note { margin: 0; font-size: var(--fs-sm); line-height: var(--lh-snug); color: var(--text); }
+.wsw-note.muted { color: var(--muted); }
+.wsw-foot { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); }
+
+/* ---- banners / alerts ---- */
+.banner, .alert { display: flex; align-items: center; gap: 12px; padding: 13px 15px; border-radius: var(--r-card); margin: 8px 0; }
+.banner { background: var(--raised); justify-content: space-between; border-radius: var(--r-card); }
+.banner-title { font-weight: 700; }
+.banner-sub { font-size: var(--fs-sm); color: var(--muted); }
+.alert { background: var(--raised); font-size: var(--fs-sm); }
+.alert.tip { background: var(--chip); }
+.alert-icon { display: grid; place-items: center; color: var(--text); flex: 0 0 auto; }
+.help-card { background: var(--raised); border-radius: var(--r-card); padding: var(--sp-4); margin-top: var(--sp-4); }
+.help-card h3 { margin-bottom: 8px; }
+
+/* ---- empty / spinner ---- */
+.empty { text-align: center; padding: 48px 20px; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+/* Ending the page, it keeps no padding under it: the page's own end gap is the space. */
+.empty:last-child { padding-bottom: 0; }
+.empty-icon { color: var(--accent-text); display: grid; place-items: center; width: 64px; height: 64px; border-radius: var(--r-card); background: var(--accent-soft); margin-bottom: var(--sp-2); }
+.empty-title { font-size: var(--fs-xl); color: var(--text); }
+.empty-msg { max-width: 420px; overflow-wrap: anywhere; }
+.spinner { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px 0; color: var(--muted); }
+.spinner-ring { width: 32px; height: 32px; border: 3px solid var(--divider); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+
+/* ---- the match: one soft accent pill everywhere ---- */
+.match {
+  display: inline-flex; align-items: baseline; gap: 6px; align-self: flex-start; white-space: nowrap;
+  padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text);
+  font-size: var(--fs-sm); font-weight: 600; line-height: var(--lh-tight); font-variant-numeric: tabular-nums;
+}
+.match-early { font-size: var(--fs-xs); font-weight: 500; }
+
+/* ---- the reason line: two reasons at most, the public score coloured ---- */
+.reason-line { margin: 0; color: var(--text); font-size: var(--fs-sm); line-height: var(--lh-snug); }
+.hero-reason { font-size: var(--fs-base); }
+.row-reason { color: var(--muted); }
+.rs-score { font-weight: 600; }
+.rs-score.good { color: var(--good); }
+.rs-score.bad { color: var(--bad); }
+
+/* ---- runway: how long it's on ---- */
+.runway { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; }
+.runway.urgent { color: var(--bad); font-weight: 600; }
+.runway-where { color: var(--muted); font-weight: 600; }
+.runway-line { display: flex; align-items: flex-start; gap: 6px; margin: 0; color: var(--text); font-size: var(--fs-sm); font-weight: 500; line-height: var(--lh-snug); }
+.runway-icon { flex: 0 0 auto; margin-top: 1px; color: var(--muted); }
+/* A confirmed end fills the calendar in. */
+.runway-line.committed .runway-icon rect { fill: currentColor; fill-opacity: .3; }
+.runway-line.urgent, .runway-line.urgent .runway-icon { color: var(--bad); }
+.runway-line.upcoming { color: var(--muted); }
+.theatre-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.t-only { font-size: var(--fs-xs); color: var(--muted); }
+.handoff, .lc-handoff { font-size: var(--fs-xs); color: var(--muted); line-height: var(--lh-snug); }

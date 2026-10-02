@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { suite } from '../lib/check.mjs';
 import { REPO, copyApp, tempDir, startServer, call } from '../lib/world.mjs';
+import { CSS_FILES, ROUTE_FILES, SETTINGS_FILES, readAll } from '../lib/sources.mjs';
 
 const S = suite('readme');
 const read = (p) => fs.readFileSync(path.join(REPO, p), 'utf8');
@@ -101,7 +102,7 @@ const tabs = [...nav.matchAll(/label:\s*'([^']+)'/g)].map((m) => m[1]);
 addAll(tabs, 'tab');
 addAll([...read('public/js/views/schedule.js').matchAll(/label:\s*'([^']+)'/g)].map((m) => m[1]), 'Schedule segment');
 addAll([...read('public/js/views/you.js').matchAll(/label:\s*'([^']+)'/g)].map((m) => m[1]), 'You segment');
-addAll([...read('public/js/views/settings.js').matchAll(/\bcard\('([^']+)'/g)].map((m) => m[1].replace(/\s*\([^)]*\)\s*$/, '')), 'Settings group');
+addAll([...readAll(SETTINGS_FILES).matchAll(/\bcard\('([^']+)'/g)].map((m) => m[1].replace(/\s*\([^)]*\)\s*$/, '')), 'Settings group');
 addAll([...read('public/js/views/home.js').matchAll(/sectionTitle\('([^']+)'/g)].map((m) => m[1]), 'Picks section');
 addAll([...read('public/js/plans.js').matchAll(/\bname:\s*'([^']+)'/g)].map((m) => m[1]).filter((n) => !/^(Other|None)\b/.test(n)), 'movie plan');
 addAll([...read('public/js/services.js').matchAll(/\bname:\s*'([^']+)'/g)].map((m) => m[1]), 'streaming service');
@@ -120,7 +121,7 @@ addAll([
 ], 'feature');
 const missingFeatures = [...features].filter(([f]) => !has(f)).map(([f, from]) => `${f} (${from})`);
 S.check('README mentions every user-facing feature, tab and section the code has', !missingFeatures.length, list(missingFeatures));
-const code = ['public/js/app.js', 'public/js/views/you.js', 'public/js/views/help.js', 'public/js/views/settings.js', 'public/styles.css', 'public/index.html', 'public/js/update.js', 'public/js/stream.js', 'public/js/views/components.js', 'server/routes.js', 'public/js/pull.js'].map(read).join('\n');
+const code = ['public/js/app.js', 'public/js/views/you.js', 'public/js/views/help.js', ...SETTINGS_FILES, ...CSS_FILES, 'public/index.html', 'public/js/update.js', 'public/js/stream.js', 'public/js/views/components.js', ...ROUTE_FILES, 'public/js/pull.js'].map(read).join('\n');
 const phantom = ['You', 'Help', 'Replay tour', 'Big Shoulders Display', 'IBM Plex Sans', 'Rent or buy', 'Seat by', 'out around', '/version', 'save-bar', 'page-glow'].filter((f) => !code.includes(f));
 S.check('the features README names by their app wording exist in the code', !phantom.length, phantom.join(', '));
 const tabsSec = raw.slice(raw.indexOf('## The tabs'), raw.indexOf('\n## ', raw.indexOf('## The tabs') + 5));

@@ -31,6 +31,7 @@ import { suite } from '../lib/check.mjs';
 import { openWorld, makeFriend, GUEST, REPO } from '../lib/world.mjs';
 import * as C from '../lib/catalog.mjs';
 import { seedYear, DEC1, NOV30, JAN15, JAN16 } from '../lib/year-seed.mjs';
+import { ROUTE_FILES, readAll } from '../lib/sources.mjs';
 
 const S = suite('year');
 
@@ -296,7 +297,7 @@ const recsOf = async (as) => {
 await S.step('readonly: nothing moves', async () => {
   // The code: no write statement in lib/year.js or the /year routes.
   const src = fs.readFileSync(path.join(REPO, 'server/lib/year.js'), 'utf8');
-  const routes = fs.readFileSync(path.join(REPO, 'server/routes.js'), 'utf8');
+  const routes = readAll(ROUTE_FILES);
   const yearRoutes = routes.slice(routes.indexOf('// ---- your year in movies'), routes.indexOf('// ---- people'));
   const writes = /\brun\(|\bexec\(|INSERT|UPDATE |DELETE|REPLACE INTO|setSetting|updateSettings/;
   S.check('readonly: lib/year.js and the /year routes hold no database write', yearRoutes.length > 500 && !writes.test(src) && !writes.test(yearRoutes) && !/from '\.\.\/db\.js'.*\brun\b/.test(src), (src.match(writes) || yearRoutes.match(writes) || ['routes section missing'])[0]);

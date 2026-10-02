@@ -1,0 +1,275 @@
+/* Reel Picks styles, after controls.css: the hero, day chips, pick cards,
+   showtime rows, lists, tiles, Last chance, Schedule, grouped lists. */
+
+/* ---- the hero: #1 on Picks, and the movie page ----
+   Phone: the art on top, the words under it on the page. Wide screens: the
+   art fills the frame with a scrim that keeps the words readable, and no
+   outline around it. */
+.hero-pick, .detail-hero { position: relative; margin: calc(-1 * var(--sp-4)) calc(-1 * var(--sp-4)) 0; isolation: isolate; }
+.hero-media { position: relative; aspect-ratio: 16 / 10; overflow: hidden; }
+.hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; }
+/* Phones: the art fades out into whatever is behind it (the page, or the
+   glow), so there's no seam where it ends. */
+.hero-media:not(.from-poster):not(.plain) { -webkit-mask-image: linear-gradient(180deg, #000 50%, transparent 100%); mask-image: linear-gradient(180deg, #000 50%, transparent 100%); }
+.hero-scrim { display: none; }
+/* No backdrop: the poster itself, small and upright, over the glow. */
+.hero-media.from-poster { aspect-ratio: auto; display: flex; justify-content: center; padding: var(--sp-6) 0 var(--sp-2); }
+.hero-media.from-poster .hero-scrim, .hero-media.plain .hero-scrim { display: none; }
+.hero-poster { width: 150px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: var(--r-poster); box-shadow: var(--shadow); }
+.hero-media.plain { aspect-ratio: auto; height: var(--sp-6); }
+.hero-content { position: relative; display: flex; flex-direction: column; gap: var(--sp-3); padding: 0 var(--sp-4) var(--sp-5); margin-top: calc(-1 * var(--sp-7)); }
+.hero-media:is(.from-poster, .plain) + .hero-content { margin-top: var(--sp-3); }
+.hero-line { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); color: var(--text); font-size: var(--fs-sm); font-weight: 600; }
+/* The one title set tighter than --lh-display: at 46-72px the default gap reads loose. */
+.hero-title { font-size: var(--fs-hero-sm); line-height: .98; text-wrap: balance; }
+.hero-title a:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .1em; }
+.hero-meta { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
+.tag-row.one-line { flex-wrap: nowrap; overflow: hidden; }
+.hero-actions { display: flex; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-1); }
+.btn.book { font-size: var(--fs-md); min-height: 48px; }
+/* 320: the longest label ("Book 9:20 PM tomorrow · RealD 3D") on one line. */
+@media (max-width: 359px) { .btn.book { font-size: var(--fs-base); padding: 0 12px; } }
+.hero-buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); }
+.hero-buttons.one { grid-template-columns: minmax(0, 1fr); }
+.hero-buttons .btn { min-width: 0; padding: 0 var(--sp-2); gap: 6px; white-space: nowrap; }
+@media (max-width: 429px) { .hero-buttons .btn { font-size: var(--fs-sm); } .hero-buttons .btn .icon { width: 16px; height: 16px; } }
+@media (max-width: 359px) { .hero-buttons .btn .icon { display: none; } }
+.seat-line { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); color: var(--muted); font-size: var(--fs-sm); }
+@media (min-width: 900px) {
+  .hero-pick, .detail-hero { margin: 0 0 var(--sp-4); min-height: 540px; border-radius: var(--r-sheet); overflow: hidden; display: flex; align-items: flex-end; }
+  .hero-pick .hero-media, .detail-hero .hero-media { position: absolute; inset: 0; aspect-ratio: auto; -webkit-mask-image: none; mask-image: none; }
+  .hero-media:not(.from-poster):not(.plain) .hero-scrim { display: block; position: absolute; inset: 0; }
+  .hero-media.from-poster { justify-content: flex-end; align-items: center; padding: var(--sp-7) var(--sp-9); }
+  .hero-poster { width: 230px; }
+  .hero-media.plain { height: auto; }
+  .hero-pick .hero-scrim, .detail-hero .hero-scrim {
+    background:
+      linear-gradient(180deg, transparent 55%, var(--bg) 100%),
+      linear-gradient(90deg,
+        color-mix(in srgb, var(--bg) 96%, transparent) 0%,
+        color-mix(in srgb, var(--bg) 86%, transparent) 36%,
+        color-mix(in srgb, var(--bg) 25%, transparent) 70%,
+        color-mix(in srgb, var(--bg) 10%, transparent) 100%);
+  }
+  .hero-pick .hero-content, .detail-hero .hero-content { width: min(620px, 100%); margin: 0; padding: var(--sp-9) var(--sp-9) var(--sp-8); }
+  .hero-title { font-size: var(--fs-hero); }
+}
+
+/* ---- the calendar button: small, with a 44px tap area ---- */
+.cal-btn {
+  position: relative; display: inline-grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px;
+  border-radius: var(--r-btn); background: var(--chip); color: var(--text);
+}
+.cal-btn::after { content: ''; position: absolute; top: -6px; bottom: -6px; left: -6px; right: -6px; }
+.cal-btn:hover { background: color-mix(in srgb, var(--chip) 85%, var(--text)); }
+
+/* ---- day chips: the chosen day filled with the accent ---- */
+.day-strip { position: relative; margin: var(--sp-3) 0 var(--sp-2); }
+/* More days off to the right: the strip fades out at its edge. */
+.day-strip::after {
+  content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 48px; pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--bg)); opacity: 0; transition: opacity 200ms;
+}
+.day-strip.more::after { opacity: 1; }
+.day-picker { display: flex; gap: var(--sp-2); overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
+.day-picker::-webkit-scrollbar { display: none; }
+.day-btn {
+  flex: 0 0 58px; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  padding: 0; border: none; border-radius: var(--r-btn); background: var(--chip); color: var(--text); cursor: pointer; scroll-snap-align: start;
+}
+.day-name { font-size: var(--fs-xs); font-weight: 500; color: var(--muted); line-height: var(--lh-tight); }
+.day-num { font-size: var(--fs-lg); font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.day-btn.active { background: var(--accent); color: var(--on-accent); }
+.day-btn.active .day-name { color: var(--on-accent); }
+@media (min-width: 900px) { .day-btn { flex-basis: 72px; height: 64px; } }
+
+/* ---- What should I watch? ---- */
+.wsw-bar { display: flex; margin: var(--sp-2) 0; }
+@media (max-width: 600px) { .wsw-bar .wsw-btn { width: 100%; } }
+
+/* ---- picks 2 to 4: cards ---- */
+.pick-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
+.pick-card { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; padding: var(--sp-3); border-radius: var(--r-card); background: var(--raised); }
+.pc-top { display: flex; gap: var(--sp-3); min-width: 0; }
+.pick-poster { flex: 0 0 96px; align-self: flex-start; }
+.poster-card { width: 96px; height: 144px; }
+.pick-body { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.pick-head { display: flex; align-items: baseline; gap: 6px; margin: 0; font-size: inherit; font-weight: inherit; }
+.pick-rank { flex: 0 0 auto; font-family: var(--font-display); font-weight: var(--display-weight); font-size: var(--fs-lg); line-height: var(--lh-display); color: var(--accent-text); }
+.pick-title { font-size: var(--fs-lg); line-height: var(--lh-display); min-width: 0; }
+.pick-title:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .12em; }
+.pick-meta { margin: 0; color: var(--muted); font-size: var(--fs-xs); }
+.pc-times { padding-top: var(--sp-2); border-top: 1px solid var(--divider); }
+.pick-card > .owner-tools { padding-top: var(--sp-2); border-top: 1px solid var(--divider); }
+@media (min-width: 900px) {
+  .pick-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4); }
+  .home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.owner-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2); width: 100%; min-width: 0; }
+.rate-inline { display: flex; align-items: center; min-width: 0; }
+.owner-buttons { display: flex; align-items: center; gap: var(--sp-2); margin-left: auto; flex: 0 0 auto; }
+.is-leaving { opacity: 0; transform: scale(.98); transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out); pointer-events: none; }
+
+/* ---- showtime rows: one fixed grid, so every row lines up ----
+   time · format · ends · fits · Book · calendar. The Book link covers the
+   whole row (its ::after), so a tap anywhere books; the calendar button sits
+   above it. At 320 the same cells take two fixed lines. */
+.st-list { display: flex; flex-direction: column; }
+.st-list > .st-row + .st-row { border-top: 1px solid var(--divider); }
+.st-row {
+  position: relative; display: grid; align-items: center; column-gap: 4px; min-height: 44px; min-width: 0;
+  /* Measured on IBM Plex: the widest time ("12:08 PM" bold, 58.2px), the
+     widest format chip ("70mm", 43.8px), "ends 12:08 PM" (81.7px), the Fits
+     mark, Book (46.6px) and the calendar button: 318px in all, inside the
+     319px of a card at 375. Book's column is fixed too, so a row that says
+     "Started" instead keeps every other column where it is. */
+  grid-template-columns: 59px 44px minmax(82px, 1fr) 38px 47px 28px;
+  grid-template-areas: "time fmt end fit book cal";
+  font-size: var(--fs-xs); color: var(--text);
+}
+.st-time { grid-area: time; font-size: var(--fs-sm); font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.st-fmt { grid-area: fmt; display: flex; }
+.st-fmt .tag { padding: 2px 4px; }
+.st-end { grid-area: end; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.st-fit { grid-area: fit; display: inline-flex; align-items: center; gap: 2px; color: var(--good); font-weight: 600; white-space: nowrap; }
+.st-book { grid-area: book; justify-self: end; display: inline-flex; align-items: center; gap: 2px; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
+a.st-book::after { content: ''; position: absolute; inset: 0; }
+a.st-book:focus-visible { outline: none; }
+a.st-book:focus-visible::after { outline: 2px solid var(--focus); outline-offset: 1px; }
+.st-row:has(a.st-book:hover) { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.st-cal { grid-area: cal; justify-self: end; z-index: 1; }
+.st-row .cal-btn { width: 28px; height: 28px; flex-basis: 28px; }
+.st-row .cal-btn::after { top: -8px; bottom: -8px; left: -8px; right: -8px; }
+.st-row.past, .st-row.past .st-time { color: var(--muted); }
+.st-row.past .st-time { font-weight: 500; }
+.st-row.past .st-book { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
+/* 320: the same cells on two fixed lines, time, format and Book over ends,
+   fits and the calendar, every column at the same x in every row. */
+@media (max-width: 359px) {
+  .st-row { grid-template-columns: 59px 44px minmax(0, 1fr) 47px; grid-template-areas: "time fmt . book" "end end fit cal"; row-gap: 2px; padding: 4px 0; }
+  .st-fit { justify-self: start; }
+}
+/* Nothing on the chosen day: the next showing, and Book. */
+.next-line { position: relative; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); min-height: 44px; margin: 0; font-size: var(--fs-sm); }
+.next-line a.st-book::after { border-radius: var(--r-btn); }
+
+/* ---- the lists: rows with thin dividers, no boxes ---- */
+.list { display: flex; flex-direction: column; }
+.list > .list-row + .list-row { border-top: 1px solid var(--divider); }
+.list-row { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--sp-3); row-gap: var(--sp-2); align-items: start; padding: var(--sp-3) 0; }
+/* The showtime, All times and the controls run under the poster, across the row. */
+.list-row > .row-wide { grid-column: 1 / -1; min-width: 0; }
+.list-row:is(.excluded, .seen, .is-hidden) .row-poster { opacity: .6; }
+.row-poster { flex: 0 0 auto; }
+.row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.row-head { display: flex; align-items: flex-start; gap: var(--sp-2); width: 100%; }
+.row-title { flex: 1; min-width: 0; font-weight: 600; padding-top: 2px; }
+.row-year { color: var(--muted); font-weight: 400; }
+.row-head .not-for-me { margin: -4px 0 -4px auto; }
+.row-match { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.row-more.row-wide { justify-self: start; }
+.row-expand { display: flex; flex-direction: column; gap: var(--sp-2); }
+.fmt-theatre { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; font-size: var(--fs-sm); font-weight: 600; margin-top: var(--sp-2); }
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.section-head .section-title { flex: 1; min-width: 0; }
+.section-toggle { flex: 0 0 auto; }
+.section-link { display: inline-flex; align-items: center; gap: var(--sp-1); min-height: 44px; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
+.section-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.hidden-line { color: var(--muted); font-size: var(--fs-sm); margin: var(--sp-2) 0 0; }
+.hidden-list { display: flex; flex-direction: column; }
+.hidden-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) 0; }
+.hidden-row + .hidden-row { border-top: 1px solid var(--divider); }
+.hidden-name { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.hidden-title { font-weight: 600; min-width: 0; }
+.hidden-title:hover { text-decoration: underline; }
+
+/* ---- tiles (Coming soon, Watchlist) ---- */
+.tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--sp-5) var(--sp-3); }
+.tile { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tile-poster { position: relative; }
+.tile-link { display: block; }
+.tile-corner { position: absolute; top: 6px; right: 6px; }
+.tile-cap { position: relative; font-size: var(--fs-sm); font-weight: 600; line-height: var(--lh-tight); }
+.tile-sub { font-size: var(--fs-xs); color: var(--muted); }
+.tile-tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* ---- Last chance tiles ---- */
+.lc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-5) var(--sp-3); }
+@media (min-width: 900px) { .lc-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.lc-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+.lc-poster { position: relative; width: 100%; }
+.lc-saved { position: absolute; top: 6px; left: 6px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: color-mix(in srgb, var(--bg) 78%, transparent); color: var(--gold); }
+.lc-saved .icon { fill: currentColor; }
+.lc-hedge { font-size: var(--fs-xs); color: var(--muted); }
+.lc-title { font-size: var(--fs-sm); font-weight: 600; line-height: var(--lh-tight); }
+.lc-meta { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.lc-left { font-size: var(--fs-xs); color: var(--muted); }
+
+/* ---- Schedule: Leaving, a week of departure deadlines ---- */
+.lv-intro { margin: 0 0 var(--sp-3); line-height: var(--lh-body); max-width: 60ch; }
+.lv-week { display: flex; flex-direction: column; gap: var(--sp-4); margin-bottom: var(--sp-5); }
+.lv-day-head { display: flex; align-items: baseline; gap: var(--sp-2); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--divider); }
+.lv-day-name { font-family: var(--font-display); font-weight: var(--display-weight); font-size: var(--fs-lg); line-height: var(--lh-display); }
+.lv-day-num { color: var(--muted); font-size: var(--fs-sm); }
+.lv-day-count { margin-left: auto; font-size: var(--fs-sm); color: var(--muted); }
+.lv-day:is(.urgent, .soon) .lv-day-count { color: var(--bad); font-weight: 600; }
+.lv-day.no-films .lv-day-head { border-bottom: none; padding-bottom: 0; }
+.lv-day.no-films .lv-day-name { font-size: var(--fs-md); color: var(--muted); }
+.lv-day.no-films .lv-day-body { display: none; }
+.lv-day-body, .lv-later, .lv-hedged { display: flex; flex-direction: column; }
+:is(.lv-day-body, .lv-later, .lv-hedged) > .lv-film + .lv-film { border-top: 1px solid var(--divider); }
+.lv-film { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px var(--sp-3); padding: var(--sp-3) 0; min-width: 0; }
+.lv-poster { position: relative; }
+.lv-film-body { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.lv-film-title { position: relative; font-weight: 600; line-height: var(--lh-tight); }
+/* A title link is one short line: its tap area reaches 44px tall over the
+   plain text around it. */
+.tile-cap::after, .lv-film-title::after { content: ''; position: absolute; top: -14px; bottom: -14px; left: 0; right: 0; }
+.lv-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.lv-when { font-size: var(--fs-sm); font-weight: 600; }
+.lv-when:is(.urgent, .soon) { color: var(--bad); }
+.lv-when.hedge { color: var(--muted); font-weight: 500; }
+.lv-sub, .lv-handoff { font-size: var(--fs-xs); color: var(--muted); line-height: var(--lh-snug); }
+.lv-more { display: inline-flex; align-items: center; align-self: flex-start; min-height: 44px; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; }
+.lv-none { margin-bottom: var(--sp-4); }
+/* That day's showtimes, More and I'm going sit beside the poster, under the
+   film's words. From 360 to 415 the one line of cells (318px) is wider than
+   the room beside the poster (292px at 390), so they run across the row
+   under it instead. (At 320 the cells take two lines, which fit beside it.) */
+.lv-film:has(> .lv-times) > .lv-poster { grid-row: span 2; }
+.lv-times { grid-column: 2; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+@media (min-width: 360px) and (max-width: 415px) {
+  .lv-film:has(> .lv-times) > .lv-poster { grid-row: auto; }
+  .lv-times { grid-column: 1 / -1; }
+}
+
+/* ---- grouped lists: an inset group of rows with thin dividers ----
+   Stats, Settings, Help and the movie page's sections. A heading above the
+   group, rows inside it, notes under it. Only the rows' group has a fill;
+   nothing is outlined. */
+.group { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.group + .group { margin-top: var(--sp-4); }
+.group-title { margin: 0 2px; font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: var(--display-tracking); font-size: var(--fs-lg); line-height: var(--lh-display); }
+.group-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
+.group-body { display: flex; flex-direction: column; min-width: 0; padding: 0 var(--sp-4); border-radius: var(--r-card); background: var(--raised); }
+.group-body > * { margin: 0; padding: var(--sp-3) 0; min-width: 0; }
+.group-body > * + * { border-top: 1px solid var(--divider); }
+/* The first row starts as far below the card's top edge as the content sits
+   from its sides (16px), and the last row ends as far above its bottom. */
+.group-body > :first-child { padding-top: var(--sp-4); }
+/* The last row that shows: an empty status or error line after it is hidden
+   (below), so :last-child alone would miss it. :where keeps this as light as
+   the base rule, so the lists and number grids that set their own padding
+   (and the filled log box) keep it. */
+.group-body > :where(:not([hidden], [role="status"]:empty, .form-error:empty, div:empty):not(:has(~ :not([hidden], [role="status"]:empty, .form-error:empty, div:empty)))) { padding-bottom: var(--sp-4); }
+.group-body > .log:where(:not(:has(~ :not([hidden], [role="status"]:empty, .form-error:empty, div:empty)))) { margin-bottom: var(--sp-4); }
+.group-foot { margin: 0 2px; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-snug); }
+.row-line { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
+.row-text { min-width: 0; flex: 1 1 200px; }
+.row-text .row-title { font-weight: 600; }
+.row-text p { margin: 2px 0 0; }
+/* Help's guide: each term and its words are one row. */
+.guide > dt { font-weight: 600; padding-bottom: 0; }
+.guide > dd { margin: 0; padding-top: 4px; border-top: none; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-body); }
+/* A part of the match on its own (public score, taste match): a big accent number. */
+.score-num { font-family: var(--font-display); font-weight: var(--display-weight); font-size: var(--fs-xl); line-height: 1; color: var(--accent-text); font-variant-numeric: tabular-nums; }

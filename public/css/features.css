@@ -1,0 +1,520 @@
+/* Reel Picks styles, after pages.css, last: your year in movies, the guest
+   link, followed theaters, unmatched titles, loading, tap targets, Together,
+   filter boxes, header search, the tour, I'm going and Send a pick, demo mode. */
+
+/* ---- Your year in movies (js/year.js) ----
+   Full-screen cards over the page: the whole screen on a phone, a tall card
+   in the middle of a wide one. Each card is washed in one of the palette's
+   soft tints, with its kicker and big figures in that tint's own colour (the
+   pairs the palette holds to AA on every surface); the opening card is a
+   solid marquee panel. Moving on slides the new card in; with reduced
+   motion it only fades. */
+.year-entry { gap: var(--sp-3); }
+.year-entry-icon { flex: 0 0 44px; display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--r-btn); background: var(--accent-soft); color: var(--accent-text); }
+.year-entry-text { flex: 1 1 auto; min-width: 0; }
+.year-entry > .btn { flex: 0 0 auto; }
+.modal-overlay.year-sheet { padding: 0; }
+.year-sheet .modal-card { width: 100%; height: 100%; max-height: none; border-radius: 0; padding: var(--sat) 0 var(--sab); }
+@media (min-width: 720px) {
+  .modal-overlay.year-sheet { padding: var(--sp-6); }
+  .year-sheet .modal-card { width: min(460px, 100%); height: min(880px, 100%); border-radius: var(--r-sheet); padding: 0; }
+}
+.year-sheet .modal-body { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
+.yr-body { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.yr-progress { display: flex; gap: var(--sp-1); padding: var(--sp-3) var(--sp-4) 0; }
+.yr-seg { flex: 1 1 0; height: 4px; border-radius: 2px; background: var(--chip); transition: background-color 200ms; }
+.yr-seg.done { background: var(--accent); }
+.yr-stage { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; padding: var(--sp-3) var(--sp-4); touch-action: pan-y; cursor: pointer; }
+.yr-card {
+  min-height: 100%; display: flex; flex-direction: column; justify-content: center; gap: var(--sp-4);
+  padding: var(--sp-6) var(--sp-5); border-radius: var(--r-card);
+  transition: opacity 240ms var(--ease-out), transform 320ms var(--ease-out);
+}
+.yr-card.yr-enter { opacity: 0; }
+.yr-card.yr-enter.yr-from-right { transform: translateX(32px); }
+.yr-card.yr-enter.yr-from-left { transform: translateX(-32px); }
+@media (prefers-reduced-motion: reduce) { .yr-card.yr-enter { transform: none; } }
+.yr-tint-accent { background: var(--accent); color: var(--on-accent); --yr-ink: var(--on-accent); }
+.yr-tint-blue { background: var(--blue-soft); --yr-ink: var(--blue); }
+.yr-tint-teal { background: var(--teal-soft); --yr-ink: var(--teal); }
+.yr-tint-purple { background: var(--purple-soft); --yr-ink: var(--purple); }
+/* The opening title in three lines, the year the biggest thing on the card. */
+.yr-stack { display: flex; flex-direction: column; }
+.yr-year { font-size: var(--fs-hero); line-height: 1; }
+.yr-kicker { margin: 0; color: var(--yr-ink); font-size: var(--fs-md); font-weight: 600; line-height: var(--lh-tight); overflow-wrap: anywhere; }
+.yr-title { font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: var(--display-tracking); font-size: var(--fs-2xl); line-height: var(--lh-display); overflow-wrap: anywhere; }
+@media (min-width: 380px) { .yr-title { font-size: var(--fs-hero-sm); } }
+.yr-title:focus { outline: none; }
+.yr-text { margin: 0; font-size: var(--fs-md); line-height: var(--lh-snug); }
+.yr-bigs { display: flex; flex-wrap: wrap; gap: var(--sp-5) var(--sp-7); }
+.yr-big { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.yr-figure { color: var(--yr-ink); font-family: var(--font-display); font-weight: var(--display-weight); font-size: var(--fs-3xl); line-height: 1; overflow-wrap: anywhere; }
+.yr-label { font-size: var(--fs-base); font-weight: 600; line-height: var(--lh-tight); }
+.yr-list { list-style: none; margin: 0; padding: 0; }
+.yr-list-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--sp-3); row-gap: 2px; padding: var(--sp-3) 0; border-top: 1px solid var(--divider); }
+.yr-list-key { grid-column: 1 / -1; font-size: var(--fs-sm); line-height: var(--lh-tight); }
+.yr-list-name { font-size: var(--fs-md); font-weight: 600; line-height: var(--lh-tight); overflow-wrap: anywhere; }
+.yr-list-n { align-self: center; font-size: var(--fs-sm); line-height: var(--lh-tight); white-space: nowrap; }
+.yr-films { display: flex; flex-direction: column; gap: var(--sp-3); }
+.yr-film { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; }
+.yr-film-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.yr-film-label, .yr-film-meta { font-size: var(--fs-sm); line-height: var(--lh-tight); }
+.yr-film-title { font-size: var(--fs-md); font-weight: 600; line-height: var(--lh-tight); overflow-wrap: anywhere; }
+.yr-hero { display: flex; align-items: flex-start; gap: var(--sp-4); }
+.yr-hero > .poster { flex: 0 0 auto; width: min(42%, 180px); }
+.yr-hero-text { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.yr-stars { display: inline-flex; align-items: center; gap: 2px; font-size: var(--fs-lg); font-weight: 700; line-height: var(--lh-tight); }
+.yr-stars .star-glyph { color: var(--gold); }
+.yr-note { margin: 0; padding-left: var(--sp-3); border-left: 3px solid var(--yr-ink); }
+.yr-note p { margin: 0; font-size: var(--fs-md); line-height: var(--lh-snug); overflow-wrap: anywhere; }
+.yr-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4); margin: 0; }
+.yr-fact { display: flex; flex-direction: column-reverse; gap: 2px; min-width: 0; }
+.yr-fact dt { font-size: var(--fs-sm); font-weight: 600; line-height: var(--lh-tight); }
+.yr-fact dd { margin: 0; color: var(--yr-ink); font-family: var(--font-display); font-weight: var(--display-weight); font-size: var(--fs-xl); line-height: var(--lh-display); overflow-wrap: anywhere; }
+.yr-posters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-2); }
+.yr-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.yr-cta { align-self: flex-start; }
+.yr-save-status { margin: 0; min-height: 20px; font-size: var(--fs-sm); line-height: 20px; }
+.yr-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+.yr-nav > .btn { min-width: 96px; }
+.yr-count { margin: 0; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-tight); font-variant-numeric: tabular-nums; }
+
+.toast-host { position: fixed; bottom: calc(var(--chrome-bottom) + 16px); left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: max-content; max-width: calc(100vw - 32px); }
+@media (min-width: 900px) { .toast-host { bottom: var(--sp-7); } }
+/* With the Save bar up, a toast sits above it, not on its button. */
+body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h) + 16px); }
+.toast.has-action { display: flex; align-items: center; gap: var(--sp-3); padding: 6px 6px 6px 16px; border-radius: var(--r-card); pointer-events: auto; text-align: left; }
+.toast-action { flex: 0 0 auto; min-height: 36px; padding: 0 14px; border-radius: var(--r-btn); border: none; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: var(--fs-sm); cursor: pointer; }
+.toast { background: var(--raised); color: var(--text); padding: 12px 16px; border-radius: var(--r-card); font-size: var(--fs-sm); font-weight: 600; box-shadow: var(--shadow); opacity: 0; transition: opacity 0.3s, transform 0.3s; transform: translateY(8px); }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { border-color: var(--field-edge); }
+.toast.error { border-color: color-mix(in srgb, var(--bad) 60%, transparent); }
+
+/* ---- guest (read-only shared link) ---- */
+.guest-banner { display: none; }
+.shell.guest .guest-banner {
+  display: block; text-align: center; font-size: var(--fs-sm); font-weight: 500;
+  color: var(--text); background: var(--accent-soft); padding: var(--sp-2) var(--sp-4);
+}
+/* The guest link has Picks and Schedule only. */
+.shell.guest :is(.nav-item, .seg-item):is([data-name="rate"], [data-name="watchlist"], [data-name="you"]) { display: none; }
+
+/* ---- followed theaters (movie page, Settings) ---- */
+.theatre-block { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-2) 0; }
+.theatre-block + .theatre-block { margin-top: var(--sp-3); }
+.theatre-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.theatre-title { margin: 0; font-weight: 700; font-size: var(--fs-base); }
+.theatre-list { display: flex; flex-direction: column; }
+.theatre-list > * + * { border-top: 1px solid var(--divider); }
+.theatre-item { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) 0; }
+.ti-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ti-name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.ti-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+.diag-scroll { position: relative; }
+.diag-wrap { overflow-x: auto; }
+.diag-scroll::after {
+  content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 40px; pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--raised)); opacity: 0; transition: opacity .2s;
+}
+.diag-scroll.more::after { opacity: 1; }
+.diag-table { width: 100%; border-collapse: collapse; font-size: var(--fs-xs); white-space: nowrap; }
+.diag-table th, .diag-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--divider); }
+.diag-table th { color: var(--muted); font-weight: 600; font-size: var(--fs-xs); }
+.diag-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.diag-table th.num { text-align: right; }
+
+/* ---- unmatched AMC titles (Settings) ---- */
+.unmatched-list { display: flex; flex-direction: column; gap: 10px; }
+.unmatched-row { display: flex; flex-direction: column; gap: 6px; padding: var(--sp-3); background: var(--chip); border-radius: var(--r-btn); }
+.unmatched-row.ignored { flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; margin-top: 6px; }
+.unmatched-row.ignored .um-title { flex: 1 1 200px; }
+.um-title { font-weight: 700; }
+.um-arrow { display: inline-flex; vertical-align: -2px; margin: 0 6px; }
+.fix-item.static { cursor: default; }
+.fix-item.static:hover { background: none; }
+.fix-item .fix-name { flex: 1; min-width: 0; }
+.note .note-link { color: var(--text); font-weight: 700; white-space: nowrap; }
+
+/* ---- no-score movies: the number rests on a default, say so ---- */
+.diag-table td.warn { color: var(--bad); font-weight: 700; }
+/* Phones: each theatre becomes a small card of labelled values. */
+@media (max-width: 599px) {
+  .diag-scroll::after { display: none; }
+  .diag-table, .diag-table tbody { display: block; white-space: normal; }
+  .diag-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .diag-table tbody { display: flex; flex-direction: column; gap: 8px; }
+  .diag-table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 12px; align-items: end; padding: 12px; background: var(--chip); border-radius: var(--r-btn); }
+  .diag-table td { display: block; padding: 0; border: 0; text-align: left; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+  .diag-table td.num { text-align: left; }
+  .diag-table td:first-child { grid-column: 1 / -1; font-weight: 600; }
+  .diag-table td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 2px; color: var(--muted); font-size: var(--fs-xs); font-weight: 500; line-height: var(--lh-snug); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+.unmatched-row.review { background: var(--amber-soft); }
+.review-why { font-size: var(--fs-xs); color: var(--text); }
+.confirm { display: flex; flex-direction: column; gap: 10px; }
+.confirm p { margin: 0; }
+
+/* ---- loading skeleton (Picks) ---- */
+.sk { background: var(--chip); border-radius: var(--r-btn); position: relative; overflow: hidden; }
+/* A slow breath, not a sweep: says "loading" without dragging the eye across. */
+.skeleton .sk { animation: sk-pulse 1.6s ease-in-out infinite alternate; }
+@keyframes sk-pulse { from { opacity: .55; } to { opacity: 1; } }
+.sk-line { height: 14px; width: 100%; }
+.sk.day-btn { border: none; }
+.sk-hero { background: var(--raised); min-height: 360px; display: flex; align-items: flex-end; }
+.sk-hero .hero-content { margin-top: 0; padding-top: var(--sp-8); width: 100%; }
+.sk-card { min-height: 180px; }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton .sk { animation: none; }
+  /* A ring that can't turn reads as stuck. The words carry it alone. */
+  .spinner-ring { display: none; }
+}
+
+/* ---- long words ----
+   A title word wider than its column ("Transformers:" at 320) breaks with a
+   hyphen where English allows one, and anywhere as a last resort, instead of
+   running out of its box. */
+.row-title, .ri-title, .search-info, .ti-name, .pick-title, .tg-title, .sheet-title, .sr-title, .lc-title, .lv-film-title, .tile-cap, .hidden-title, .um-title, .bar-meta { overflow-wrap: anywhere; hyphens: auto; }
+.ti-main { min-width: 0; }
+@media (max-width: 359px) { .bs-value { font-size: var(--fs-lg); } }
+
+/* ---- tap targets ---- */
+@media (pointer: coarse) {
+  .rater-clear, .row-more, .section-toggle, .bar-row, .ob-star, .toast-action, .switch-row { min-height: 44px; }
+  .rater-clear { display: inline-flex; align-items: center; min-width: 44px; justify-content: center; }
+  input[type="range"] { height: 44px; }
+  .log summary { padding: 11px 0; }
+  .stars.interactive { font-size: calc(var(--fs-lg) + 4px) !important; padding: 9px 0; }
+  .stars.interactive .stars-fill { top: 9px; }
+}
+
+/* Title links: the text stays where it is and the tap area grows to at least
+   44px around it (the poster beside most of them links to the same page). */
+.row-title, .pick-title, .ri-title, .search-title, .tg-title, .hidden-title, .stream-more { position: relative; }
+.ri-title, .search-title { display: block; }
+.row-title::after, .pick-title::after, .ri-title::after, .search-title::after, .tg-title::after, .hidden-title::after, .stream-more::after {
+  content: ''; position: absolute;
+  top: min(0px, calc(50% - 22px)); bottom: min(0px, calc(50% - 22px));
+  left: min(0px, calc(50% - 22px)); right: min(0px, calc(50% - 22px));
+}
+
+/* Read by screen readers, never drawn. */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* ---- dialog focus ---- */
+/* The dialog's Tab turn-around point (ui.js): focusable, never seen. */
+.focus-wrap { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.modal-card:focus { outline: none; }
+.modal-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* ---- Together ---- */
+.tg-picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 2px 6px; }
+.tg-person { font-size: var(--fs-sm); padding: 7px 14px; }
+.tg-where { margin: 4px 2px 10px; }
+.tg-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.tg-film { display: flex; gap: 14px; align-items: flex-start; padding: var(--sp-3) 0; min-width: 0; }
+.tg-list > .tg-film + .tg-film { border-top: 1px solid var(--divider); }
+.tg-film .poster-link, .tg-film > .poster { flex: 0 0 64px; }
+.tg-film .poster-sm { width: 64px; flex-basis: 64px; }
+.tg-main { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; flex: 1; }
+.tg-title { font-weight: 700; font-size: var(--fs-base); color: var(--text); overflow-wrap: anywhere; }
+.tg-year { color: var(--muted); font-weight: 500; }
+/* "On their watchlist · great match for you": two tags drawn as one pill,
+   the dot between them with a space's width (.233em) each side, less the
+   tag's own gap. At 320 the whole is wider than the room beside the poster,
+   so they part: two pills, one under the other. */
+.tg-pair { display: inline-flex; max-width: 100%; }
+.tg-pair > .tag:first-child { padding-right: 0; border-radius: 999px 0 0 999px; }
+.tg-pair > .tag + .tag { padding-left: 0; border-radius: 0 999px 999px 0; }
+.tg-pair > .tag + .tag::before { content: "·"; margin: 0 calc(0.233em - var(--sp-1)) 0 0.233em; }
+@media (max-width: 359px) {
+  .tg-pair { flex-wrap: wrap; gap: 6px; }
+  .tg-pair > .tag:first-child, .tg-pair > .tag + .tag { padding: 3px 9px; border-radius: 999px; }
+  .tg-pair > .tag + .tag::before { content: none; }
+}
+.tag.tg-label.strong { background: var(--accent-soft); color: var(--accent-text); }
+.tg-times { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.tg-time { display: inline-flex; flex-direction: column; justify-content: center; gap: 1px; min-height: 44px; padding: 4px 10px; border-radius: var(--r-btn); background: var(--chip); color: var(--text); font-size: var(--fs-sm); line-height: var(--lh-tight); }
+a.tg-time:hover { border-color: var(--text); }
+.tg-when { font-weight: 600; font-variant-numeric: tabular-nums; }
+.tg-at { color: var(--muted); font-size: var(--fs-xs); }
+@media (min-width: 900px) {
+  .tg-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+}
+
+/* ---- hidden means hidden, whatever display a class gives ---- */
+[hidden] { display: none !important; }
+
+/* ---- filter boxes (Watchlist, Everything playing, Stats) ---- */
+.filter { display: flex; flex-direction: column; gap: 6px; margin: 2px 0 10px; }
+.filter-field { position: relative; display: flex; align-items: center; }
+.filter-icon { position: absolute; left: 12px; color: var(--muted); pointer-events: none; }
+.input.filter-input { padding-left: 38px; padding-right: 44px; font-size: var(--fs-md); /* 16px or more keeps iOS from zooming in */ }
+.filter-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.filter-clear {
+  position: absolute; right: 0; width: 44px; height: 44px; display: grid; place-items: center;
+  background: none; border: none; border-radius: var(--r-btn); color: var(--muted); cursor: pointer;
+}
+.filter-clear:hover { color: var(--text); background: var(--chip); }
+.filter-none { margin: 2px 2px 0; color: var(--muted); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.stat-list .filter { margin: 0 0 10px; }
+.sheet > .filter { margin: 0 0 12px; }
+
+/* ---- header search sheet ---- */
+.search-overlay { place-items: start center; padding-top: 10vh; }
+.search-card { width: min(640px, 100%); max-height: 76vh; }
+.search-card .modal-body { display: flex; flex-direction: column; min-height: 0; flex: 1; padding: 12px 16px 16px; overflow: hidden; }
+.search-sheet { display: flex; flex-direction: column; min-height: 0; flex: 1; gap: 8px; }
+.input.search-input { padding-left: 44px; padding-right: 48px; font-size: var(--fs-md); }
+.search-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.search-field .filter-icon { left: 14px; }
+.search-status { margin: 0 2px; min-height: 1.2em; color: var(--muted); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.search-status:empty { display: none; }
+.search-body { overflow-y: auto; overscroll-behavior: contain; min-height: 0; flex: 1; margin: 0 -8px; padding: 0 8px 4px; display: flex; flex-direction: column; gap: 2px; }
+.sr-row, .sr-person, .recent-main {
+  display: flex; align-items: center; gap: 12px; min-width: 0; flex: none; padding: 6px 8px; border-radius: var(--r-btn);
+  color: var(--text); text-align: left; background: none; border: none; font: inherit; cursor: pointer; min-height: 48px;
+}
+.sr-row:hover, .sr-person:hover, .recent-main:hover, .sr-row.active, .sr-person.active, .recent-main.active { background: var(--chip); }
+.sr-row.active, .sr-person.active, .recent-main.active { outline: 2px solid var(--focus); outline-offset: -2px; }
+/* People sit above the films, a round photo where a film has its poster, and
+   a hairline under the last of them. */
+.sr-face { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%; object-fit: cover; object-position: 50% 20%; background: var(--chip); }
+.recent-main .sr-face { margin: 0 -2px; }
+.sr-noface { display: grid; place-items: center; color: var(--muted); }
+.sr-person .sr-title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.sr-person:hover .sr-role, .sr-person.active .sr-role { background: var(--raised); }
+.sr-known { color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-snug); overflow-wrap: anywhere; }
+.sr-person + .sr-row { position: relative; margin-top: 9px; }
+.sr-person + .sr-row::before { content: ''; position: absolute; top: -6px; left: 8px; right: 8px; border-top: 1px solid var(--divider); }
+.sr-thumb { flex: 0 0 40px; width: 40px; height: 60px; border-radius: 6px; object-fit: cover; background: var(--chip); }
+.sr-noposter { display: grid; place-items: center; color: var(--muted); }
+.sr-text { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.sr-title { font-weight: 600; overflow-wrap: anywhere; }
+.sr-year { color: var(--muted); font-weight: 400; }
+.sr-badges { display: flex; flex-wrap: wrap; gap: 5px; }
+.sr-badges:empty { display: none; }
+.tag.sr-badge.playing { background: var(--accent-soft); color: var(--accent-text); }
+.recents-head { display: flex; align-items: center; justify-content: space-between; margin: 2px 2px 0; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+.recents-clear { min-height: 44px; padding: 4px 8px; }
+.recents-label { margin: 8px 2px 2px; font-size: var(--fs-sm); font-weight: 600; color: var(--muted); }
+.recent-row { display: flex; align-items: center; gap: 4px; }
+.recent-row > .recent-main { flex: 1; }
+.recent-main svg { flex: 0 0 auto; color: var(--muted); }
+.recent-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-x {
+  flex: 0 0 44px; width: 44px; height: 44px; display: grid; place-items: center; border-radius: var(--r-btn);
+  background: none; border: none; color: var(--muted); cursor: pointer;
+}
+.recent-x:hover { color: var(--text); background: var(--chip); }
+.search-empty { margin: 12px 2px; color: var(--muted); font-size: var(--fs-sm); }
+/* Phones: the sheet takes the screen above the keyboard. --vvh / --vvt are
+   the visual viewport's height and offset, kept current by js/search.js, so
+   the results end where the keyboard begins instead of behind it. */
+@media (max-width: 640px) {
+  .search-overlay { padding: 0; place-items: start stretch; align-content: start; }
+  .search-card {
+    width: 100%; max-height: none; border-radius: 0; border-width: 0 0 1px;
+    height: var(--vvh, 100dvh); margin-top: var(--vvt, 0px);
+  }
+  /* The close button reaches 10px above its row, so the row starts 10px below the notch. */
+  .search-card .modal-head { padding-top: max(14px, calc(var(--sat) + 10px)); }
+}
+
+/* ---- Rate: import heading with its icon ---- */
+.import-head { display: flex; align-items: center; gap: 8px; }
+.import-head svg { color: var(--text); flex: 0 0 auto; }
+
+/* ---- guided tour (js/tour.js) ---- */
+.tour-layer { position: fixed; inset: 0; z-index: 250; }
+.tour-spot {
+  position: fixed; border-radius: var(--r-card); pointer-events: none;
+  box-shadow: 0 0 0 2px var(--focus), 0 0 0 9999px color-mix(in srgb, #000 72%, transparent);
+  transition: top 280ms var(--ease-out), left 280ms var(--ease-out), width 280ms var(--ease-out), height 280ms var(--ease-out), opacity 150ms;
+}
+.tour-spot[hidden] { display: none; }
+.tour-layer:has(.tour-spot[hidden]) { background: color-mix(in srgb, #000 72%, transparent); }
+.tour-card {
+  position: fixed; display: flex; flex-direction: column; gap: 8px;
+  background: var(--raised); border-radius: var(--r-card);
+  padding: 16px; box-shadow: var(--shadow);
+  transition: top 280ms var(--ease-out), left 280ms var(--ease-out), opacity 150ms;
+}
+.tour-card:focus { outline: none; }
+.tour-layer.moving .tour-card, .tour-layer.moving .tour-spot { opacity: .35; }
+.tour-words { display: flex; flex-direction: column; gap: 8px; }
+.tour-count { margin: 0; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+.tour-title { font-size: var(--fs-md); }
+.tour-text { margin: 0; color: var(--text); }
+.tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.tour-moves { display: flex; gap: 8px; margin-left: auto; }
+.tour-skip { padding-left: 0; }
+
+/* ---- I'm going and Send a pick (js/social.js) ----
+   A plan is the soft accent everywhere it shows: the line on the hero and the
+   movie page, and the showtime row it's for. */
+.plan-pill {
+  display: flex; align-items: center; gap: var(--sp-2); min-height: 44px; padding: 2px 2px 2px var(--sp-3);
+  border-radius: var(--r-btn); background: var(--accent-soft); color: var(--accent-text);
+  font-size: var(--fs-sm); font-weight: 600; line-height: var(--lh-snug);
+}
+.plan-icon { flex: 0 0 auto; }
+.plan-text { flex: 1 1 auto; min-width: 0; padding: 6px 0; }
+.plan-acts { display: flex; flex: 0 0 auto; }
+.plan-acts .link-btn { padding: 0 8px; }
+.hero-plan { display: flex; flex-direction: column; gap: var(--sp-2); }
+.hero-plan-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); }
+.hero-plan-btns.one { grid-template-columns: minmax(0, 1fr); }
+.hero-plan-btns .btn { min-width: 0; padding: 0 var(--sp-2); gap: 6px; white-space: nowrap; }
+@media (max-width: 429px) { .hero-plan-btns .btn { font-size: var(--fs-sm); } .hero-plan-btns .btn .icon { width: 16px; height: 16px; } }
+.detail-plan { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-2); margin: var(--sp-2) 0 var(--sp-3); }
+.detail-plan .plan-pill { align-self: stretch; }
+.lv-plan { margin-top: var(--sp-2); }
+.plan-pill.compact { font-size: var(--fs-xs); }
+.going-lines { display: flex; flex-direction: column; gap: 2px; }
+.going-line { display: flex; align-items: flex-start; gap: 6px; margin: 0; color: var(--text); font-size: var(--fs-sm); line-height: var(--lh-snug); }
+.going-line .icon { flex: 0 0 auto; margin-top: 2px; color: var(--accent-text); }
+/* Your showing in a list: tinted, with the plan's line under its cells.
+   The margin and padding cancel, so every column stays where it was. */
+.st-row.planned {
+  margin: 0 -6px; padding: 0 6px 6px; border-radius: var(--r-poster); background: var(--accent-soft);
+  grid-template-areas: "time fmt end fit book cal" "plan plan plan plan plan plan";
+}
+.st-list > .st-row.planned, .st-list > .st-row + .st-row.planned, .st-list > .st-row.planned + .st-row { border-top-color: transparent; }
+.st-plan { grid-area: plan; display: flex; align-items: center; gap: 4px; color: var(--accent-text); font-size: var(--fs-xs); font-weight: 600; line-height: var(--lh-snug); }
+.st-plan .icon { flex: 0 0 auto; }
+@media (max-width: 359px) {
+  .st-row.planned { grid-template-areas: "time fmt . book" "end end fit cal" "plan plan plan plan"; }
+}
+
+/* Detail: Save, Send and Trailer on one row. */
+.detail-actions.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.detail-actions .btn { min-width: 0; }
+.detail-actions.three .btn { padding: 0 var(--sp-2); gap: 6px; white-space: nowrap; }
+@media (max-width: 429px) { .detail-actions.three .btn { font-size: var(--fs-sm); } .detail-actions.three .btn .icon { width: 16px; height: 16px; } }
+@media (max-width: 359px) { .detail-actions.three .btn .icon { display: none; } }
+
+/* "Sent by" on the movie page. */
+.sent-by-list { display: flex; flex-direction: column; gap: var(--sp-2); }
+.sent-by { display: flex; align-items: center; gap: var(--sp-2); padding: 2px 2px 2px var(--sp-3); border-radius: var(--r-btn); background: var(--accent-soft); }
+.sent-icon { flex: 0 0 auto; color: var(--accent-text); }
+.sent-words { flex: 1 1 auto; min-width: 0; padding: 6px 0; }
+.sent-from { margin: 0; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; }
+.sent-note { margin: 2px 0 0; color: var(--text); font-size: var(--fs-sm); line-height: var(--lh-snug); overflow-wrap: anywhere; }
+.sent-dismiss { flex: 0 0 auto; background: transparent; color: var(--accent-text); }
+
+/* The top of Picks: "Did you see it?" and "Sent to you". */
+.inbox { display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.inbox:not([hidden]) ~ .hero-slot .hero-pick { margin-top: 0; }
+@media (min-width: 900px) { .inbox { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); align-items: start; } }
+.inbox-card {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: var(--sp-3);
+  padding: var(--sp-3); border-radius: var(--r-card); background: var(--raised); border-left: 4px solid var(--accent);
+}
+.ask-card { grid-template-columns: auto minmax(0, 1fr); }
+.inbox-body { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.inbox-q { margin: 0; font-size: var(--fs-md); font-weight: 700; line-height: var(--lh-snug); }
+.inbox-sub { margin: 0; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-snug); }
+.inbox-acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
+.inbox-acts .btn { min-width: 88px; }
+.inbox-from { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--accent-text); font-size: var(--fs-xs); font-weight: 600; }
+/* A 44px tap area around the title, with the card's spacing unchanged. */
+.inbox-title { display: block; padding: 11px 0; margin: -11px 0; font-size: var(--fs-md); font-weight: 700; line-height: var(--lh-snug); }
+.inbox-title:hover { text-decoration: underline; text-underline-offset: 3px; }
+.inbox-side { display: flex; flex-direction: column; gap: var(--sp-2); }
+.inbox-side .sent-dismiss { background: var(--chip); color: var(--text); }
+
+/* The sheets: which showing, send a pick, rate it. */
+.pp-intro { margin: 0 0 var(--sp-3); }
+.pp-theatre + .pp-theatre { margin-top: var(--sp-4); }
+.pp-where { margin: 0 0 var(--sp-2); font-size: var(--fs-md); }
+.pp-day + .pp-day { margin-top: var(--sp-3); }
+.pp-date { margin: 0 0 6px; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+.pp-times { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.pp-time {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; min-width: 44px; padding: 0 12px;
+  border: none; border-radius: var(--r-btn); background: var(--bg); color: var(--text);
+  font-size: var(--fs-sm); font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer;
+}
+/* On the sheet's raised card, unpicked showings sit on the page colour (as
+   chips in a group do), where the format tags keep their contrast. */
+.pp-time:hover { box-shadow: inset 0 0 0 1.5px var(--field-edge); } /* an edge, so the tags keep their contrast */
+.pp-time .tag { padding: 2px 4px; }
+.pp-clock { display: inline-flex; align-items: center; gap: 4px; }
+.pp-time.on { background: var(--accent); color: var(--on-accent); }
+.pp-time.on .tag { background: color-mix(in srgb, var(--on-accent) 20%, transparent); color: var(--on-accent); }
+.pp-foot { display: flex; margin-top: var(--sp-5); }
+.send-form, .send-sheet { display: flex; flex-direction: column; gap: var(--sp-4); }
+.send-film { display: flex; align-items: center; gap: var(--sp-3); }
+.send-film-title { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.send-to { display: flex; flex-direction: column; margin: 0; padding: 0; border: none; min-width: 0; }
+.send-to legend { padding: 0; margin-bottom: 4px; }
+.send-to-one { margin: 0; }
+.radio-row { display: flex; align-items: center; gap: var(--sp-3); min-height: 44px; cursor: pointer; }
+.radio-row input { width: 20px; height: 20px; margin: 0; flex: 0 0 auto; accent-color: var(--accent); }
+.note-input { resize: vertical; min-height: 88px; font-size: var(--fs-md); line-height: var(--lh-snug); }
+.note-count { align-self: flex-end; color: var(--muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.form-error:empty { display: none; }
+.send-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.send-foot p { margin: 0; }
+.rate-sheet { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-4); }
+.rate-sheet p { margin: 0; }
+
+/* Zoomed far in (200% on a phone is about 195px): the header's buttons wrap
+   under the name, the five tabs share the bar at their labels' own widths
+   (it scrolls sideways, not the page, if they ever outgrow it), and rows
+   stack. Last in the file, so it wins over the rules it narrows. */
+@media (max-width: 299px) {
+  .app-header { flex-wrap: wrap; position: static; }
+  .bottom-nav { justify-content: flex-start; overflow-x: auto; scrollbar-width: none; left: 0; transform: none; width: 100vw; }
+  .nav-item { flex: 1 1 auto; min-width: 0; padding-inline: 0; }
+  .wc-head { flex-wrap: wrap; }
+  .stat-grid { grid-template-columns: minmax(0, 1fr); }
+  .hero-title, .detail-hero .hero-title { font-size: var(--fs-xl); overflow-wrap: anywhere; }
+  .inbox-card, .ask-card { grid-template-columns: minmax(0, 1fr); }
+  .inbox-poster { display: none; }
+  .inbox-side { flex-direction: row; }
+  .hero-plan-btns, .detail-actions.three { grid-template-columns: minmax(0, 1fr); }
+  .plan-pill, .sent-by { flex-wrap: wrap; }
+  .segment { white-space: normal; text-align: center; line-height: var(--lh-tight); }
+  .row-head { flex-wrap: wrap; }
+  .factor-row { grid-template-columns: minmax(0, 1fr); row-gap: 2px; }
+  .bar-row { grid-template-columns: 1.6em minmax(0, 1fr) auto; row-gap: 2px; }
+  .bar-row .bar-meta { grid-column: 2; }
+  /* The calendar button's tap area grows left only, so it can't poke past the page edge. */
+  .st-row .cal-btn::after { left: -16px; right: 0; }
+  /* Labels that hold one line elsewhere may take two here. */
+  .tag, .runway-text, .st-end, .key-status, .factor-name, .btn, .row-gap:has(> .input) > .btn { white-space: normal; }
+  .segment { overflow-wrap: anywhere; }
+  .key-row { flex-wrap: wrap; }
+  html .stars.interactive { font-size: var(--fs-lg) !important; }
+  .rating-item > .stars { grid-column: 1 / -1; grid-row: 3; }
+  .tg-film { flex-direction: column; }
+  /* Leaving: the poster over the film, and its showtimes on three lines. */
+  .lv-film { grid-template-columns: minmax(0, 1fr); }
+  .lv-film > .lv-poster, .lv-film:has(> .lv-times) > .lv-poster { grid-row: auto; justify-self: start; }
+  .lv-times { grid-column: 1 / -1; }
+  .lv-times .st-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "time book" "fmt fit" "end cal"; }
+  .lv-times .st-fit { justify-self: end; }
+  .lv-times .st-row.planned { grid-template-areas: "time book" "fmt fit" "end cal" "plan plan"; }
+  .source-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .source-row .src-bar { grid-column: 1 / -1; grid-row: 2; }
+  .pick-card, .list-row, .theatre-item { flex-direction: column; align-items: stretch; }
+  /* The poster over the facts, so the facts get the full width. */
+  .pc-top { flex-direction: column; }
+  .list-row { grid-template-columns: minmax(0, 1fr); }
+  .match, .runway { white-space: normal; }
+  .row-gap:has(> .input) > .btn { flex-shrink: 1; min-width: 0; }
+  .ti-actions { flex-wrap: wrap; }
+  /* A person page's or Stats sheet's stars and Save under the whole row, not indented past the edge. */
+  .more-tools { padding-left: 0; flex-wrap: wrap; }
+}
+
+/* ---- demo mode (js/demo.js): a slim line under the header ---- */
+.demo-banner {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 2px var(--sp-2);
+  padding: 6px var(--sp-4); text-align: center; font-size: var(--fs-xs); line-height: var(--lh-tight);
+  color: var(--muted); border-bottom: 1px solid var(--divider);
+}
+.demo-banner a { color: var(--accent-text); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.demo-off { margin: 0; }
