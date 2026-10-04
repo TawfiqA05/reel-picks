@@ -86,19 +86,27 @@ export function startDemo() {
   return first;
 }
 
+// A copy that can't be deleted (a full or broken disk) is logged and left
+// for the folder's removal at the next stop.
 function drop(v) {
   visitors.delete(v.id);
   try { v.handle.close(); } catch { /* already closed */ }
-  remove(v.file);
+  try { remove(v.file); } catch (e) { console.error('[demo] a visitor copy could not be deleted:', e.message); }
 }
 
+// Every minute. Anything that fails is logged and the next minute tries
+// again: a throw here would end the process.
 export function sweep(now = Date.now()) {
-  for (const v of visitors.values()) {
-    if (v.busy) continue;
-    if (now - v.created > MAX_AGE_MS || now - v.last > IDLE_MS) drop(v);
-  }
-  if (sample && sample.day !== localYMD(new Date(now)) && !building) {
-    rebuild().catch((e) => console.error('[demo] rebuilding the sample failed:', e.message));
+  try {
+    for (const v of visitors.values()) {
+      if (v.busy) continue;
+      if (now - v.created > MAX_AGE_MS || now - v.last > IDLE_MS) drop(v);
+    }
+    if (sample && sample.day !== localYMD(new Date(now)) && !building) {
+      rebuild().catch((e) => console.error('[demo] rebuilding the sample failed:', e.message));
+    }
+  } catch (e) {
+    console.error('[demo] sweep failed:', e.message);
   }
 }
 
@@ -110,8 +118,15 @@ function newVisitor(now) {
   }
   const id = crypto.randomBytes(18).toString('base64url');
   const file = path.join(visitorDir, `${id}.db`);
-  fs.copyFileSync(sample.file, file);
-  const v = { id, handle: open(file), file, created: now, last: now, busy: 0 };
+  let handle;
+  try {
+    fs.copyFileSync(sample.file, file);
+    handle = open(file);
+  } catch (e) {
+    try { remove(file); } catch { /* nothing was made */ }
+    throw e;
+  }
+  const v = { id, handle, file, created: now, last: now, busy: 0 };
   visitors.set(id, v);
   return v;
 }
@@ -121,6 +136,10 @@ const isHttps = (req) => req.secure || String(req.get('x-forwarded-proto') || ''
 // Before the API: find or make this visitor's copy and remember it on the
 // request (index.js binds it with withDb after the body parser). While the
 // first sample is still being built, requests wait for it.
+//
+// Express 4 doesn't catch a rejected async middleware, so every error here
+// (a copy that can't be made on a full disk, say) goes to next(err) and the
+// error handler answers; left alone it would end the process.
 export async function demoVisitor(req, res, next) {
   try {
     if (!sample) await building;
@@ -129,21 +148,25 @@ export async function demoVisitor(req, res, next) {
     console.error('[demo]', e.message);
     return res.status(503).json({ error: 'The demo is starting up. Try again in a moment.' });
   }
-  const now = Date.now();
-  let v = visitors.get(readCookie(req, COOKIE) || '');
-  if (v && (now - v.created > MAX_AGE_MS || now - v.last > IDLE_MS) && !v.busy) { drop(v); v = null; }
-  if (!v) {
-    v = newVisitor(now);
-    const left = Math.round((v.created + MAX_AGE_MS - now) / 1000);
-    res.cookie(COOKIE, v.id, { httpOnly: true, sameSite: 'lax', secure: isHttps(req), maxAge: left * 1000, path: '/' });
+  try {
+    const now = Date.now();
+    let v = visitors.get(readCookie(req, COOKIE) || '');
+    if (v && (now - v.created > MAX_AGE_MS || now - v.last > IDLE_MS) && !v.busy) { drop(v); v = null; }
+    if (!v) {
+      v = newVisitor(now);
+      const left = Math.round((v.created + MAX_AGE_MS - now) / 1000);
+      res.cookie(COOKIE, v.id, { httpOnly: true, sameSite: 'lax', secure: isHttps(req), maxAge: left * 1000, path: '/' });
+    }
+    v.last = now;
+    v.busy++;
+    let done = false;
+    const release = () => { if (!done) { done = true; v.busy--; } };
+    res.on('finish', release);
+    res.on('close', release);
+    req.demo = { handle: v.handle, key: v.id };
+  } catch (e) {
+    return next(e);
   }
-  v.last = now;
-  v.busy++;
-  let done = false;
-  const release = () => { if (!done) { done = true; v.busy--; } };
-  res.on('finish', release);
-  res.on('close', release);
-  req.demo = { handle: v.handle, key: v.id };
   next();
 }
 

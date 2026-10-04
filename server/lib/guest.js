@@ -144,7 +144,9 @@ export function readCookie(req, name) {
   for (const part of raw.split(';')) {
     const i = part.indexOf('=');
     if (i === -1) continue;
-    if (part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+    if (part.slice(0, i).trim() !== name) continue;
+    // A value that isn't valid %-encoding ("%zz") counts as no cookie.
+    try { return decodeURIComponent(part.slice(i + 1).trim()); } catch { return null; }
   }
   return null;
 }

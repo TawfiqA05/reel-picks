@@ -18,6 +18,10 @@
 //   off          typed text, invites, theater changes, imports, backups,
 //                push, owner alerts, the owner token and the guest view are
 //                off; everything else answers.
+//   crashes      a visitor cookie that isn't valid %-encoding, and a copy
+//                that can't be made or dropped (a read-only folder standing
+//                in for a full disk), each get an answer, and the demo keeps
+//                running. Only ever sent to this local server.
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -79,6 +83,7 @@ async function start(label, env, ready) {
   const entries = () => { try { return fs.readFileSync(log, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } };
   return {
     base: `http://localhost:${port}`, out, entries, clock: (ms) => fs.writeFileSync(path.join(dir, `clock-${label}`), String(ms)),
+    alive: () => child.exitCode == null && child.signalCode == null,
     stop: () => new Promise((r) => { if (child.exitCode != null) return r(); child.once('exit', r); child.kill('SIGTERM'); }),
   };
 }
@@ -268,6 +273,55 @@ await S.step('real data: no real database, no .env, no key, no network', async (
   S.check('no canary value (key, owner name, token, theater) shows anywhere', !all.includes(CAN), all.slice(Math.max(0, all.indexOf(CAN) - 80), all.indexOf(CAN) + 80));
 });
 
+// ================================================================ crashes
+await S.step('crashes: a cookie that isn\'t valid %-encoding gets a normal answer', async () => {
+  for (const bad of ['%', '%zz', 'abc%E0%A4%A']) {
+    const r = await fetch(`${srv.base}/api/status`, { headers: { cookie: `rp_demo=${bad}` }, signal: AbortSignal.timeout(20000) }).catch((e) => ({ status: 0, err: e.message, headers: new Headers() }));
+    S.check(`"Cookie: rp_demo=${bad}" gets a normal answer and a new visitor cookie`, r.status === 200 && /rp_demo=/.test(r.headers.get('set-cookie') || ''), `${r.status} ${r.err || ''}`);
+  }
+  S.check('the demo is still running after the bad cookies', srv.alive(), srv.out.text.slice(-600));
+});
+
 await srv.stop();
+
+// A second demo server whose temp folder (the sample and every visitor's
+// copy) is made inside this suite's folder. A read-only visitors folder
+// stands in for a full disk: a copy can be neither made nor deleted there.
+await S.step('crashes: a copy that can\'t be made or dropped gets an answer, and the demo keeps running', async () => {
+  const demoTmp = path.join(dir, 'tmp');
+  fs.mkdirSync(demoTmp);
+  const disk = await start('disk', { ...canaryEnv, DEMO_MODE: '1', TMPDIR: demoTmp }, 'Demo sample ready');
+  try {
+    const made = fs.readdirSync(demoTmp).find((n) => n.startsWith('reel-picks-demo-'));
+    const vdir = made && path.join(demoTmp, made, 'visitors');
+    S.check('the demo\'s visitors folder is found', vdir && fs.existsSync(vdir), fs.readdirSync(demoTmp).join(','));
+    if (!vdir) return;
+    const C = visitor(disk);
+    await C.call('GET', '/api/status');
+    fs.chmodSync(vdir, 0o555);
+    try {
+      let blocked = false;
+      try { fs.writeFileSync(path.join(vdir, 'probe'), 'x'); fs.rmSync(path.join(vdir, 'probe')); } catch { blocked = true; }
+      S.check('control: nothing can be written in the read-only folder', blocked);
+      // An hour on, C's copy is due to go, and can't be deleted.
+      disk.clock(61 * 60 * 1000);
+      await sleep(150);
+      const old = await C.call('GET', '/api/status').catch((e) => ({ status: 0, text: e.message }));
+      S.check('a visitor whose old copy can\'t be dropped gets an error answer', old.status === 500 && old.json?.error === 'Something went wrong on the server. Try again.', `${old.status} ${old.text?.slice(0, 200)}`);
+      S.check('the demo is still running after the failed drop', disk.alive(), disk.out.text.slice(-600));
+      const fresh = await visitor(disk).call('GET', '/api/status').catch((e) => ({ status: 0, text: e.message }));
+      S.check('a new visitor whose copy can\'t be made gets an error answer', fresh.status === 500 && fresh.json?.error === 'Something went wrong on the server. Try again.', `${fresh.status} ${fresh.text?.slice(0, 200)}`);
+      S.check('the demo is still running after the failed copy', disk.alive(), disk.out.text.slice(-600));
+    } finally {
+      fs.chmodSync(vdir, 0o755);
+      disk.clock(0);
+    }
+    const after = await visitor(disk).call('GET', '/api/status').catch((e) => ({ status: 0, text: e.message }));
+    S.check('once the disk has room again, a new visitor gets their copy', after.status === 200 && /rp_demo=/.test(after.setCookie || ''), `${after.status} ${after.text?.slice(0, 200)}`);
+  } finally {
+    await disk.stop();
+  }
+});
+
 if (!process.env.RP_KEEP_TEMP) fs.rmSync(dir, { recursive: true, force: true });
 S.finish();
