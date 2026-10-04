@@ -116,15 +116,16 @@ you want your own, you run your own copy with your own keys.
   while there are others to show (see What should I watch? below).
 - Lets me say "I'm going" to a showing and reminds me before it (see I'm going below).
 - Sends a film to a friend with a short note (see Send a pick below).
-- Shares a read-only guest link so other people can see my picks without touching anything.
+- Shares a read-only guest link that shows what's playing at my theaters, ranked by public
+  reviews, with nothing of mine in it.
 
 ## The weekly four
 
 The four locks once a week, at the first good refresh of the A-List week (normally just
-after midnight on Friday), separately for me and for each friend. The guest link shows
-mine. Until the new four locks, last week's stays up. The four that locks is exactly what
-the ranking would pick at that moment; after that, the scores keep moving but the four
-doesn't.
+after midnight on Friday), separately for me and for each friend. The guest link has no
+lock: its four is the top four by public reviews. Until the new four locks, last week's
+stays up. The four that locks is exactly what the ranking would pick at that moment; after
+that, the scores keep moving but the four doesn't.
 
 During the week a film leaves my four only when I rate it, mark it seen, tap Not for me,
 or it has no showtimes left this week at any of my theaters. The next best film by its
@@ -701,10 +702,22 @@ are cleared after the nightly backup, so that night's backup still has them.
 
 With `GUEST_MODE` on, anyone who reaches a deployment from outside without a cookie gets
 the read-only guest view. The same goes for anyone coming through the `npm run share`
-tunnel. They see one banner ("You're viewing Tawfiq's picks. Ask him for an invite to
-get your own.") instead of the setup and tour, and they get my picks, the full list,
-Schedule (Leaving soon and Coming soon), and movie pages. A person page opened from a movie
-page or a link works too, read only: no stars, no Save, and none of my ratings. Rating,
+tunnel. They see one banner ("You're viewing what's playing this week, ranked by public reviews.
+Ask whoever shared this link for an invite to get picks of your own.") instead of the setup
+and tour.
+
+What a guest gets is what's playing at my theaters, ranked by the public score alone: a top
+four, Also worth seeing and Last chance (both at 75 or better), Also nearby, the full list,
+Schedule (Leaving soon, soonest first, and Coming soon, by release date), movie pages, and a
+person page opened from a movie page or a link. Each film shows "Reviews 88" instead of a
+match. My theaters' names stay, because the showtimes and Book links need them.
+
+What a guest doesn't get is anything of mine: none of my ratings, watchlist, seen or hidden
+marks, no taste match or taste line, nothing my settings decide (preferred hours, excluded
+genres, previews, weights and boosts), not my weekly four or when it locked, and not my
+name. That holds for picks, lists, movie pages and person pages: no stars, no Save, and no
+marks of any kind, not even empty ones. One thing does show: a Coming Soon film fills in its
+details once anyone with an account opens or rates it. Rating,
 settings, imports, search, stats and everything else are hidden in the UI and rejected at
 the API. At localhost it's always me.
 
@@ -913,7 +926,7 @@ Sharing and the owner:
   view and I get an alert.
 - `OWNER_TOKEN`: a long random string for the owner unlock (`/?owner=<OWNER_TOKEN>`).
   Leave it blank to turn the unlock off. `.env.example` shows a one-line way to make one.
-- `OWNER_NAME`: the name on the guest banner and the Join page. It defaults to mine.
+- `OWNER_NAME`: the name on the Join page. It defaults to mine.
 - `RP_ALLOW_LAN`: when the app runs off Railway, it only answers at localhost. Turning
   this on lets other devices on my network reach it. Railway never needs it.
 
