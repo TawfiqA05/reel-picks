@@ -33,7 +33,8 @@ router.post('/push/subscribe', pushOn, (req, res) => {
     saveSubscription(currentUserId(), req.body?.subscription);
     res.json({ subscribed: true });
   } catch (e) {
-    res.status(e.status || 500).json({ error: e.message });
+    if (!e.status) console.error('[push]', e.message);
+    res.status(e.status || 500).json({ error: e.status ? e.message : 'Something went wrong on the server. Try again.' });
   }
 });
 

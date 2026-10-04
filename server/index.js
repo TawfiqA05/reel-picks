@@ -161,7 +161,8 @@ app.use('/api', (req, res, next) => {
 // express.json holds each to its limit while it arrives: past it nothing more
 // is kept or parsed, and the rest is drained before the 413, so the browser
 // reads that answer rather than a dropped connection.
-app.use(['/api/ratings/import', '/api/state'], express.json({ limit: '20mb' }));
+const UPLOAD_LIMIT_MB = 20;
+app.use(['/api/ratings/import', '/api/state'], express.json({ limit: `${UPLOAD_LIMIT_MB}mb` }));
 app.use(express.json({ limit: '200kb' }));
 
 // Every API request runs as one user (lib/user.js): the owner, a signed-in
@@ -199,12 +200,25 @@ app.get('*', (req, res, next) => {
   sendIndex(req, res);
 });
 
+const SERVER_LINE = 'Something went wrong on the server. Try again.';
+const TOO_BIG = `That file is too big. Reel Picks takes files up to ${UPLOAD_LIMIT_MB} MB.`;
+const UNREADABLE = 'Reel Picks couldn\'t read that request. Reload the page and try again.';
+
 app.use((err, req, res, next) => {
   console.error('[api error]', err.message);
+  if (res.headersSent) return next(err);
+  // The body parser's own errors (it sets err.type) and a web address with
+  // broken %-escapes (a URIError from Express) keep their code but get a
+  // plain line: their messages are the parser's, not written for anyone.
+  if (err.type === 'entity.too.large' || err.type === 'parameters.too.many') return res.status(413).json({ error: TOO_BIG });
+  if (typeof err.type === 'string' || err instanceof URIError) {
+    const code = err.status || err.statusCode || 400;
+    return res.status(code).json({ error: code < 500 ? UNREADABLE : SERVER_LINE });
+  }
   // A thrown error with a status was written for the reader; anything else is
-  // internal (a database message, say) and stays in the log.
+  // internal (a database message, an upstream address) and stays in the log.
   const status = err.status || err.statusCode || 500;
-  res.status(status).json({ error: status < 500 || err.status ? err.message || 'Server error' : 'Something went wrong on the server. Try again.' });
+  res.status(status).json({ error: status < 500 || err.status ? err.message || 'Server error' : SERVER_LINE });
 });
 
 app.listen(config.port, () => {

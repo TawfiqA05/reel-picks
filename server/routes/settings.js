@@ -168,7 +168,8 @@ router.post('/theatre', (req, res) => {
     afterTheatreChange(wasShared, 'theatre');
     res.json(forCaller(settings));
   } catch (e) {
-    res.status(e.status || 500).json({ error: e.message });
+    if (!e.status) console.error('[theatre]', e.message);
+    res.status(e.status || 500).json({ error: e.status ? e.message : 'Something went wrong on the server. Try again.' });
   }
 });
 
@@ -184,7 +185,8 @@ router.post('/theatres/follow', (req, res) => {
     afterTheatreChange(wasShared, 'follow');
     res.json(forCaller(settings));
   } catch (e) {
-    res.status(e.status || 500).json({ error: e.message });
+    if (!e.status) console.error('[theatre]', e.message);
+    res.status(e.status || 500).json({ error: e.status ? e.message : 'Something went wrong on the server. Try again.' });
   }
 });
 
@@ -203,7 +205,8 @@ router.post('/theatres/primary', (req, res) => {
     afterTheatreChange(true, 'primary'); // already followed by this user, so already pulled
     res.json(forCaller(settings));
   } catch (e) {
-    res.status(e.status || 500).json({ error: e.message });
+    if (!e.status) console.error('[theatre]', e.message);
+    res.status(e.status || 500).json({ error: e.status ? e.message : 'Something went wrong on the server. Try again.' });
   }
 });
 
@@ -239,7 +242,8 @@ router.post('/state', ownerOnly, (req, res) => {
     startCreditsBackfill('setup import');
     res.json({ imported: counts, refreshing: true });
   } catch (e) {
-    res.status(e.status || 500).json({ error: e.message });
+    if (!e.status) console.error('[state]', e.message);
+    res.status(e.status || 500).json({ error: e.status ? e.message : 'Something went wrong on the server. Try again.' });
   }
 });
 

@@ -76,7 +76,8 @@ router.post('/friends', ownerOnly, (req, res) => {
     const { friend, token } = createFriend(req.body?.name);
     res.json({ friend, invite: `/?invite=${token}` });
   } catch (e) {
-    res.status(e.status || 500).json({ error: e.message });
+    if (!e.status) console.error('[friends]', e.message);
+    res.status(e.status || 500).json({ error: e.status ? e.message : 'Something went wrong on the server. Try again.' });
   }
 });
 
@@ -84,7 +85,8 @@ router.post('/friends/:id/revoke', ownerOnly, (req, res) => {
   try {
     res.json({ friend: revokeFriend(req.params.id) });
   } catch (e) {
-    res.status(e.status || 500).json({ error: e.message });
+    if (!e.status) console.error('[friends]', e.message);
+    res.status(e.status || 500).json({ error: e.status ? e.message : 'Something went wrong on the server. Try again.' });
   }
 });
 
@@ -93,7 +95,8 @@ router.post('/friends/:id/reissue', ownerOnly, (req, res) => {
     const { friend, token } = reissueFriend(req.params.id);
     res.json({ friend, invite: `/?invite=${token}` });
   } catch (e) {
-    res.status(e.status || 500).json({ error: e.message });
+    if (!e.status) console.error('[friends]', e.message);
+    res.status(e.status || 500).json({ error: e.status ? e.message : 'Something went wrong on the server. Try again.' });
   }
 });
 
