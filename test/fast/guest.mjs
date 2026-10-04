@@ -80,6 +80,12 @@ await S.step('every route on the guest allowlist has a sample path', async () =>
   // or rates it, which fetches its details for everyone. The owner opens each
   // first, so what follows tells the marks apart from that.
   for (const f of C.UPCOMING) S.check(`owner opens upcoming ${f.id}`, (await w.api('GET', `/api/movies/${f.id}`)).status === 200);
+  // The sample's taste order on Coming Soon happens to be its release order;
+  // the film the owner likes most opens last here, so the two differ.
+  const d = w.db();
+  try { d.prepare("UPDATE movies SET release_date = '2026-11-20' WHERE tmdb_id = 970001").run(); } finally { d.close(); }
+  const own = (await w.api('GET', '/api/coming-soon')).json.list.map((e) => e.tmdb_id);
+  S.check('setup: the owner\'s Coming Soon (by taste) isn\'t in release order', own[0] === 970001, JSON.stringify(own));
   for (const p of paths) {
     const r = await w.api('GET', p, { as: GUEST });
     S.check(`guest GET ${p.replace(/\d{6,}/g, (d) => (p.includes('calendar') ? '<showtime>' : d))} answers 200`, r.status === 200, `${r.status} ${r.text.slice(0, 200)}`);
