@@ -66,10 +66,17 @@ export function verifyFriendCookie(value) {
   return parts[0] === 'v1' ? { ...user, legacy: true } : user;
 }
 
+// Runs on every friend request. It's only a note of when they were last
+// here, so a write that fails (a full disk, say) is logged and the request
+// goes on: reads included, it would otherwise turn into a 500.
 export function touchLastSeen(user) {
   const last = user.last_seen_at ? Date.parse(user.last_seen_at) : 0;
   if (Date.now() - last > LAST_SEEN_EVERY_MS) {
-    run('UPDATE users SET last_seen_at = ? WHERE id = ?', new Date().toISOString(), user.id);
+    try {
+      run('UPDATE users SET last_seen_at = ? WHERE id = ?', new Date().toISOString(), user.id);
+    } catch (e) {
+      console.error('[last seen]', e.message);
+    }
   }
 }
 

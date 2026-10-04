@@ -17,9 +17,17 @@
 //    control file says {"disk":{"total":<bytes>,"other":<bytes>}}) whose used
 //    space is what the data folder really holds plus `other`, so a test can
 //    fill it up and see pruning free it again, on any machine.
+//
+// 4. The database. {"dbFail":[{"sql":"<part of the SQL>","param":<value>}]}
+//    in the control file makes every statement whose SQL contains `sql` (and,
+//    with `param`, that is run with that value) throw the error SQLite gives
+//    on a full disk, as if the write or read failed. Each failure is written
+//    to <control file>.dbfail.jsonl, so a suite can see the statement was
+//    really reached.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { DatabaseSync, StatementSync } from 'node:sqlite';
 import jpeg from 'jpeg-js';
 import * as C from './catalog.mjs';
 
@@ -83,6 +91,24 @@ if (DATA) {
     const free = Math.max(0, Math.floor((total - used) / bsize));
     return { type: 0, bsize, blocks: Math.floor(total / bsize), bfree: free, bavail: free, files: 1e6, ffree: 1e6 };
   };
+}
+
+// ---------------------------------------------------------------- database
+const failLog = ctrlFile ? `${ctrlFile}.dbfail.jsonl` : null;
+function maybeFail(sql, params) {
+  const rules = Array.isArray(ctrl.dbFail) ? ctrl.dbFail : [];
+  const hit = rules.find((r) => r && r.sql && String(sql).includes(r.sql) && (!('param' in r) || params.some((p) => p === r.param)));
+  if (!hit) return;
+  try { fs.appendFileSync(failLog, `${JSON.stringify({ sql: hit.sql, param: hit.param ?? null, at: RealDate.now() })}\n`); } catch { /* best effort */ }
+  throw Object.assign(new Error('database or disk is full'), { code: 'ERR_SQLITE_ERROR', errcode: 13, errstr: 'database or disk is full' });
+}
+if (ctrlFile) {
+  for (const m of ['run', 'get', 'all', 'iterate']) {
+    const real = StatementSync.prototype[m];
+    StatementSync.prototype[m] = function patched(...params) { maybeFail(this.sourceSQL, params); return real.apply(this, params); };
+  }
+  const realExec = DatabaseSync.prototype.exec;
+  DatabaseSync.prototype.exec = function exec(sql) { maybeFail(sql, []); return realExec.call(this, sql); };
 }
 
 // ---------------------------------------------------------------- network log

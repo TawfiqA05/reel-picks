@@ -287,7 +287,14 @@ app.listen(config.port, () => {
   // sends Friday's "weekly picks are ready" push to anyone who turned
   // notifications on after that day's refresh (lib/push.js; once per person
   // per week).
-  setInterval(() => {
+  //
+  // Each timer body reads the database before any promise exists, so a
+  // failed read there (a full disk, say) would be an uncaught exception that
+  // ends the process. It is logged instead, and the next tick tries again.
+  const guarded = (tag, fn) => () => {
+    try { fn(); } catch (e) { console.error(`[${tag}]`, e.message); }
+  };
+  setInterval(guarded('15-minute check', () => {
     letterboxd();
     // This week's "At home" picks, ready before anyone opens Picks (lib/home.js).
     warmHomePicks(activeUserIds()).catch((e) => console.error('[home]', e.message));
@@ -295,7 +302,7 @@ app.listen(config.port, () => {
     if (refreshState.running) return;
     if (shouldAutoRefresh()) autoRefresh('new day');
     else sendWeeklyIfDue().catch((e) => console.error('[push]', e.message));
-  }, AUTO_REFRESH_CHECK_MS).unref();
+  }), AUTO_REFRESH_CHECK_MS).unref();
 
   // "I'm going" (lib/plans.js): the reminder two hours before a showing, the
   // next morning's "Did you see it?", and plans left unanswered three days,
@@ -311,8 +318,8 @@ app.listen(config.port, () => {
   setInterval(sendWatchlistAlerts, PLAN_CHECK_MS).unref();
 
   // A failed refresh is retried hourly, up to six times (lib/refresh.js).
-  setInterval(() => {
+  setInterval(guarded('refresh retry', () => {
     const r = retryIfDue();
     if (r) r.catch((e) => console.error('  ✗ Refresh retry failed:', e.message));
-  }, RETRY_CHECK_MS).unref();
+  }), RETRY_CHECK_MS).unref();
 });

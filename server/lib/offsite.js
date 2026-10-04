@@ -203,11 +203,17 @@ function nextSlot(now = new Date()) {
 export function startWeeklyOffsite(dataDir) {
   if (!offsiteEnabled()) return null;
   let failedAt = 0;
+  // A failed read of when the last copy went (a full disk, say) is logged;
+  // thrown from the timer it would end the process.
   const tick = () => {
-    if (running || Date.now() - failedAt < RETRY_MS || !offsiteDue() || !hasNightly(dataDir)) return;
-    uploadNow(dataDir, { why: 'weekly' })
-      .then(() => { failedAt = getSetting('offsiteError') ? Date.now() : 0; })
-      .catch((e) => console.error('[offsite]', e.message));
+    try {
+      if (running || Date.now() - failedAt < RETRY_MS || !offsiteDue() || !hasNightly(dataDir)) return;
+      uploadNow(dataDir, { why: 'weekly' })
+        .then(() => { failedAt = getSetting('offsiteError') ? Date.now() : 0; })
+        .catch((e) => console.error('[offsite]', e.message));
+    } catch (e) {
+      console.error('[offsite]', e.message);
+    }
   };
   tick();
   return setInterval(tick, CHECK_MS).unref();

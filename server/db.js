@@ -26,7 +26,9 @@ export { dataDir, dbPath };
 
 // In demo mode each request reads and writes its visitor's own copy
 // (server/demo/scope.js); `db` forwards there.
-const opened = new DatabaseSync(dbPath);
+// A write waits up to 5 s for another connection's lock (a backup tool, a
+// maintenance script) instead of failing at once with "database is locked".
+const opened = new DatabaseSync(dbPath, { timeout: 5000 });
 export const db = DEMO ? scopedDb(opened) : opened;
 db.exec('PRAGMA journal_mode = WAL;');
 db.exec('PRAGMA foreign_keys = ON;');
