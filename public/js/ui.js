@@ -74,7 +74,16 @@ export function poster(movie, { size = 'md', link = true, file = null } = {}) {
 // The match, one style everywhere: a soft accent pill, "97% match". `early`
 // (no public scores yet, so the number leans on taste and a neutral 50 for
 // reviews) adds a small "early".
+// The guest link ranks by public score alone, so its films' score is the
+// public score, not a match (server/lib/recommend.js). Set from the status
+// (js/app.js).
+let publicScores = false;
+export function showPublicScores(on) { publicScores = Boolean(on); }
+
 export function matchBadge(value, { early = false } = {}) {
+  if (publicScores) {
+    return h('span', { class: 'match', title: 'Rotten Tomatoes, Metacritic, IMDb and TMDB, averaged' }, value == null ? 'No reviews yet' : `Reviews ${value}`);
+  }
   return h('span', {
     class: 'match',
     title: early ? 'No public scores yet. This number uses a neutral 50 for reviews.' : 'How likely you are to enjoy it',

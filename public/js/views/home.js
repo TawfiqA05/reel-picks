@@ -158,7 +158,7 @@ function buildPage(data, status, ctx, state, actions) {
 
   // Weekly 4: the first pick is the hero, the day picker sits under it and
   // drives every showtime on the page, and the other three follow as cards.
-  const owner = status?.ownerName || 'Owner';
+  // The guest link's four is the top four by public reviews.
   const heroSlot = h('div', { class: 'hero-slot' });
   const pickGrid = h('div', { class: 'pick-grid' });
   if (data.weekly4.length) page.appendChild(heroSlot);
@@ -171,8 +171,8 @@ function buildPage(data, status, ctx, state, actions) {
         icon('ticket', { size: 18 }), 'What should I watch?')));
   }
   if (data.weekly4.length > 1) {
-    page.appendChild(sectionTitle(guest ? `The rest of ${owner}'s four` : 'The rest of your four',
-      data.profile.lowData && !guest ? 'Leaning on public scores. Rate more to make it yours.' : `${data.theatre?.name || ''}`));
+    page.appendChild(sectionTitle(guest ? 'The rest of the top four by reviews' : 'The rest of your four',
+      !guest && data.profile.lowData ? 'Leaning on public scores. Rate more to make it yours.' : `${data.theatre?.name || ''}`));
   }
   if (data.weekly4.length) {
     page.appendChild(pickGrid);

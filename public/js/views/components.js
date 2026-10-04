@@ -115,20 +115,20 @@ function scoreSpan(text, source, value) {
   const tone = scoreTone(source, Number(value));
   return h('span', { class: `rs-score${tone ? ` ${tone}` : ''}` }, text);
 }
-function tasteWords(t, who) {
+function tasteWords(t) {
   const name = t.kind === 'genre' ? t.label.toLowerCase() : t.label;
   const verb = t.avg >= 4 ? 'love' : t.avg >= 3.5 ? 'like' : 'rate';
-  const lead = who ? `${who} ${verb}s` : `You ${verb}`;
-  return verb === 'rate' ? `${lead} ${name} ${t.avg}/5` : `${lead} ${name}`;
+  return verb === 'rate' ? `You ${verb} ${name} ${t.avg}/5` : `You ${verb} ${name}`;
 }
 const DIVERGE = { 'critics-higher': 'Critics like it more than audiences', 'audience-higher': 'Audiences like it more than critics' };
 
-function factsParts(why, { who, lastChance }) {
+// The guest link's facts have no taste in them (server/lib/ranking.js).
+function factsParts(why, { lastChance }) {
   const parts = [];
   if (why.review && !why.noScores) parts.push(scoreSpan(why.review.text, why.review.source, why.review.value));
-  if (why.taste) parts.push(tasteWords(why.taste, who));
+  if (why.taste) parts.push(tasteWords(why.taste));
   if (why.goneAfter && !lastChance) parts.push(why.goneAfter.charAt(0).toUpperCase() + why.goneAfter.slice(1));
-  if (why.leaning) parts.push(who ? `${who}'s taste is still filling in` : 'Your taste is still filling in');
+  if (why.leaning) parts.push('Your taste is still filling in');
   if (why.divergence && DIVERGE[why.divergence]) parts.push(DIVERGE[why.divergence]);
   return parts;
 }
@@ -150,9 +150,7 @@ function textParts(text) {
 }
 
 export function reasonLine(entry, ctx, { cls = 'reason-line', lastChance = false } = {}) {
-  const guest = ctx?.isGuest?.();
-  const who = guest ? (ctx.getStatus?.()?.ownerName || 'The owner') : null;
-  const parts = (entry.why ? factsParts(entry.why, { who, lastChance }) : textParts(entry.reason)).slice(0, 2);
+  const parts = (entry.why ? factsParts(entry.why, { lastChance }) : textParts(entry.reason)).slice(0, 2);
   if (!parts.length) return null;
   const kids = [];
   parts.forEach((p, i) => { if (i) kids.push(' · '); kids.push(...(Array.isArray(p) ? p : [p])); });
@@ -654,7 +652,7 @@ export function lastChanceCard(entry, ctx) {
   const onList = entry.watchlisted;
   return h('a', { class: `lc-card${committed ? ' committed' : ' hedged'}`, href: `#/movie/${entry.tmdb_id}` },
     h('div', { class: 'lc-poster' }, poster(entry, { size: 'grid', link: false }),
-      onList ? h('span', { class: 'lc-saved', title: ctx?.isGuest?.() ? 'On the watchlist' : 'On your watchlist' }, icon('bookmark', { size: 14, label: 'Saved' })) : null),
+      onList ? h('span', { class: 'lc-saved', title: 'On your watchlist' }, icon('bookmark', { size: 14, label: 'Saved' })) : null),
     committed
       ? h('span', { class: 'tag last lc-when', title: entry.lastLabel || '' }, when)
       : h('span', { class: 'lc-hedge', title: entry.runway?.detail || entry.runway?.label || '' }, entry.runway?.label || entry.lastLabel),

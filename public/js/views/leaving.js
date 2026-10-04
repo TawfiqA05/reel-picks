@@ -166,7 +166,7 @@ function filmRow(e, ctx, { date = null, showDate = false } = {}) {
   return h('div', { class: 'lv-film' },
     h('a', { class: 'lv-poster', href: `#/movie/${e.tmdb_id}`, tabindex: '-1', 'aria-hidden': 'true' },
       poster(e, { size: 'sm', link: false }),
-      e.flags?.watchlisted ? h('span', { class: 'lc-saved', title: ctx?.isGuest?.() ? 'On the watchlist' : 'On your watchlist' }, icon('bookmark', { size: 13, label: 'Saved' })) : null),
+      e.flags?.watchlisted ? h('span', { class: 'lc-saved', title: 'On your watchlist' }, icon('bookmark', { size: 13, label: 'Saved' })) : null),
     h('div', { class: 'lv-film-body' },
       h('a', { class: 'lv-film-title', href: `#/movie/${e.tmdb_id}` }, e.title),
       h('div', { class: 'lv-meta' }, matchBadge(e.final), h('span', { class: `lv-when ${tier}` }, e.runway.label)),

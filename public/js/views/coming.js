@@ -1,4 +1,5 @@
 // Coming Soon: upcoming releases + advance screenings, ranked by predicted taste.
+// The guest link gets them by release date with no match (server/lib/recommend.js).
 import { api } from '../api.js';
 import { h, clear, spinner, emptyState, matchBadge, badge, sectionTitle } from '../ui.js';
 import { posterTile, isOldRelease } from './components.js';
@@ -8,10 +9,11 @@ export async function render(root, params, ctx) {
   root.appendChild(spinner('Loading upcoming…'));
   const data = await api.comingSoon();
   clear(root);
+  const guest = ctx.isGuest?.();
 
   const page = h('div', { class: 'page' });
   page.appendChild(sectionTitle('Coming soon',
-    data.profile.lowData ? 'Predicted from public taste. Rate more to make it yours.' : 'Ranked by your predicted taste match', { level: 1 }));
+    guest ? null : data.profile.lowData ? 'Predicted from public taste. Rate more to make it yours.' : 'Ranked by your predicted taste match', { level: 1 }));
 
   if (!data.list.length) {
     page.appendChild(emptyState('calendar', 'Nothing upcoming yet',
@@ -23,7 +25,7 @@ export async function render(root, params, ctx) {
   const grid = h('div', { class: 'tile-grid' });
   for (const mv of data.list) {
     const tags = [
-      matchBadge(mv.predicted),
+      guest ? null : matchBadge(mv.predicted),
       mv.advance ? badge('Advance screening', 'accent') : null,
     ];
     // An old film coming back carries its original release date, which would

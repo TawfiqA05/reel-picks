@@ -1243,7 +1243,7 @@ async function groupC() {
     const gp = await g.open('guest', 390, 'light');
     await go(gp.page, w, `#/movie/${withTrailer.id}`, 500);
     check('movie: guest sees no rating row or watchlist', await gp.page.locator('.rating-row').count() === 0 && await gp.page.locator('.detail-actions [aria-pressed]').count() === 0);
-    check('movie: guest sees the match pill', /^\d+% match/.test((await gp.page.locator('.hero-line .match').textContent().catch(() => '')).trim()));
+    check('movie: guest sees the public score pill, not a match', /^(Reviews \d+|No reviews yet)$/.test((await gp.page.locator('.hero-line .match').textContent().catch(() => '')).trim()));
     g.noErrors('movie', m0);
   });
 
@@ -1684,7 +1684,7 @@ async function groupC() {
       const { page } = await g.open('guest', width, theme);
       await page.goto(`${w.base}/#/home`); await settle(page, 700);
       const banner = await page.locator('#guest-banner').textContent();
-      check(`guest ${width}: banner names the owner`, new RegExp(`You're viewing ${C.OWNER_NAME}'s picks`).test(banner), banner);
+      check(`guest ${width}: banner says the films are ranked by public reviews and names no one`, banner === 'You\'re viewing what\'s playing this week, ranked by public reviews. Ask whoever shared this link for an invite to get picks of your own.', banner);
       check(`guest ${width}: no search, help, settings or refresh`, await page.locator('#search-btn:visible, #help-btn:visible, #settings-btn:visible, #refresh-btn:visible').count() === 0);
       check(`guest ${width}: no You tab`, await page.locator('[data-name="you"]:visible').count() === 0);
       check(`guest ${width}: no What should I watch, At home or owner tools`, await page.locator('#wsw-btn, #at-home, .owner-tools, .not-for-me').count() === 0);

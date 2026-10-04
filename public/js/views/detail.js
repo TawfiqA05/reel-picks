@@ -53,9 +53,8 @@ export async function render(root, params, ctx) {
 
   page.appendChild(showtimesSection(d, ctx));
 
-  // Score breakdown
-  const owner = guest ? (ctx.getStatus()?.ownerName || 'the owner') : null;
-  page.appendChild(h('div', { class: 'score-groups' }, publicCard(d), tasteCard(d, owner)));
+  // Score breakdown. The guest link has public scores only, so no taste match.
+  page.appendChild(h('div', { class: 'score-groups' }, publicCard(d), guest ? null : tasteCard(d)));
 
   // Where to stream it in the US. Not on the guest link, which can't ask TMDB.
   if (!guest) page.appendChild(streamSection(m.tmdb_id));
@@ -168,8 +167,7 @@ function sourceRow(name, valueText, norm) {
   );
 }
 
-// `owner` is set on the guest link: copy switches to the third person.
-function tasteCard(d, owner = null) {
+function tasteCard(d) {
   const t = d.taste || {};
   const factors = [];
   (t.genres || []).forEach((g) => factors.push(factorRow(g.name, g.avg, g.n)));
@@ -177,13 +175,11 @@ function tasteCard(d, owner = null) {
   (t.actors || []).slice(0, 3).forEach((a) => factors.push(factorRow(a.name, a.avg, a.n)));
 
   const n = d.profile?.count ?? 0;
-  const lowData = d.profile?.lowData
-    ? (owner ? `Based on ${n} of ${owner}'s rating${n === 1 ? '' : 's'}.` : `Based on ${n} rating${n === 1 ? '' : 's'}. Add more to sharpen this.`)
-    : null;
+  const lowData = d.profile?.lowData ? `Based on ${n} rating${n === 1 ? '' : 's'}. Add more to sharpen this.` : null;
   return h('section', { class: 'group', 'aria-labelledby': 'taste-title' },
     h('div', { class: 'group-head' }, h('h2', { class: 'group-title', id: 'taste-title' }, 'Taste match'), scoreNum(t.score)),
     h('div', { class: 'group-body' }, ...(factors.length ? factors
-      : [h('p', { class: 'muted' }, owner ? `No overlap with ${owner}'s ratings yet.` : 'No overlap with your ratings yet.')])),
+      : [h('p', { class: 'muted' }, 'No overlap with your ratings yet.')])),
     lowData ? h('p', { class: 'group-foot' }, lowData) : null,
   );
 }

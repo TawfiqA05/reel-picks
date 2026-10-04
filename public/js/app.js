@@ -1,6 +1,6 @@
 // App shell, hash router, chrome (header + bottom nav), and refresh polling.
 import { api } from './api.js';
-import { h, clear, toast, spinner, emptyState, icon, ensureToastHost } from './ui.js';
+import { h, clear, toast, spinner, emptyState, icon, ensureToastHost, showPublicScores } from './ui.js';
 import { watchForUpdates } from './update.js';
 import { openSearch } from './search.js';
 import { startTour, shouldAutoTour, tourActive } from './tour.js';
@@ -125,6 +125,7 @@ function renderChrome() {
   if (!els.searchBtn) return;
   const guest = Boolean(status?.guest);
   document.querySelector('.shell')?.classList.toggle('guest', guest);
+  showPublicScores(guest);
   // A friend can't force a refresh (pull-to-refresh just re-fetches for them).
   document.querySelector('.shell')?.classList.toggle('friend', !guest && status?.user?.isOwner === false);
   // Search is the owner's and friends'; the guest link has none (and the
@@ -133,7 +134,7 @@ function renderChrome() {
 
   // The guest link's one piece of guidance, in place of the setup and tour.
   const banner = document.querySelector('#guest-banner');
-  if (banner) banner.textContent = guest ? `You're viewing ${status?.ownerName || 'the owner'}'s picks. Ask him for an invite to get your own.` : '';
+  if (banner) banner.textContent = guest ? 'You\'re viewing what\'s playing this week, ranked by public reviews. Ask whoever shared this link for an invite to get picks of your own.' : '';
 
   // Anything in Settings that needs the owner (a missing key, AMC titles that
   // couldn't be matched, matches to review) is a dot on the You tab, and the
