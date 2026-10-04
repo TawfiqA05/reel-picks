@@ -300,7 +300,7 @@ async function words() {
     for (const [role, hash] of scenes) {
       const p = await page(role, { width, theme: 'dark', hash });
       const tag = `words ${width} ${role} ${hash.split('/').slice(0, 2).join(' ')}`;
-      const b = wordProblems(await p.page.evaluate(wordScan, VISIBLE));
+      const b = wordProblems(await p.page.evaluate(wordScan, VISIBLE), { guest: role === 'guest' });
       S.check(`${tag}: plain sentence-case wording`, !b.length && !p.errors.length, [...b, ...p.errors].slice(0, 4).join(' || '));
       if (hash === 'home' && ['owner', 'heavy'].includes(role)) {
         const pg = p.page;

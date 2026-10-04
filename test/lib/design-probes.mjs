@@ -74,7 +74,8 @@ export function wordScan(vis) {
   out.body = document.body.innerText;
   return out;
 }
-export function wordProblems(r) {
+// guest: the guest link's scores are public scores ("Reviews 88"), not a match.
+export function wordProblems(r, { guest = false } = {}) {
   const bad = [];
   for (const c of r.caps) bad.push(`capitals or tracked label: ${c}`);
   const body = r.body;
@@ -85,7 +86,8 @@ export function wordProblems(r) {
   if (/Through at least/i.test(body)) bad.push('"Through at least" is still on screen');
   const oldW = body.match(/\bNO\. \d|\bMATCH\b|BACK IN THEATERS|ON WATCHLIST|IMAX available|watchlisted|Be in your seat|be there by/);
   if (oldW) bad.push(`old wording on screen: ${oldW[0]}`);
-  for (const m of r.matches) if (!/^\d+% match( ?early)?$|^No match yet$/.test(m.trim())) bad.push(`match reads "${m}"`);
+  const MATCH = guest ? /^Reviews \d+$|^No reviews yet$/ : /^\d+% match( ?early)?$|^No match yet$/;
+  for (const m of r.matches) if (!MATCH.test(m.trim())) bad.push(`match reads "${m}"`);
   for (const s of r.seats) if (!/^Seat by \d{1,2}:\d\d [AP]M · out around \d{1,2}:\d\d [AP]M$|^(Seat by|Out around) \d{1,2}:\d\d [AP]M$/.test(s)) bad.push(`seat line "${s}"`);
   for (const x of r.reasons) {
     const t = x.text.trim();

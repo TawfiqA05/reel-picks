@@ -97,7 +97,7 @@ async function hero() {
         if (x.missing) bad.push('no hero');
         else {
           if (!/^#\d this week/.test(x.line || '')) bad.push(`hero line "${x.line}"`);
-          if (!/^\d+% match( ?early)?$/.test(x.match || '')) bad.push(`match "${x.match}"`);
+          if (!(role === 'guest' ? /^Reviews \d+$|^No reviews yet$/ : /^\d+% match( ?early)?$/).test(x.match || '')) bad.push(`match "${x.match}"`);
           if (x.tags.length && (new Set(x.tags.map((t) => t.top)).size > 1 || x.tagRowWrap !== 'nowrap')) bad.push('tags on more than one line');
           if (x.tags.some((t) => /watchlist/i.test(t.text))) bad.push('an On watchlist tag');
           const kinds = x.tags.map((t) => (/\bimax\b|dolby|reald|fmt/.test(t.cls) ? 'format' : 'status'));
@@ -484,7 +484,9 @@ async function tag() {
               };
             });
             const t0 = m.tags[0];
-            S.check(`tag ${role} ${theme} ${width}: one New this week tag, on the swapped-in film, inside its card, AA`, swapped && m.tags.length === 1 && t0.inside && t0.contrast >= 4.5 && t0.title.includes(swapped.title), JSON.stringify(m.tags));
+            // The guest link has no lock, so no swap and no tag.
+            if (role === 'guest') S.check(`tag guest ${theme} ${width}: no New this week tag (the guest's four is the top four by reviews)`, m.tags.length === 0, JSON.stringify(m.tags));
+            else S.check(`tag ${role} ${theme} ${width}: one New this week tag, on the swapped-in film, inside its card, AA`, swapped && m.tags.length === 1 && t0.inside && t0.contrast >= 4.5 && t0.title.includes(swapped.title), JSON.stringify(m.tags));
             S.check(`tag ${role} ${theme} ${width}: Picks has no console error, failed request or sideways scroll`, !p.errors.length && m.wide, p.errors.slice(0, 2).join(' | '));
             await p.ctx.close();
           }
