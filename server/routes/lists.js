@@ -76,7 +76,7 @@ router.get('/providers', h(async (req, res) => {
     try {
       providers[id] = await tmdb.watchProviders(id, { gate: tmdbThrottle });
     } catch (e) {
-      if (e.status !== 404) console.error('[providers]', id, e.message);
+      if (e.upstreamStatus !== 404) console.error('[providers]', id, e.message);
       providers[id] = null;
     }
   }

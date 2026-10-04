@@ -74,7 +74,7 @@ async function fetchOmdb(params) {
   try {
     raw = await fetchJson(url(params));
   } catch (e) {
-    const why = unavailableReason(null, e.status);
+    const why = unavailableReason(null, e.upstreamStatus);
     if (why) { pause(why); throw new OmdbUnavailableError(`OMDb ${why}`); }
     throw e;
   }

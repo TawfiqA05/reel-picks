@@ -300,7 +300,7 @@ async function resolveTheatres(log) {
     for (const t of theatres) t.record = (await amc.getTheatre(t.id)) || null;
     return theatres;
   } catch (e) {
-    const unauthorized = e.status === 403 || /unauthorized vendorkey/i.test(e.body?.errors?.[0]?.exceptionMessage || '');
+    const unauthorized = e.upstreamStatus === 403 || /unauthorized vendorkey/i.test(e.body?.errors?.[0]?.exceptionMessage || '');
     log.errors.push(unauthorized
       ? 'AMC key rejected ("Unauthorized VendorKey"). AMC\'s developer API is gated and this key is not authorized for showtimes. Ranking TMDB\'s current releases instead. Remove AMC_API_KEY from .env to hide this warning.'
       : `AMC theater lookup: ${e.message}`);

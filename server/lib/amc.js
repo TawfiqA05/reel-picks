@@ -215,7 +215,9 @@ export async function showtimes(theatreId, date, theatre, { force = false, meta 
         return raw.map((s) => normalizeShowtime(s, theatre));
       } catch (err) {
         lastErr = err;
-        if (err.status && err.status !== 404 && err.status !== 400) throw err;
+        // AMC's own code, or the 502 pageAll gives an answer that isn't JSON.
+        const code = err.upstreamStatus ?? err.status;
+        if (code && code !== 404 && code !== 400) throw err;
       }
     }
     if (lastErr) throw lastErr;

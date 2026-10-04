@@ -8,6 +8,9 @@
 //               timer (the 15-minute check, the refresh retry, the off-site
 //               check), is logged and the server keeps answering. A write
 //               waits out another connection's lock instead of failing.
+//   upstream    TMDB or AMC failing shows a friend the plain server line,
+//               never the upstream address or code. Errors the app writes
+//               itself keep their own words and code.
 import fs from 'node:fs';
 import path from 'node:path';
 import { suite } from '../lib/check.mjs';
@@ -78,6 +81,33 @@ try {
     const r = await p;
     check('a rating saved while another connection held the write lock for 1.5 s goes through', r.status === 200, `${r.status} ${r.text.slice(0, 160)}`);
     check('and it is saved', w.q1('SELECT rating FROM ratings WHERE user_id = 1 AND tmdb_id = ?', C.RATED[4].id)?.rating === 2.5);
+  });
+
+  // ============================================================== upstream
+  await step('upstream: TMDB or AMC failing shows a friend the plain server line', async () => {
+    w.q("DELETE FROM cache WHERE key LIKE 'tmdb:popular:%'");
+    w.writeCtrl({ tmdbFail: { '/3/movie/popular': { status: 429, body: { status_message: 'Your request count is over the allowed limit.' } } } });
+    await sleep(120);
+    const t = await w.api('GET', '/api/onboarding/movies', { as: robin });
+    check('a TMDB 429 gives the friend a 500 with the plain server line', t.status === 500 && t.json?.error === SERVER_LINE, `${t.status} ${t.text.slice(0, 200)}`);
+    check('with no TMDB address or upstream code in it', !/themoviedb|HTTP \d|api_key/i.test(t.text), t.text.slice(0, 200));
+    check('the details are in the log', /HTTP 429 for https:\/\/api\.themoviedb\.org/.test(w.srv.log()));
+    w.writeCtrl({});
+    w.amc.mode = '500';
+    w.q("DELETE FROM cache WHERE key = 'amc:theatres:all'");
+    const a = await w.api('GET', '/api/theatres?query=maple', { as: robin });
+    w.amc.mode = 'ok';
+    check('an AMC 500 gives the friend a 500 with the plain server line', a.status === 500 && a.json?.error === SERVER_LINE, `${a.status} ${a.text.slice(0, 200)}`);
+    check('with no AMC address in it', !/127\.0\.0\.1|HTTP \d|v2\/theatres/.test(a.text), a.text.slice(0, 200));
+  });
+
+  await step('upstream: errors the app writes itself keep their words and code', async () => {
+    const lb = await w.api('PUT', '/api/letterboxd', { as: robin, body: { username: 'not a name!' } });
+    check('a bad Letterboxd name is a 400 with its own line', lb.status === 400 && /^That isn't a Letterboxd username/.test(lb.json?.error || ''), `${lb.status} ${lb.text.slice(0, 160)}`);
+    const sent = await w.api('POST', '/api/sends', { as: robin, body: { to: 999, tmdb_id: C.RATED[0].id } });
+    check('a pick sent to nobody is a 404 "Not found."', sent.status === 404 && sent.json?.error === 'Not found.', `${sent.status} ${sent.text.slice(0, 160)}`);
+    const again = await w.api('POST', '/api/theatres/follow', { body: { id: '9101', name: 'AMC Maple Grove 12', slug: 'amc-maple-grove-12' } });
+    check('following the primary theater as an extra is a 400 with its own line', again.status === 400 && /already your primary theater/.test(again.json?.error || ''), `${again.status} ${again.text.slice(0, 160)}`);
   });
 } finally {
   await w.close();

@@ -11,7 +11,9 @@
 //    poster images with a tiny generated JPEG. localhost passes through (the
 //    AMC, Letterboxd and push stand-ins). Anything else is refused. Every
 //    outside request is logged to RP_NET_LOG so a suite can prove none went
-//    unanswered.
+//    unanswered. The control file can make TMDB answer one path with an
+//    error ({"tmdbFail":{"/3/movie/123":404}}, or {"status":429,"body":{}})
+//    and OMDb answer 401 ({"omdbMode":"unauthorized"}).
 //
 // 3. The disk. The data folder sits on a made-up volume (8 GB unless the
 //    control file says {"disk":{"total":<bytes>,"other":<bytes>}}) whose used
@@ -217,6 +219,11 @@ function tmdbSynth(u) {
 
 function tmdb(u) {
   if (ctrl.tmdb === 'down') { note({ host: u.hostname, path: u.pathname, how: 'down' }); return json({ status_message: 'down' }, 503); }
+  const fail = ctrl.tmdbFail?.[u.pathname];
+  if (fail) {
+    note({ host: u.hostname, path: u.pathname, how: `fail ${fail.status ?? fail}` });
+    return json(fail.body ?? { success: false, status_message: 'made-up failure' }, fail.status ?? fail);
+  }
   const key = savedKey(u);
   const s = saved.get(key);
   if (s) { note({ host: u.hostname, path: u.pathname, how: 'saved', key }); return json(s.body, s.status); }
@@ -228,6 +235,7 @@ function tmdb(u) {
 
 function omdb(u) {
   if (ctrl.omdbMode === 'quota') { note({ host: u.hostname, path: '/', how: 'quota' }); return json({ Response: 'False', Error: 'Request limit reached!' }); }
+  if (ctrl.omdbMode === 'unauthorized') { note({ host: u.hostname, path: '/', how: 'unauthorized' }); return json({ Response: 'False', Error: 'Invalid API key!' }, 401); }
   const i = u.searchParams.get('i');
   const t = u.searchParams.get('t');
   let f = null;

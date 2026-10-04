@@ -75,7 +75,7 @@ async function fetchOne(row) {
       backfillState.fetched++;
       return true;
     } catch (e) {
-      if (e.status === 404) {
+      if (e.upstreamStatus === 404) {
         // TMDB has no such film: remember that, and never ask again.
         if (!get('SELECT 1 AS x FROM movies WHERE tmdb_id = ?', row.tmdb_id)) {
           upsertLightMovie({ tmdb_id: row.tmdb_id, title: row.title || null });
@@ -84,7 +84,7 @@ async function fetchOne(row) {
         backfillState.notFound++;
         return true;
       }
-      if (e.status === 429) {
+      if (e.upstreamStatus === 429) {
         const after = Number(e.body?.retry_after || 0) || 10;
         await sleep(Math.min(60, after) * 1000);
         continue;

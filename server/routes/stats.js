@@ -82,7 +82,8 @@ router.get('/person/:id', h(async (req, res) => {
     }
     res.json(d);
   } catch (e) {
-    if (e.status === 404) return res.status(404).json({ error: 'Person not found' });
+    // TMDB's 404, or the one lib/personPage.js gives a record it can't show.
+    if (e.upstreamStatus === 404 || e.status === 404) return res.status(404).json({ error: 'Person not found' });
     console.error('[person]', id, e.message);
     res.status(502).json({ error: "Couldn't reach TMDB to load this person. Try again in a moment." });
   }

@@ -176,7 +176,7 @@ async function compute(uid, week, keys) {
     ranked.sort((a, b) => b.score - a.score || b.popularity - a.popularity);
     // The front of the list gets full details, then everything is scored again.
     for (const c of ranked.slice(0, DETAILS_TOP)) {
-      try { c.m = await ensureDetails(c.id); } catch (e) { if (e.status !== 404) throw e; }
+      try { c.m = await ensureDetails(c.id); } catch (e) { if (e.upstreamStatus !== 404) throw e; }
     }
     ranked = ranked.filter((c) => !excludedBySettings(c.m, p.settings));
     for (const c of ranked) c.scored = scoreFilm(c.m, p);
@@ -189,7 +189,7 @@ async function compute(uid, week, keys) {
       if (!service) continue;
       // Every kept film has a full record: its card, its movie page, its runtime.
       if (!c.m.details_at) {
-        try { c.m = await ensureDetails(c.id); c.scored = scoreFilm(c.m, p); } catch (e) { if (e.status === 404) continue; throw e; }
+        try { c.m = await ensureDetails(c.id); c.scored = scoreFilm(c.m, p); } catch (e) { if (e.upstreamStatus === 404) continue; throw e; }
         if (excludedBySettings(c.m, p.settings)) continue;
       }
       keep.push({ tmdb_id: c.id, final: c.scored.final, reason: reasonFor(c.m, c.scored, p, { used: reasonsUsed }), service, collection: await collectionOf(c.id) });

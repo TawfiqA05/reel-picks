@@ -60,7 +60,7 @@ async function personId(kind, name, films) {
     try {
       upsertFullMovie(tmdb.normalizeDetails(await tmdb.details(m.tmdb_id, { gate: tmdbThrottle })));
     } catch (e) {
-      if (e.status !== 404) throw e; // a real outage stays an error ("try again later")
+      if (e.upstreamStatus !== 404) throw e; // a real outage stays an error ("try again later")
       run("UPDATE movies SET details_missing = 'not_found' WHERE tmdb_id = ?", m.tmdb_id);
       continue;
     }
@@ -149,7 +149,7 @@ export async function getStatsMore(kind, name) {
     try {
       credits = await tmdb.personCredits(pid, { gate: tmdbThrottle });
     } catch (e) {
-      if (e.status === 404) return remember();
+      if (e.upstreamStatus === 404) return remember();
       throw e;
     }
     const pool = kind === 'director'

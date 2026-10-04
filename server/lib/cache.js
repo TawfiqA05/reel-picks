@@ -25,9 +25,12 @@ export async function fetchJson(url, opts = {}) {
       body = text;
     }
   }
+  // The upstream code is kept as upstreamStatus, never as status: the error
+  // handler (index.js) shows an error's message when it carries a status,
+  // and this message is the upstream address.
   if (!res.ok) {
     const err = new Error(`HTTP ${res.status} for ${redact(url)}`);
-    err.status = res.status;
+    err.upstreamStatus = res.status;
     err.body = body;
     throw err;
   }

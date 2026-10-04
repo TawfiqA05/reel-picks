@@ -22,12 +22,13 @@ export function serve(handler) {
 
 const readBody = (req) => new Promise((r) => { const b = []; req.on('data', (d) => b.push(d)); req.on('end', () => r(Buffer.concat(b))); });
 
-// AMC. mode: ok | 500 | hold (answers wait for release()). gone: AMC movie
-// ids no longer listed. until: AMC movie id -> the last date (YYYY-MM-DD) it
-// is listed on. shift: days the whole schedule is moved later. hits: every
-// request, for suites that count calls.
+// AMC. mode: ok | 500 | 403 | hold (answers wait for release()). gone: AMC
+// movie ids no longer listed. until: AMC movie id -> the last date
+// (YYYY-MM-DD) it is listed on. shift: days the whole schedule is moved
+// later. missing: dates (YYYY-MM-DD) whose showtimes answer 404, in either
+// date form. hits: every request, for suites that count calls.
 export async function amcMock() {
-  const amc = { mode: 'ok', delay: 2, hits: [], inflight: 0, maxInflight: 0, held: [], gone: new Set(), until: new Map(), shift: 0 };
+  const amc = { mode: 'ok', delay: 2, hits: [], inflight: 0, maxInflight: 0, held: [], gone: new Set(), until: new Map(), shift: 0, missing: new Set() };
   const srv = await serve(async (req, res) => {
     const u = new URL(req.url, 'http://x');
     const hit = { kind: 'other', path: u.pathname, at: Date.now() };
@@ -47,6 +48,7 @@ export async function amcMock() {
       await sleep(amc.delay);
       const send = (status, body) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
       if (amc.mode === '500') return send(500, { errors: [{ message: 'Internal Server Error' }] });
+      if (amc.mode === '403') return send(403, { errors: [{ message: 'Forbidden' }] });
       if (!req.headers['x-amc-vendor-key']) return send(401, { errors: [{ message: 'Unauthorized' }] });
       const rec = (t) => ({ id: Number(t.id), name: t.name, longName: t.name, slug: t.slug, location: { cityName: t.city, stateName: t.state, latitude: t.lat, longitude: t.lng } });
       if (hit.kind === 'theatres') return send(200, { _embedded: { theatres: C.THEATRES.map(rec) } });
@@ -57,6 +59,7 @@ export async function amcMock() {
       if (hit.kind === 'movie') { const mv = C.amcMovie(hit.movie); return mv ? send(200, mv) : send(404, { errors: [] }); }
       if (hit.kind === 'showtimes') {
         if (!/^\d{4}-\d\d-\d\d$/.test(hit.date)) return send(404, { errors: [{ message: 'bad date' }] });
+        if (amc.missing.has(hit.date)) return send(404, { errors: [{ message: 'no showtimes' }] });
         const list = C.amcShowtimes(hit.theatre, hit.date, { shift: amc.shift })
           .filter((s) => !amc.gone.has(s.movieId) && !(amc.until.has(s.movieId) && hit.date > amc.until.get(s.movieId)));
         return send(200, { _embedded: { showtimes: list } });
