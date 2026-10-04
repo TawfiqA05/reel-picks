@@ -84,8 +84,8 @@ export async function getPerson(id, { guest = false } = {}) {
       prerelease: date && date > today ? { opens: date } : null,
       playing: playing.has(f.tmdb_id),
       stored: Boolean(m),
-      myRating: mine.get(f.tmdb_id) ?? null,
-      watchlisted: watch.has(f.tmdb_id),
+      // The guest link gets no one's marks, not even empty ones.
+      ...(guest ? {} : { myRating: mine.get(f.tmdb_id) ?? null, watchlisted: watch.has(f.tmdb_id) }),
     };
   });
 

@@ -724,12 +724,9 @@
    990010,
    990002
   ],
-  "lockWeek": "2026-09-18",
+  "lockWeek": null,
   "worthSeeing": [
-   990004,
-   990003,
-   990012,
-   990009
+   990004
   ],
   "lastChance": [
    990007,
@@ -740,168 +737,168 @@
   ],
   "films": {
    "990001": {
-    "final": 94,
-    "beforeUrgency": 94,
+    "final": 85,
+    "beforeUrgency": null,
     "public": 85,
     "critic": 90,
     "audience": 80,
-    "taste": 83
+    "taste": null
    },
    "990002": {
-    "final": 91,
-    "beforeUrgency": 91,
+    "final": 80,
+    "beforeUrgency": null,
     "public": 80,
     "critic": 84,
     "audience": 77,
-    "taste": 73
+    "taste": null
    },
    "990003": {
-    "final": 78,
-    "beforeUrgency": 78,
+    "final": 73,
+    "beforeUrgency": null,
     "public": 73,
     "critic": 76,
     "audience": 71,
-    "taste": 70
+    "taste": null
    },
    "990004": {
-    "final": 88,
-    "beforeUrgency": 88,
+    "final": 80,
+    "beforeUrgency": null,
     "public": 80,
     "critic": 86,
     "audience": 75,
-    "taste": 84
+    "taste": null
    },
    "990005": {
-    "final": 83,
-    "beforeUrgency": 83,
+    "final": 77,
+    "beforeUrgency": null,
     "public": 77,
     "critic": 80,
     "audience": 74,
-    "taste": 76
+    "taste": null
    },
    "990006": {
-    "final": 68,
-    "beforeUrgency": 68,
+    "final": null,
+    "beforeUrgency": null,
     "public": null,
     "critic": null,
     "audience": null,
-    "taste": 73
+    "taste": null
    },
    "990007": {
-    "final": 87,
-    "beforeUrgency": 82,
+    "final": 81,
+    "beforeUrgency": null,
     "public": 81,
     "critic": 86,
     "audience": 77,
-    "taste": 70
+    "taste": null
    },
    "990008": {
-    "final": 56,
-    "beforeUrgency": 56,
+    "final": 53,
+    "beforeUrgency": null,
     "public": 53,
     "critic": 46,
     "audience": 60,
-    "taste": 46
+    "taste": null
    },
    "990009": {
-    "final": 76,
-    "beforeUrgency": 76,
+    "final": 73,
+    "beforeUrgency": null,
     "public": 73,
     "critic": 74,
     "audience": 71,
-    "taste": 66
+    "taste": null
    },
    "990010": {
-    "final": 89,
-    "beforeUrgency": 86,
+    "final": 81,
+    "beforeUrgency": null,
     "public": 81,
     "critic": 83,
     "audience": 79,
-    "taste": 79
+    "taste": null
    },
    "990011": {
-    "final": 68,
-    "beforeUrgency": 66,
+    "final": null,
+    "beforeUrgency": null,
     "public": null,
     "critic": null,
     "audience": null,
-    "taste": 70
+    "taste": null
    },
    "990012": {
-    "final": 77,
-    "beforeUrgency": 77,
+    "final": 74,
+    "beforeUrgency": null,
     "public": 74,
     "critic": 78,
     "audience": 71,
-    "taste": 67
+    "taste": null
    }
   },
   "movies": {
    "990001": {
-    "final": 94,
+    "final": 85,
     "public": 85,
-    "taste": 83
+    "taste": null
    },
    "990002": {
-    "final": 91,
+    "final": 80,
     "public": 80,
-    "taste": 73
+    "taste": null
    },
    "990003": {
-    "final": 78,
+    "final": 73,
     "public": 73,
-    "taste": 70
+    "taste": null
    },
    "990004": {
-    "final": 88,
+    "final": 80,
     "public": 80,
-    "taste": 84
+    "taste": null
    },
    "990005": {
-    "final": 83,
+    "final": 77,
     "public": 77,
-    "taste": 76
+    "taste": null
    },
    "990006": {
-    "final": 68,
+    "final": null,
     "public": null,
-    "taste": 73
+    "taste": null
    },
    "990007": {
-    "final": 87,
+    "final": 81,
     "public": 81,
-    "taste": 70
+    "taste": null
    },
    "990008": {
-    "final": 56,
+    "final": 53,
     "public": 53,
-    "taste": 46
+    "taste": null
    },
    "990009": {
-    "final": 76,
+    "final": 73,
     "public": 73,
-    "taste": 66
+    "taste": null
    },
    "990010": {
-    "final": 89,
+    "final": 81,
     "public": 81,
-    "taste": 79
+    "taste": null
    },
    "990011": {
-    "final": 68,
+    "final": null,
     "public": null,
-    "taste": 70
+    "taste": null
    },
    "990012": {
-    "final": 77,
+    "final": 74,
     "public": 74,
-    "taste": 67
+    "taste": null
    }
   },
   "comingSoon": {
-   "970001": 86,
-   "970002": 69,
-   "970003": 77
+   "970001": null,
+   "970002": null,
+   "970003": null
   }
  }
 }

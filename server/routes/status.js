@@ -47,9 +47,9 @@ router.get('/status', (req, res) => {
   if (isGuest(req)) {
     // Minimal, non-sensitive payload for the shared read-only link. No drive
     // times or distances: the link is public and they'd reveal where home is.
+    // No owner's name either: the guest link doesn't say whose it is.
     return res.json({
       guest: true,
-      ownerName: ownerName(),
       theatre: { id: '', name: s.theatreName, short: theatres[0].short, distance: null },
       theatres: theatres.map((t) => ({ id: '', name: t.name, short: t.short, isPrimary: t.isPrimary, distance: null })),
       keys: { tmdb: true, omdb: true, amc: false },

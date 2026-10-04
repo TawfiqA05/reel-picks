@@ -1,7 +1,7 @@
 // The API: header search, add to calendar, where to stream, onboarding, the
 // watchlist, Not for me, the A-List tracker, At home and What should I watch?
 import { Router } from 'express';
-import { get, all, run, getSetting, setSetting } from '../db.js';
+import { get, all, run, getSetting, setSetting, DEFAULT_SETTINGS } from '../db.js';
 import { ingestOne } from '../lib/refresh.js';
 import { getRecommendations, wasWeekly4Pick } from '../lib/recommend.js';
 import { upsertRating, ratedIds } from '../lib/ratings.js';
@@ -10,7 +10,7 @@ import { logWatched, undoWatched, getWeek } from '../lib/alist.js';
 import * as tmdb from '../lib/tmdb.js';
 import { followedTheatres } from '../lib/theatres.js';
 import { showtimeIcs, icsFilename, theatreRecord } from '../lib/calendar.js';
-import { currentUserId } from '../lib/user.js';
+import { currentUserId, currentUser } from '../lib/user.js';
 import { tmdbThrottle } from '../lib/backfill.js';
 import { homePicks } from '../lib/home.js';
 import { suggest, suggestState } from '../lib/suggest.js';
@@ -39,14 +39,16 @@ router.post('/search/recents/restore', (req, res) => res.json(restoreRecents(req
 
 // One showtime as an .ics file (lib/calendar.js). Only showtimes at a theater
 // the caller follows; anything else is the same 404 as a made-up id. The guest
-// link may ask too (read only, about the owner's theaters it already sees).
+// link may ask too (read only, about the owner's theaters it already sees),
+// and gets the default minutes of previews, not the owner's.
 router.get('/showtimes/:id/calendar.ics', (req, res) => {
   const s = get('SELECT * FROM showtimes WHERE id = ?', String(req.params.id));
   const theatre = s && followedTheatres().find((t) => String(t.id) === String(s.theatre_id));
   if (!s || !theatre || !s.tmdb_id) return res.status(404).json({ error: 'Showtime not found' });
   const movie = getMovie(s.tmdb_id);
   const ics = showtimeIcs({
-    showtime: s, movie, theatreName: theatre.name, record: theatreRecord(s.theatre_id), previewsMinutes: getSetting('previewsMinutes'),
+    showtime: s, movie, theatreName: theatre.name, record: theatreRecord(s.theatre_id),
+    previewsMinutes: currentUser()?.guest ? DEFAULT_SETTINGS.previewsMinutes : getSetting('previewsMinutes'),
   });
   if (!ics) return res.status(404).json({ error: 'Showtime not found' });
   res.set({

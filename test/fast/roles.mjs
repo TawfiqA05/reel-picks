@@ -58,7 +58,7 @@ await S.step('the guest reads a person page with no one\'s ratings, and writes n
   const g = await w.api('GET', `/api/person/${PID}`, { as: GUEST });
   S.check('guest GET /api/person is allowed', g.status === 200 && g.json?.person?.id === PID, `${g.status}`);
   const all = g.json ? [...g.json.playing, ...g.json.rated, ...g.json.directed, ...g.json.acted, ...g.json.actedSmaller] : [];
-  S.check('the guest gets no ratings and no watchlist', g.json && !g.json.rated.length && all.every((f) => f.myRating == null && f.watchlisted === false) && all.some((f) => f.tmdb_id === rated?.tmdb_id));
+  S.check('the guest gets no ratings and no watchlist, not even empty marks', g.json && !g.json.rated.length && all.every((f) => !('myRating' in f) && !('watchlisted' in f)) && all.some((f) => f.tmdb_id === rated?.tmdb_id));
   S.check('the owner still has their rating (control)', (await w.api('GET', `/api/person/${PID}`)).json.rated.some((f) => f.tmdb_id === rated?.tmdb_id && f.myRating === rated.myRating));
   S.check('guest /api/search is 403', (await w.api('GET', '/api/search?q=lindqvist', { as: GUEST })).status === 403);
   S.check('guest recents are 403', (await w.api('GET', '/api/search/recents', { as: GUEST })).status === 403);

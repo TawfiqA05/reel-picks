@@ -6,7 +6,7 @@
 // movie is playing at, with per-theatre showtimes and runway, (b) the "Also
 // nearby" section for movies the primary doesn't have, and (c) the hand-off
 // line when a movie is leaving the primary but still on elsewhere.
-import { all, get, getSettings } from '../db.js';
+import { all, get, getSettings, DEFAULT_SETTINGS } from '../db.js';
 import { getMovie, hydrate } from './movies.js';
 import { profileRows, ratedIds, getRating, statsRows } from './ratings.js';
 import { getMatch } from './match.js';
@@ -19,14 +19,15 @@ import { getLastChance, dailyBreadth, computeHorizon, lineupExodus } from './lea
 import { followedTheatres, homeBase, readDistance, sharedTheatreIds } from './theatres.js';
 import { computeRunway, runwayDates, handoffLine, goneAfterPhrase } from './runway.js';
 import { localYMD, addDays, timeLabel, weekStartFriday } from './util.js';
-import { ownerName } from './guest.js';
 import { currentUserId } from './user.js';
 import { glowColor, ensurePosterColor } from './posterColor.js';
+import { guestEntry, guestTheatre, guestDays } from './guestShape.js';
 import { SWAP_MARGIN, weekOpen, prevWeek, readLock, createLock, saveLock } from './lock.js';
 
 // Everything below is for the user in context (lib/user.js): their settings,
 // ratings, watchlist, watch log and hidden films. The guest link runs as the
-// owner. Movies, showtimes and scores are shared.
+// owner but reads none of that (publicSettings below). Movies, showtimes and
+// scores are shared.
 function watchlistSet() {
   return new Set(all('SELECT tmdb_id FROM watchlist WHERE user_id = ?', currentUserId()).map((r) => r.tmdb_id));
 }
@@ -41,16 +42,38 @@ function hiddenSet() {
   return new Set(all('SELECT tmdb_id FROM hidden_movies WHERE user_id = ?', currentUserId()).map((r) => r.tmdb_id));
 }
 
-// guest: the read-only shared link. Drive times/distances are dropped at the
+// The guest link's bar for Also worth seeing and Last chance: a public score
+// of 75, the default good-match bar.
+export const GUEST_BAR = 75;
+
+// The guest link's settings: the defaults, with the public score as the whole
+// score and every boost at zero, so nothing the owner chose (weights, boosts,
+// preferred hours, excluded genres, previews) shapes a guest answer. Only
+// how the owner's theaters' schedules are read carries over.
+function publicSettings(own) {
+  return {
+    ...DEFAULT_SETTINGS,
+    lastChanceDensity: own.lastChanceDensity,
+    lastChanceMinGapDays: own.lastChanceMinGapDays,
+    weightPublic: 1, weightTaste: 0, preferImax: false, showtimeWindows: null, excludedGenres: [], excludedMpaa: [],
+    watchlistBoost: 0, imaxBoost: 0, windowFitBoost: 0, urgencyBoost: 0,
+    goodMatchMinScore: GUEST_BAR, lastChanceMinScore: GUEST_BAR,
+  };
+}
+
+// guest: the read-only shared link. It gets the owner's theaters and nothing
+// else of theirs: no ratings, watchlist, watch log, hidden films or taste
+// profile, and publicSettings. Drive times/distances are dropped at the
 // source so no payload derived from this context can reveal where home is.
 function buildCtx({ guest = false } = {}) {
-  const settings = getSettings();
-  const profile = buildProfile(profileRows());
+  const own = getSettings();
+  const settings = guest ? publicSettings(own) : own;
+  const profile = buildProfile(guest ? [] : profileRows());
   const conf = confidence(profile);
   const today = localYMD();
   const weekEnd = localYMD(addDays(new Date(), 6));
-  const home = homeBase(settings);
-  const theatres = followedTheatres(settings).map((t) => ({ ...t, distance: guest ? null : readDistance(t.id, home) }));
+  const home = homeBase(own);
+  const theatres = followedTheatres(own).map((t) => ({ ...t, distance: guest ? null : readDistance(t.id, home) }));
   const primaryId = theatres[0].id;
   const known = new Set(theatres.map((t) => t.id));
 
@@ -90,11 +113,11 @@ function buildCtx({ guest = false } = {}) {
     settings,
     profile,
     conf,
-    rated: ratedIds(),
-    ratings: new Map(all('SELECT tmdb_id, rating FROM ratings WHERE user_id = ?', currentUserId()).map((r) => [r.tmdb_id, r.rating])),
-    watch: watchlistSet(),
-    watched: watchedSet(),
-    hidden: hiddenSet(),
+    rated: guest ? new Set() : ratedIds(),
+    ratings: guest ? new Map() : new Map(all('SELECT tmdb_id, rating FROM ratings WHERE user_id = ?', currentUserId()).map((r) => [r.tmdb_id, r.rating])),
+    watch: guest ? new Set() : watchlistSet(),
+    watched: guest ? new Set() : watchedSet(),
+    hidden: guest ? new Set() : hiddenSet(),
     weights: { public: Number(settings.weightPublic) || 0, taste: Number(settings.weightTaste) || 0 },
     today,
     weekEnd,
@@ -108,8 +131,8 @@ function buildCtx({ guest = false } = {}) {
     exodus,
     minGap,
     handoffMinScore: Number(settings.lastChanceMinScore) || 0,
-    // Third-person voice for reason lines on the guest link ("Tawfiq rates…").
-    owner: guest ? ownerName() : null,
+    // Reason lines keep to the public scores.
+    guest,
   };
 }
 
@@ -293,7 +316,7 @@ function evaluate(movie, ctx, tid = ctx.primaryId) {
     imax: imaxAvailable && ctx.settings.preferImax,
     goneAfter: urgency > 0 ? goneAfterPhrase(runway, ctx.today) : null,
   };
-  const reason = buildReason({ pub, topTaste, conf: ctx.conf, flags: reasonFlags, owner: ctx.owner });
+  const reason = buildReason({ pub, topTaste, conf: ctx.conf, flags: reasonFlags, publicOnly: ctx.guest });
 
   const handoff = finalBeforeUrgency >= ctx.handoffMinScore
     ? handoffLine({
@@ -309,7 +332,7 @@ function evaluate(movie, ctx, tid = ctx.primaryId) {
     final,
     finalBeforeUrgency,
     reason,
-    why: reasonFacts({ pub, topTaste, conf: ctx.conf, flags: reasonFlags }),
+    why: reasonFacts({ pub, topTaste, conf: ctx.conf, flags: reasonFlags, publicOnly: ctx.guest }),
     myRating: ctx.ratings.get(movie.tmdb_id) ?? null,
     public: {
       combined: pub.combined, critic: pub.critic, audience: pub.audience, sources: pub.sources, divergence: pub.divergence, display: pub.display,
@@ -525,19 +548,15 @@ function stillShowing(ctx, tmdbId) {
 // This week's four for the user in context (lib/lock.js has the rules). The
 // lock is made from `eligible` in ranked order, which is exactly the four the
 // live ranking would show at that moment; after that the four only changes
-// by the rules below. The guest link reads the owner's lock and writes nothing.
-function weeklyFour(ctx, { list, eligible, nearbyEval, guest, lockHow }) {
+// by the rules below. The guest link has no four of the owner's (getGuestRecommendations).
+function weeklyFour(ctx, { list, eligible, nearbyEval, lockHow }) {
   const uid = currentUserId();
   const week = weekStartFriday(new Date(ctx.now));
   const at = new Date(ctx.now).toISOString();
   const unscored = () => list.filter((e) => e.flags.noScores).map((e) => e.tmdb_id);
   let lock = readLock(uid, week);
   let pending = false;
-  if (!lock && weekOpen(week)) {
-    lock = guest
-      ? { user_id: uid, week_start: week, locked_at: at, how: 'preview', slots: eligible.slice(0, 4).map((e) => [{ tmdb_id: e.tmdb_id, via: 'lock' }]), unscored: unscored(), swapped_at: null, preview: true }
-      : createLock(uid, week, eligible.slice(0, 4), unscored(), lockHow || 'first-view', at);
-  }
+  if (!lock && weekOpen(week)) lock = createLock(uid, week, eligible.slice(0, 4), unscored(), lockHow || 'first-view', at);
   // Until this week's four lock, last week's stays up.
   if (!lock) { lock = readLock(uid, prevWeek(week)); pending = true; }
   // Nothing locked yet at all (someone brand new before Friday's refresh).
@@ -585,16 +604,52 @@ function weeklyFour(ctx, { list, eligible, nearbyEval, guest, lockHow }) {
     }
   }
   const four = pick.filter(Boolean);
-  if (!guest && !lock.preview && (swappedAt || JSON.stringify(slots) !== JSON.stringify(lock.slots))) saveLock(lock, slots, four, { swappedAt, at });
+  if (swappedAt || JSON.stringify(slots) !== JSON.stringify(lock.slots)) saveLock(lock, slots, four, { swappedAt, at });
   return {
     four: four.map((p) => ({ ...entries.get(p.tmdb_id), pick: { via: p.via, newThisWeek: p.via === 'swap' } })),
-    meta: { week: lock.week_start, lockedAt: lock.preview ? null : lock.locked_at, how: lock.how, pending },
+    meta: { week: lock.week_start, lockedAt: lock.locked_at, how: lock.how, pending },
+  };
+}
+
+// The guest link's order: public score, films without one last; the
+// lineup's order between equals.
+function byPublic(a, b) {
+  return (b.flags.noScores ? -1 : b.final) - (a.flags.noScores ? -1 : a.final);
+}
+
+// The guest link (lib/guest.js): what's playing at the owner's theaters,
+// ranked by public score alone, with no lock and nothing of the owner's (see
+// buildCtx and lib/guestShape.js). The four is the top four; Also worth
+// seeing and Last chance need a public score of GUEST_BAR. Writes nothing.
+function getGuestRecommendations() {
+  const ctx = buildCtx({ guest: true });
+  const playing = all('SELECT * FROM movies WHERE playing = 1').map(hydrate);
+  const { main, nearby } = splitLineup(ctx, playing);
+  const list = main.map((m) => evaluate(m, ctx)).sort(byPublic);
+  const four = list.slice(0, 4);
+  const top4 = new Set(four.map((e) => e.tmdb_id));
+  const lastChance = getLastChance(list, ctx);
+  const primary = ctx.theatres[0];
+  return {
+    weekly4: four.map(guestEntry),
+    worthSeeing: list.filter((e) => !top4.has(e.tmdb_id) && !e.flags.noScores && e.final >= GUEST_BAR).map(guestEntry),
+    goodMatchMinScore: GUEST_BAR,
+    days: dailyBreadth(ctx.today, ctx.primaryId).map((d) => ({ date: d.date, movies: d.movies, showtimes: d.showtimes })),
+    list: list.map(guestEntry),
+    alsoNearby: nearby.map(({ m, t }) => evaluate(m, ctx, t.id)).sort(byPublic).map(guestEntry),
+    lastChance: lastChance.items.map(guestEntry),
+    theatre: { ...guestTheatre(theatreShape(primary)), horizon: horizonSummary(ctx.horizons.get(primary.id), ctx.exodus.get(primary.id)) },
+    theatres: theatreList(ctx).map(guestTheatre),
+    multiTheatre: ctx.theatres.length > 1,
+    playingSource: main[0]?.playing_source || playing[0]?.playing_source || null,
+    leavingSoon: lastChance.all.map(guestEntry),
   };
 }
 
 // lockHow: set by the refresh that locks everyone's four (lib/lock.js).
 export function getRecommendations({ guest = false, lockHow = null } = {}) {
-  const ctx = buildCtx({ guest });
+  if (guest) return getGuestRecommendations();
+  const ctx = buildCtx();
   const playing = all('SELECT * FROM movies WHERE playing = 1').map(hydrate);
   const { main, nearby } = splitLineup(ctx, playing);
 
@@ -603,7 +658,7 @@ export function getRecommendations({ guest = false, lockHow = null } = {}) {
   // Hidden films drop out here, so the next-best film moves up into the four.
   const eligible = list.filter((e) => !e.flags.seen && !e.flags.excluded && !e.flags.hidden);
   const nearbyEval = nearby.map(({ m, t }) => evaluate(m, ctx, t.id));
-  const { four: weekly4, meta: lock } = weeklyFour(ctx, { list, eligible, nearbyEval, guest, lockHow });
+  const { four: weekly4, meta: lock } = weeklyFour(ctx, { list, eligible, nearbyEval, lockHow });
   // Everything else that still clears the "good match" bar, so the picks page
   // isn't capped at four. Already-in-weekly4 movies are excluded, not repeated;
   // so are movies with no public score — their `final` rests on a default 50.
@@ -651,6 +706,9 @@ export function getRecommendations({ guest = false, lockHow = null } = {}) {
   };
 }
 
+// The guest link gets every upcoming film with its public score, advance
+// screenings first, then the soonest release: nothing ranked or left out by
+// the owner's taste or hidden films.
 export function getComingSoon({ guest = false } = {}) {
   const ctx = buildCtx({ guest });
   const up = all('SELECT * FROM movies WHERE upcoming = 1').map(hydrate)
@@ -662,6 +720,21 @@ export function getComingSoon({ guest = false } = {}) {
       .filter((r) => !ctx.othersTheatres.has(r.theatre_id))
       .map((r) => r.tmdb_id),
   );
+  if (guest) {
+    const list = up.map((m) => {
+      const pub = publicScoreForMovie(m, m.scores);
+      return {
+        ...cardShape(m),
+        release_date: m.release_date,
+        public: { combined: pub.combined, sources: pub.sources },
+        advance: advanceIds.has(m.tmdb_id),
+        reason: buildReason({ pub, publicOnly: true }),
+        why: reasonFacts({ pub, publicOnly: true }),
+      };
+    });
+    list.sort((a, b) => Number(b.advance) - Number(a.advance) || (a.release_date || '9999').localeCompare(b.release_date || '9999'));
+    return { list };
+  }
   const scored = up.map((m) => {
     const tm = tasteMatch(taste3(m), ctx.profile);
     const pub = publicScoreForMovie(m, m.scores);
@@ -672,7 +745,7 @@ export function getComingSoon({ guest = false } = {}) {
       predicted: tm.score,
       public: { combined: pub.combined, sources: pub.sources },
       advance: advanceIds.has(m.tmdb_id),
-      reason: buildReason({ pub, topTaste, conf: ctx.conf, flags: {}, owner: ctx.owner }),
+      reason: buildReason({ pub, topTaste, conf: ctx.conf, flags: {} }),
       why: reasonFacts({ pub, topTaste, conf: ctx.conf }),
     };
   });
@@ -710,10 +783,13 @@ export function matchScores(tmdbIds) {
   return out;
 }
 
+// The guest link gets the film, its public score, its showtimes and how long
+// it has left, and nothing of the owner's (lib/guestShape.js). Its read asks
+// the outside for nothing and writes nothing, so no poster colour either.
 export function getMovieDetail(tmdbId, { guest = false } = {}) {
   const m = getMovie(tmdbId);
   if (!m) return null;
-  ensurePosterColor(tmdbId);
+  if (!guest) ensurePosterColor(tmdbId);
   const ctx = buildCtx({ guest });
   const ev = evaluate(m, ctx, scoredAt(ctx, tmdbId));
 
@@ -727,22 +803,44 @@ export function getMovieDetail(tmdbId, { guest = false } = {}) {
     .filter(Boolean);
   // `showtimesByDay` stays the primary's schedule (what the page shows first).
   const showtimesByDay = showtimesByTheatre.find((x) => x.theatre.isPrimary)?.showtimesByDay || [];
+  const movie = {
+    ...cardShape(m),
+    cast: m.cast || [],
+    // TMDB person ids, so the page can link each name to its person page.
+    director_id: m.director_id ?? null,
+    cast_ids: m.cast_ids || [],
+    synopsis: m.synopsis || '',
+    trailer_key: m.trailer_key || null,
+    release_date: m.release_date || null,
+    imdb_id: m.imdb_id || null,
+  };
+
+  if (guest) {
+    const e = guestEntry(ev);
+    return {
+      movie,
+      final: e.final,
+      reason: e.reason,
+      why: e.why,
+      public: e.public,
+      flags: e.flags,
+      prerelease: e.prerelease,
+      showtimesByDay: guestDays(showtimesByDay),
+      showtimesByTheatre: showtimesByTheatre.map((x) => ({ ...x, theatre: guestTheatre(x.theatre), showtimesByDay: guestDays(x.showtimesByDay) })),
+      runway: e.runway,
+      handoff: e.handoff,
+      theatres: theatreList(ctx).map(guestTheatre),
+      multiTheatre: ctx.theatres.length > 1,
+      playing: Boolean(m.playing),
+      upcoming: Boolean(m.upcoming),
+    };
+  }
 
   const match = getMatch(all('SELECT amc_movie_id FROM matches WHERE tmdb_id = ? LIMIT 1', tmdbId)[0]?.amc_movie_id);
   const rating = getRating(tmdbId);
 
   return {
-    movie: {
-      ...cardShape(m),
-      cast: m.cast || [],
-      // TMDB person ids, so the page can link each name to its person page.
-      director_id: m.director_id ?? null,
-      cast_ids: m.cast_ids || [],
-      synopsis: m.synopsis || '',
-      trailer_key: m.trailer_key || null,
-      release_date: m.release_date || null,
-      imdb_id: m.imdb_id || null,
-    },
+    movie,
     final: ev.final,
     reason: ev.reason,
     why: ev.why,

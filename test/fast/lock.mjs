@@ -30,6 +30,12 @@ const replaced = (four, gone, fill) => four.map((x) => (x === gone ? fill : x));
 const eligible = (r) => (r.list || []).filter((e) => !e.flags.seen && !e.flags.excluded && !e.flags.hidden);
 
 const w = S.world(await openWorld('lock', { refresh: true, push: true, env: { RP_TIMER_SCALE: '0.002' } }));
+// The guest link has no lock: its four is the top four by public score
+// (lib/recommend.js), whatever anyone's lock says.
+const publicFour = (r) => {
+  const s = (e) => (e.final == null ? -1 : e.final);
+  return eq(ids(r.weekly4), ids(r.list.slice(0, 4))) && r.list.every((e, i) => !i || s(r.list[i - 1]) >= s(e)) && !r.weekly4.some((e) => e.pick) && !('lock' in r);
+};
 const roles = { owner: { id: 1, as: null }, robin: { id: w.friends.robin.id, as: w.friends.robin }, jordan: { id: w.friends.jordan.id, as: w.friends.jordan }, guest: { id: null, as: GUEST } };
 const USERS = ['owner', 'robin', 'jordan'];
 const recs = async (role) => (await w.api('GET', '/api/recommendations', { as: roles[role].as })).json;
@@ -72,7 +78,7 @@ await S.step('Friday 00:00: the first refresh is held', async () => {
   const prev = Object.fromEntries(USERS.map((r) => [r, lockRow(roles[r].id, '2026-09-18')]));
   S.check('Friday before the first refresh: every user still sees last week\'s four, marked pending', USERS.every((r) => eq(ids(pre[r].weekly4), prev[r].picks.map((p) => p.tmdb_id)) && pre[r].lock?.pending === true),
     USERS.map((r) => `${r}:${ids(pre[r].weekly4).join(',')} pending=${pre[r].lock?.pending}`).join(' '));
-  S.check('Friday before the first refresh: the guest sees the owner\'s (last week\'s) four', eq(ids(pre.guest.weekly4), ids(pre.owner.weekly4)));
+  S.check('Friday before the first refresh: the guest sees the top four by public score, not the owner\'s lock', publicFour(pre.guest), ids(pre.guest.weekly4).join(','));
   S.check('Friday before the first refresh: no lock exists for the new week', w.q1("SELECT COUNT(*) n FROM weekly4_lock WHERE week_start = '2026-09-25'").n === 0);
   S.check('log: nothing is logged under the new week before its four lock (Picks opened by everyone)', w.q1("SELECT COUNT(*) n FROM weekly4_log WHERE week_start = '2026-09-25'").n === 0);
   S.check('push: no weekly push before the four lock', w.push.hits.filter((h) => h.topic === 'weekly-picks').length === 0, `${w.push.hits.length} pushes`);
@@ -91,7 +97,7 @@ await S.step('Friday 00:00: the first refresh is held', async () => {
     const lg = logRows(roles[r].id, '2026-09-25');
     S.check(`log: ${r}'s log for the new week is exactly the locked four, written at the lock`, eq(lg.map((x) => x.tmdb_id).sort(), lockAt[r].picks.map((p) => p.tmdb_id).sort()) && lg.every((x) => x.first_seen_at === lockAt[r].locked_at), `${lg.length} rows`);
   }
-  S.check('Friday: the guest sees the owner\'s locked four', eq(ids(fri.guest.weekly4), lockAt.owner.picks.map((p) => p.tmdb_id)));
+  S.check('Friday: the guest sees the top four by public score, not the owner\'s lock', publicFour(fri.guest), ids(fri.guest.weekly4).join(','));
   S.check('Friday: no pick is tagged New this week at the lock', Object.values(fri).every((x) => x.weekly4.every((e) => !e.pick?.newThisWeek)));
   const pushed = await until(() => USERS.every((n) => weekly(n).length >= 1), 15000);
   for (const r of USERS) {
@@ -160,7 +166,7 @@ await S.step('Saturday: the four holds; a rating, Not for me and Mark seen each 
   S.check('Saturday: repeat views and a manual refresh leave the four as it is', eq(ids(again.weekly4), ids(sat1.weekly4)) && eq(ids(again2.weekly4), ids(sat1.weekly4)));
   const sig = tableSig();
   const g1 = await recs('guest');
-  S.check('Saturday: the guest sees the owner\'s current four', eq(ids(g1.weekly4), ids(sat1.weekly4)));
+  S.check('Saturday: the guest sees the top four by public score, not the owner\'s four', publicFour(g1), ids(g1.weekly4).join(','));
   S.check('log: guest views write nothing (lock and log unchanged)', tableSig() === sig);
 });
 
@@ -219,7 +225,7 @@ await S.step('Monday: the thin film earns a score and swaps in once', async () =
   const swapped = USERS.filter((r) => mon1[r].weekly4[3]?.tmdb_id === THIN && mon1[r].weekly4[3]?.pick?.via === 'swap');
   S.check('Monday: at least one user\'s four got the swap (the test reached the rule)', swapped.length > 0, USERS.map((r) => `${r}:${ids(mon1[r].weekly4).join(',')}`).join(' '));
   const g = await recs('guest');
-  S.check('Monday: the guest sees the owner\'s four, with the tag exactly when the owner got the swap', eq(ids(g.weekly4), ids(mon1.owner.weekly4)) && g.weekly4.some((e) => e.pick?.newThisWeek) === swapped.includes('owner'));
+  S.check('Monday: the guest sees the top four by public score, with no swap and no tag', publicFour(g), ids(g.weekly4).join(','));
   S.check('log: the swapped-in film is logged under this week for each user who got it', swapped.every((r) => logRows(roles[r].id, '2026-09-25').some((x) => x.tmdb_id === THIN)));
 });
 
@@ -275,7 +281,7 @@ await S.step('next Friday: last week\'s four until the refresh, then a new lock'
       `lock ${l?.picks.map((p) => p.tmdb_id).join(',')} top ${ids(eligible(nf[r]).slice(0, 4)).join(',')}`);
     S.check(`log: ${r}'s 10-02 log is the new locked four`, l && eq(logRows(roles[r].id, '2026-10-02').map((x) => x.tmdb_id).sort(), l.picks.map((p) => p.tmdb_id).sort()));
   }
-  S.check('next Friday: the guest sees the owner\'s new four', eq(ids(nf.guest.weekly4), ids(nf.owner.weekly4)));
+  S.check('next Friday: the guest sees the top four by public score, not the owner\'s new lock', publicFour(nf.guest), ids(nf.guest.weekly4).join(','));
   await until(() => USERS.every((n) => weekly(n).length === 2), 15000);
   for (const r of USERS) {
     const hits = weekly(r);

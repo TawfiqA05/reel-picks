@@ -61,7 +61,9 @@ await S.step('measure every role as the world starts', async () => {
   first = await measure();
   S.check('the owner has a weekly four', first.owner.weekly4.length === 4, JSON.stringify(first.owner.weekly4));
   S.check('the 700-rating friend has a weekly four', first.heavy.weekly4.length === 4);
-  S.check('the guest sees the owner\'s four', JSON.stringify(first.guest.weekly4) === JSON.stringify(first.owner.weekly4));
+  const g = first.guest;
+  const rest = Object.keys(g.films).map(Number).filter((id) => !g.weekly4.includes(id) && !g.alsoNearby.includes(id)).map((id) => g.films[id].final ?? -1);
+  S.check('the guest sees the top four by public score', g.weekly4.length === 4 && g.weekly4.every((id) => g.films[id].final === Math.round(g.films[id].public) && g.films[id].final >= Math.max(...rest)), JSON.stringify(g.weekly4));
 });
 
 if (process.env.RP_UPDATE_EXPECTED === '1') {

@@ -124,21 +124,22 @@ export function bestShowtime(showtimes, { windows, preferImax } = {}) {
 // The same facts buildReason puts into words, as data, for the short reason
 // line the page draws ("RT 94% · You love action"). Nothing here feeds a
 // score; it's what the sentence already says.
-export function reasonFacts({ pub, topTaste, conf, flags = {} }) {
+// publicOnly (the guest link) leaves out the taste facts altogether.
+export function reasonFacts({ pub, topTaste, conf, flags = {}, publicOnly = false }) {
+  const review = { review: topSource(pub), noScores: !pub || pub.combined == null };
+  const after = { divergence: pub?.divergence ? pub.divergence.direction : null, goneAfter: flags.goneAfter || null };
+  if (publicOnly) return { ...review, ...after };
   return {
-    review: topSource(pub),
-    noScores: !pub || pub.combined == null,
+    ...review,
     taste: topTaste ? { kind: topTaste.kind, label: topTaste.label, avg: Math.round(topTaste.avg * 10) / 10 } : null,
     leaning: !topTaste && conf < 1,
-    divergence: pub?.divergence ? pub.divergence.direction : null,
-    goneAfter: flags.goneAfter || null,
+    ...after,
   };
 }
 
-// Compose the one-line reason shown on cards. `owner` is null for the owner
-// ("you rate…"); on the read-only guest link it is the owner's name, so the
-// same facts read in the third person ("Tawfiq rates…").
-export function buildReason({ pub, topTaste, conf, flags = {}, owner = null }) {
+// Compose the one-line reason shown on cards. publicOnly (the read-only guest
+// link) keeps to the public scores: nothing about anyone's taste.
+export function buildReason({ pub, topTaste, conf, flags = {}, publicOnly = false }) {
   const bits = [];
 
   if (pub && pub.combined != null) {
@@ -154,19 +155,20 @@ export function buildReason({ pub, topTaste, conf, flags = {}, owner = null }) {
     bits.push('no public scores yet');
   }
 
-  const rates = owner ? `${owner} rates` : 'you rate';
-  if (topTaste) {
+  if (publicOnly) {
+    // The public part only.
+  } else if (topTaste) {
     const v = topTaste.avg.toFixed(1);
-    if (topTaste.kind === 'genre') bits.push(`${rates} ${topTaste.label} ${v}/5 on average`);
-    else bits.push(`${rates} ${topTaste.label} ${v}/5`);
+    if (topTaste.kind === 'genre') bits.push(`you rate ${topTaste.label} ${v}/5 on average`);
+    else bits.push(`you rate ${topTaste.label} ${v}/5`);
   } else if (conf < 1) {
-    bits.push(`leaning on public scores while ${owner ? `${owner}'s` : 'your'} taste profile fills in`);
+    bits.push('leaning on public scores while your taste profile fills in');
   }
 
   let s = bits.join(' + ');
 
   const extra = [];
-  if (flags.watchlist) extra.push(owner ? `★ on ${owner}'s watchlist` : '★ watchlisted');
+  if (flags.watchlist) extra.push('★ watchlisted');
   if (flags.imax) extra.push('IMAX available');
   if (pub?.divergence) extra.push(pub.divergence.label.toLowerCase());
   if (extra.length) s += ` · ${extra.join(' · ')}`;
