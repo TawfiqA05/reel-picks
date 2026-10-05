@@ -106,8 +106,10 @@ export function notFoundPage() {
   });
 }
 
-// A 4xx here is a request the server couldn't read (a broken address, a Join
-// form far too big); anything else went wrong on the server's side.
+// A 4xx here is a request the server couldn't read (a body that isn't what
+// it says, a Join form far too big); anything else went wrong on the
+// server's side. A page address with broken %-escapes names no file, so it
+// gets the not-found page instead.
 export function errorPage({ status = 500 } = {}) {
   const line = status < 500
     ? 'Reel Picks couldn’t read that request. Check the address, or go to the front page.'
