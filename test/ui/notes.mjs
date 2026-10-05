@@ -311,10 +311,12 @@ await S.step('Rate import: ratings.csv and reviews.csv picked together', async (
     `2024-01-05,${c[0].title},${c[0].year},https://boxd.it/v0,4,,"A <b>fine</b> film.",,2024-01-05`,
     `2024-01-06,${c[1].title},${c[1].year},https://boxd.it/v1,3,,"${'Long thoughts. '.repeat(30)}",,2024-01-06`].join('\n');
   // reviews.csv first in the picker: the page reads ratings.csv before it.
+  // Its summary is on screen before reviews.csv is read, so wait for the one
+  // that names the reviews (or an error, which ends the upload).
   const t = await importFiles(p.page, w, 'input[type=file][accept=".csv,text/csv"]', [
     { name: 'reviews.csv', mimeType: 'text/csv', buffer: Buffer.from(reviews) },
     { name: 'ratings.csv', mimeType: 'text/csv', buffer: Buffer.from(ratings) },
-  ], () => { const r = document.querySelector('.import-result'); return r && !r.hidden && /imported|brought in/.test(r.textContent) && !/Matching titles/.test(r.textContent); }, { timeout: 40000 });
+  ], () => { const r = document.querySelector('.import-result'); return r && !r.hidden && (/brought in/.test(r.textContent) || r.classList.contains('err')) && !/Matching titles/.test(r.textContent); }, { timeout: 40000 });
   S.check('import: both files import, the summary names ratings and notes', /3 ratings imported/.test(t) && /2 reviews brought in as notes/.test(t), t);
   S.check('import: the review became a plain-text note', rowOf(f.id, c[0].id)?.note === 'A fine film.' && rowOf(f.id, c[1].id)?.note.endsWith('…'));
   S.check('import: ratings.csv decided the ratings', w.q1('SELECT rating FROM ratings WHERE user_id = ? AND tmdb_id = ?', f.id, c[1].id)?.rating === 3);
