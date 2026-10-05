@@ -147,12 +147,17 @@ export async function toastText(page, re = null, timeout = 8000) {
 export const VISIBLE = `(el) => { if (!el || el.closest('[hidden]')) return false; const r = el.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return false; for (let a = el; a; a = a.parentElement) { const s = getComputedStyle(a); if (s.display === 'none' || s.visibility === 'hidden' || Number(s.opacity) === 0) return false; } return true; }`;
 
 // Picks files in an import input and waits until `done` (a page predicate)
-// holds. Never waits for good and never fails quietly: after `timeout` it
-// returns text starting "TIMED OUT" that says where the import stopped: the
-// page never sent it, the browser is still waiting for POST
-// /api/ratings/import, or it was answered and the page never finished. With
-// the world's request log on (openWorld reqLog), it says too whether the
-// server got the request and answered it.
+// holds, counting it only once the result box has changed since the pick.
+// Until the page writes something new the box still shows the upload before,
+// and a slow page can spend a while reading the file first. Changes are
+// counted, not compared: two uploads in a row can end with the same words.
+// Never waits for good and never fails quietly: after `timeout` it returns
+// text starting "TIMED OUT" that says where the import stopped: the page
+// never sent it, the browser is still waiting for POST /api/ratings/import,
+// or it was answered and the page never finished. With the world's request
+// log on (openWorld reqLog), it says too whether the server got the request
+// and answered it.
+let importSeq = 0;
 export async function importFiles(page, w, input, files, done, { result = '.import-result', timeout = 30000 } = {}) {
   const posts = [];
   const isImport = (r) => r.method() === 'POST' && new URL(r.url()).pathname === '/api/ratings/import';
@@ -162,16 +167,30 @@ export async function importFiles(page, w, input, files, done, { result = '.impo
   page.on('request', onRequest);
   page.on('requestfinished', onFinished);
   page.on('requestfailed', onFailed);
+  const key = `rpImport${++importSeq}`;
   const t0 = Date.now();
   try {
+    // Counts every change in or to the box (text, children, attributes such
+    // as hidden), and the box itself being put in or taken out.
+    await page.evaluate(([key, sel]) => {
+      const inBox = (n) => Boolean((n.nodeType === 1 ? n : n.parentElement)?.closest(sel));
+      const holdsBox = (n) => n.nodeType === 1 && (n.matches(sel) || Boolean(n.querySelector(sel)));
+      const seen = { changes: 0 };
+      seen.observer = new MutationObserver((list) => {
+        for (const m of list) if (inBox(m.target) || [...m.addedNodes, ...m.removedNodes].some(holdsBox)) seen.changes++;
+      });
+      seen.observer.observe(document.documentElement, { subtree: true, childList: true, characterData: true, attributes: true });
+      window[key] = seen;
+    }, [key, result]);
     await page.locator(input).setInputFiles(files);
-    const ok = await page.waitForFunction(done, null, { timeout }).then(() => true, () => false);
+    const ok = await page.waitForFunction(`window[${JSON.stringify(key)}]?.changes > 0 && (${done})()`, null, { timeout }).then(() => true, () => false);
     const text = (await page.locator(result).first().textContent({ timeout: 2000 }).catch(() => null)) ?? '';
     if (ok) return text;
+    const changes = await page.evaluate((key) => window[key]?.changes, key).catch(() => null);
     const secs = (ms) => `${(ms / 1000).toFixed(1)}s`;
     let why;
     const stuck = posts.filter((p) => p.state === 'waiting');
-    if (!posts.length) why = 'the page never sent POST /api/ratings/import';
+    if (!posts.length) why = `the page never sent POST /api/ratings/import${changes === 0 ? ' and never changed the result box after the pick' : ''}`;
     else if (!stuck.length) why = `every POST /api/ratings/import was answered (${posts.map((p) => p.state).join(', ')}), but the page never finished`;
     else {
       const p = stuck[0];
@@ -192,5 +211,6 @@ export async function importFiles(page, w, input, files, done, { result = '.impo
     page.off('request', onRequest);
     page.off('requestfinished', onFinished);
     page.off('requestfailed', onFailed);
+    await page.evaluate((key) => { window[key]?.observer.disconnect(); delete window[key]; }, key).catch(() => {});
   }
 }
