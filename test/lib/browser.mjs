@@ -197,8 +197,10 @@ export async function importFiles(page, w, input, files, done, { result = '.impo
       const log = w?.srv ? reqEntries(w.srv) : null;
       let server = 'the server was not logging requests';
       if (log) {
-        const mine = log.filter((e) => e.url === '/api/ratings/import' && e.at >= p.at - 2000);
-        const got = mine.find((e) => e.ev === 'in');
+        // Only what the server logged after this pick (the upload before can
+        // end a moment earlier). Its answer is logged by request id, no url.
+        const mine = log.filter((e) => e.at >= t0);
+        const got = mine.find((e) => e.ev === 'in' && e.url === '/api/ratings/import');
         const out = got && mine.find((e) => e.id === got.id && e.ev !== 'in' && e.ev !== 'body read');
         server = !got ? 'the server never received it'
           : out ? `the server received it and ${out.ev === 'out' ? `answered ${out.status} after ${secs(out.ms)}` : `closed it unanswered after ${secs(out.ms)}`}`
