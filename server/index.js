@@ -45,6 +45,12 @@ if (DEMO) installDemoNet();
 const app = express();
 app.disable('x-powered-by');
 
+// My own app stays out of search engines: every answer says so, the guest
+// view and every refusal included. Crawlers may still fetch it (robots.txt
+// below), since that is how they read this; link previews ignore it. The
+// demo is meant to be found.
+if (!DEMO) app.use((req, res, next) => { res.set('X-Robots-Tag', 'noindex, nofollow'); next(); });
+
 // Off Railway, only requests addressed to this machine are answered: a page
 // on another site can point its own hostname at 127.0.0.1 (DNS rebinding) and
 // would otherwise reach the app as the owner. RP_ALLOW_LAN opens it to other
@@ -199,6 +205,11 @@ const publicDir = fileURLToPath(new URL('../public/', import.meta.url));
 // served as a plain file.
 app.get(['/', '/index.html'], sendIndex);
 app.get('/styles.css', sendStyles);
+// Crawling is allowed on my own app, so a crawler sees the noindex header
+// above. The demo keeps crawlers off /api, where each new visitor gets a copy
+// of the sample (server/demo/sessions.js) that a crawl could use up.
+const ROBOTS = DEMO ? 'User-agent: *\nDisallow: /api/\n' : 'User-agent: *\nAllow: /\n';
+app.get('/robots.txt', (req, res) => res.type('text/plain').send(ROBOTS));
 app.use(express.static(publicDir, { extensions: ['html'], index: false }));
 
 // SPA fallback: send index.html for any non-API, non-file route.

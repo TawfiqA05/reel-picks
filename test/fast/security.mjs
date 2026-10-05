@@ -127,6 +127,7 @@ const APP_ROUTES = [
   ['GET', '/', 'the page'],
   ['GET', '/index.html', 'the page'],
   ['GET', '/styles.css', 'the stylesheet, its parts joined (server/lib/styles.js); checked with the static files'],
+  ['GET', '/robots.txt', 'robots.txt (test/fast/pages.mjs)'],
   ['GET', 'static files', 'static'],
   ['GET', '*', 'SPA fallback'],
 ];
