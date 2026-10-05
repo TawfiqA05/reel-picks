@@ -42,6 +42,30 @@ export function viaCloudflare(req) {
   return Boolean(req.headers['cf-connecting-ip'] || req.headers['cf-ray']);
 }
 
+// The connection came from this machine itself (a browser here, the share
+// tunnel's connector, the tests), not from another device on the network.
+export function fromLoopback(req) {
+  const a = String(req.socket?.remoteAddress || '');
+  return a === '::1' || a.startsWith('127.') || a.startsWith('::ffff:127.');
+}
+
+// The address to count a guest's hourly limits against (lib/limits.js), or
+// null when there is none to go by. Only ever kept in memory, never logged.
+//   - On Railway: X-Real-IP, which Railway's edge sets to the caller's
+//     address. cf-connecting-ip and X-Forwarded-For are ignored there: a
+//     caller can type any value into either.
+//   - Through the share tunnel: cf-connecting-ip, which Cloudflare's edge
+//     sets. The tunnel's connector runs on this machine, so those requests
+//     arrive over loopback; the same header from anywhere else counts for
+//     nothing.
+//   - Anything else: the address the connection came from.
+export function clientAddress(req) {
+  const one = (v) => String(Array.isArray(v) ? v[0] : v || '').trim().slice(0, 64) || null;
+  if (onRailway()) return one(req.headers['x-real-ip']);
+  if (fromLoopback(req) && viaCloudflare(req)) return one(req.headers['cf-connecting-ip']);
+  return one(req.socket?.remoteAddress);
+}
+
 function isRemote(req) {
   return onRailway() || viaCloudflare(req) || (guestModeEnabled() && !hostIsLocal(req));
 }

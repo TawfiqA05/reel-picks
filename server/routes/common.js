@@ -2,6 +2,7 @@
 import { refreshAll } from '../lib/refresh.js';
 import { currentUser } from '../lib/user.js';
 import { take as takeLimit, LIMIT_MESSAGE } from '../lib/limits.js';
+import { clientAddress } from '../lib/guest.js';
 
 export const h = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
@@ -18,15 +19,14 @@ export function afterTheatreChange(wasShared, tag) {
   else if (!wasShared) refreshAll({ force: false, reason: 'friend followed a new theatre' }).catch((e) => console.error(`[${tag} refresh]`, e.message));
 }
 // Per-person hourly limits on what spends the shared keys (lib/limits.js):
-// friends by account, the guest link by address, the owner not at all.
-// Answers 429 and returns true when `n` more would go over.
+// friends by account, the guest link by address (lib/guest.js clientAddress;
+// guests with no address share one allowance), the owner not at all.
 // Counts `n` against the caller's limit; false when that would go over.
+// limited() answers 429 and returns true when `n` more would go over.
 export function spendLimit(req, kind, n = 1) {
   const u = currentUser();
   if (!u || u.isOwner || n <= 0) return true;
-  const who = u.guest
-    ? `ip:${req.get('cf-connecting-ip') || String(req.get('x-forwarded-for') || '').split(',')[0].trim() || req.socket?.remoteAddress || '?'}`
-    : `user:${u.userId}`;
+  const who = u.guest ? `ip:${clientAddress(req) || '?'}` : `user:${u.userId}`;
   return takeLimit(kind, who, u.guest ? 'guest' : 'friend', Date.now(), n);
 }
 export function limited(req, res, kind, n = 1) {

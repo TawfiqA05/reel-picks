@@ -7,9 +7,11 @@
 //   note      saving or deleting a note on a rating (lib/notes.js)
 //
 // Friends get room for far more than a busy evening; the guest link, keyed
-// by address, gets less (it can't reach any of these today, so its limits are
-// a second line). The owner has none. Kept in memory: a restart starts every
-// count again, which is fine for a limit meant to stop runaway use.
+// by address (lib/guest.js clientAddress), gets less. Of these the guest can
+// only reach one: a person page not cached yet is a new-film lookup. The
+// owner has none. Kept in memory only, addresses included, and never
+// written anywhere: a restart starts every count again, which is fine for a
+// limit meant to stop runaway use.
 // No imports, so a test can load it without a database.
 const LIMITS = {
   friend: { newFilm: 200, search: 300, place: 30, note: 300 },

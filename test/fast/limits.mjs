@@ -8,9 +8,10 @@
 //
 // The message shown in the app is a browser check (function suite).
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { suite } from '../lib/check.mjs';
-import { openWorld, makeFriend, REPO, GUEST } from '../lib/world.mjs';
+import { openWorld, makeFriend, call, REPO, GUEST } from '../lib/world.mjs';
 import * as C from '../lib/catalog.mjs';
 
 const S = suite('limits');
@@ -117,6 +118,43 @@ await S.step('the guest link is held to stricter limits', async () => {
   const guestCold = await w.api('GET', `/api/movies/${nextId++}`, { as: GUEST });
   const guestSearch = await w.api('GET', '/api/ratings/search?q=x', { as: GUEST });
   S.check('the guest link can\'t look films up at all (404 for an unstored film, 403 for search)', guestCold.status === 404 && guestSearch.status === 403, `${guestCold.status}/${guestSearch.status}`);
+});
+
+// Who a guest is counted as: on Railway, X-Real-IP (Railway's edge sets it);
+// through the share tunnel on this machine, cf-connecting-ip (Cloudflare's
+// edge sets it); anything else, the socket address. A caller can type any
+// cf-connecting-ip or X-Forwarded-For, so on Railway those buy nothing.
+await S.step('made-up headers don\'t buy a guest more requests', async () => {
+  const src = fs.readFileSync(path.join(REPO, 'server/lib/limits.js'), 'utf8');
+  const cap = Number(src.match(/guest:\s*\{[^}]*newFilm:\s*(\d+)/)?.[1]);
+  let ip = 0;
+  const madeUp = () => { ip++; return { 'cf-connecting-ip': `203.0.113.${ip % 250}`, 'x-forwarded-for': `198.18.${ip % 250}.1, 10.0.0.${ip % 250}`, 'cf-ray': `made-up-${ip}` }; };
+  let pid = 7700000;
+  await w.restart({ env: { RAILWAY_ENVIRONMENT_NAME: 'production', RAILWAY_PROJECT_ID: 'test-project-id', GUEST_MODE: '1' } });
+  const st = (await w.api('GET', '/api/status', { as: { 'x-real-ip': '198.51.100.7' } })).json;
+  S.check('Railway: a visitor with no cookie is the guest', st?.guest === true, JSON.stringify({ guest: st?.guest }));
+  const one = await burst(cap, () => person({ 'x-real-ip': '198.51.100.7', ...madeUp() }, pid++));
+  const oneOver = await person({ 'x-real-ip': '198.51.100.7', ...madeUp() }, pid++);
+  S.check(`Railway: ${cap} person lookups from one X-Real-IP, each with new made-up cf-connecting-ip and X-Forwarded-For values, then a 429`, cap > 0 && count(one, 429) === 0 && oneOver.status === 429 && oneOver.json?.error === MSG, `${count(one, 429)} x 429, then ${oneOver.status}`);
+  S.check('Railway: another X-Real-IP has its own allowance', (await person({ 'x-real-ip': '198.51.100.8', ...madeUp() }, pid++)).status !== 429);
+  const none = await burst(cap, () => person(madeUp(), pid++));
+  const noneOver = await person(madeUp(), pid++);
+  S.check(`Railway: with no X-Real-IP, guests share one allowance whatever else they send (${cap}, then a 429)`, count(none, 429) === 0 && noneOver.status === 429, `${count(none, 429)} x 429, then ${noneOver.status}`);
+  const log = w.srv.log();
+  S.check('the server prints none of the addresses it counted', !/198\.51\.100\.|203\.0\.113\.|198\.18\./.test(log), log.match(/.{0,60}(198\.51\.100\.|203\.0\.113\.|198\.18\.).{0,20}/)?.[0]);
+
+  // Off Railway, cf-connecting-ip counts only when the request came through
+  // the tunnel: Cloudflare's connector on this machine, so over loopback. A
+  // device on the network typing the tunnel's headers is counted by its own
+  // address.
+  const lan = Object.values(os.networkInterfaces()).flat().find((a) => a && !a.internal && a.family === 'IPv4')?.address;
+  if (!lan) { console.log('  - skipped: this machine has no network address, so the check from the network was not run'); return; }
+  await w.restart({ env: { RP_ALLOW_LAN: '1', GUEST_MODE: '1' } });
+  const fromLan = (h, id) => call(`http://${lan}:${w.srv.port}`, 'GET', `/api/person/${id}`, { as: h }).catch((e) => ({ status: 0, text: String(e.cause?.code || e.message) }));
+  const l = await burst(cap, () => fromLan(madeUp(), pid++));
+  const lOver = await fromLan(madeUp(), pid++);
+  S.check(`off Railway: a device on the network sending made-up tunnel headers gets ${cap} person lookups, then a 429`, count(l, 429) === 0 && l.every((s) => s !== 0) && lOver.status === 429, `${count(l, 429)} x 429, statuses ${[...new Set(l)].join('/')}, then ${lOver.status}`);
+  S.check('off Railway: the tunnel (over loopback) still counts each cf-connecting-ip on its own', (await person({ 'cf-ray': 'test', 'cf-connecting-ip': '203.0.113.201' }, pid++)).status !== 429);
 });
 
 await w.close();
