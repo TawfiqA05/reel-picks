@@ -204,7 +204,10 @@ await S.step('a friend is never told their own account number', async () => {
   // A cookie from before the change: v1.<id>.<version>.<expiry>.<hmac>.
   const secret = JSON.parse(w.q1("SELECT value FROM settings WHERE key = 'friendCookieSecret'").value);
   const row = w.q1('SELECT id, session_version FROM users WHERE id = ?', A.id);
-  const payload = `v1.${row.id}.${row.session_version}.${Date.now() + 864e5 * 30}`;
+  // Its expiry is on the server's made-up clock, so the cookie is good whatever
+  // today's date is.
+  const now = w.srv.fakeNowMs + (Date.now() - w.srv.startedAt);
+  const payload = `v1.${row.id}.${row.session_version}.${now + 864e5 * 30}`;
   const v1 = `rp_user=${payload}.${crypto.createHmac('sha256', secret).update(payload).digest('base64url')}`;
   const old = await w.api('GET', '/api/ratings', { as: { headers: { 'cf-ray': 'test', cookie: v1 } } });
   const swapped = (old.headers.get('set-cookie') || '').split(';')[0];
