@@ -700,8 +700,8 @@ are cleared after the nightly backup, so that night's backup still has them.
 
 ## The guest link
 
-With `GUEST_MODE` on, anyone who reaches a deployment from outside without a cookie gets
-the read-only guest view. The same goes for anyone coming through the `npm run share`
+Anyone who reaches a deployment from outside without a cookie gets the read-only guest
+view. The same goes for anyone coming through the `npm run share`
 tunnel. They see one banner ("You're viewing what's playing this week, ranked by public reviews.
 Ask whoever shared this link for an invite to get picks of your own.") instead of the setup
 and tour.
@@ -719,7 +719,7 @@ name. That holds for picks, lists, movie pages and person pages: no stars, no Sa
 marks of any kind, not even empty ones. One thing does show: a Coming Soon film fills in its
 details once anyone with an account opens or rates it. Rating,
 settings, imports, search, stats and everything else are hidden in the UI and rejected at
-the API. At localhost it's always me.
+the API. In a browser on the machine running it, at localhost, it's always me.
 
 On Railway the app fails closed: if `GUEST_MODE` is missing or not 1 there, it treats every
 visitor as a guest anyway, and sends me an owner alert each time it starts until I set it.
@@ -728,10 +728,12 @@ Railway sets itself, so a copy on my Mac behaves as it always has. The one excep
 service with `DEMO_MODE` on: there every visitor gets a private copy of the sample instead
 (see Demo mode), and that service has no data of mine to protect.
 
-When it isn't on Railway, the server only answers requests addressed to `localhost`,
-`127.0.0.1` or `[::1]`, so a web page can't point its own address at my machine and reach
-it as me. `RP_ALLOW_LAN` opens it to other devices on my network. The share tunnel below
-still works without it.
+When it isn't on Railway, the server listens on 127.0.0.1 only and answers requests
+addressed to `localhost`, `127.0.0.1` or `[::1]`, so another device can't connect and a
+web page can't point its own address at my machine and reach it as me. `RP_ALLOW_LAN`
+opens it to other devices on my network, as the read-only guest. My owner link doesn't
+help there over plain http, because browsers only keep its cookie over https, so on my
+phone I use Railway. The share tunnel below still works without it.
 
 Visiting `/?owner=<OWNER_TOKEN>` once in a browser sets a signed cookie that unlocks full
 access for me there, and the token itself never stays in the URL.
@@ -920,15 +922,19 @@ Running it:
 
 Sharing and the owner:
 
-- `GUEST_MODE`: `1` (or `true`, `yes`, `on`) makes every request that isn't addressed to
-  localhost the read-only guest, unless it has a friend or owner cookie. Set it on every
-  deployment. On Railway, leaving it off doesn't open the site: everyone gets the guest
-  view and I get an alert.
+- `GUEST_MODE`: `1` (or `true`, `yes`, `on`). Set it on every deployment. Any request
+  that isn't from a browser on the machine running the app, at localhost, is the read-only
+  guest unless it has a friend or owner cookie, whether this is on or not. On Railway,
+  leaving it off sends me an alert each time the server starts.
 - `OWNER_TOKEN`: a long random string for the owner unlock (`/?owner=<OWNER_TOKEN>`).
   Leave it blank to turn the unlock off. `.env.example` shows a one-line way to make one.
 - `OWNER_NAME`: the name on the Join page. It defaults to mine.
-- `RP_ALLOW_LAN`: when the app runs off Railway, it only answers at localhost. Turning
-  this on lets other devices on my network reach it. Railway never needs it.
+- `RP_ALLOW_LAN`: when the app runs off Railway, it listens on 127.0.0.1 and only answers
+  at localhost. Turning this on lets other devices on my network reach it, as the
+  read-only guest. Railway never needs it. The Docker image run anywhere else does, since
+  the container's port forwarding doesn't arrive over loopback. There even my own browser
+  is the guest until I open my owner link at `http://localhost` in Chrome, which keeps its
+  cookie at localhost (Safari doesn't).
 
 The demo:
 

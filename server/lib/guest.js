@@ -1,11 +1,14 @@
 // Read-only "guest mode" for the public tunnel link.
 //
-// Classification is security-critical: cloudflared connects to the origin from
-// localhost, so we can't use the socket IP. Instead we key off Cloudflare's
-// edge headers (CF-Ray / CF-Connecting-IP), which the edge always sets and a
-// guest cannot strip — and which a direct local browser never sends. A guest
-// also can't reach localhost:PORT directly (only via the tunnel), so any request
-// bearing these headers is definitionally remote.
+// Classification is security-critical. The owner at their own machine is a
+// request with a localhost Host that also came over loopback, with neither
+// of Cloudflare's edge headers; everything else is remote. The Host alone
+// proves nothing: a device on the network can send "Host: localhost". The
+// socket alone isn't enough either: cloudflared connects to the origin from
+// localhost, so the tunnel's requests are told apart by CF-Ray /
+// CF-Connecting-IP, which the edge always sets and a guest cannot strip, and
+// which a browser on this machine never sends. Off Railway the server also
+// listens on 127.0.0.1 only, unless RP_ALLOW_LAN is set (index.js).
 //
 // Owner unlock: passing ?owner=<OWNER_TOKEN> sets a signed, HttpOnly cookie whose
 // value is an HMAC (keyed by the token) — never the token itself. A valid cookie
@@ -66,13 +69,15 @@ export function clientAddress(req) {
   return one(req.socket?.remoteAddress);
 }
 
-function isRemote(req) {
-  return onRailway() || viaCloudflare(req) || (guestModeEnabled() && !hostIsLocal(req));
+// The owner at their own machine: a localhost Host on a connection from this
+// machine, not through the tunnel, and never on Railway. GUEST_MODE doesn't
+// change it: anything else is remote whatever GUEST_MODE says.
+export function isLocalRequest(req) {
+  return !onRailway() && hostIsLocal(req) && fromLoopback(req) && !viaCloudflare(req);
 }
 
-// The owner at their own machine: localhost, not through the tunnel.
-export function isLocalRequest(req) {
-  return !onRailway() && hostIsLocal(req) && !viaCloudflare(req);
+function isRemote(req) {
+  return !isLocalRequest(req);
 }
 
 // Who a request belongs to, in this order: the owner cookie (the owner, even

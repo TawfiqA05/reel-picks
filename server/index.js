@@ -48,8 +48,11 @@ app.disable('x-powered-by');
 // Off Railway, only requests addressed to this machine are answered: a page
 // on another site can point its own hostname at 127.0.0.1 (DNS rebinding) and
 // would otherwise reach the app as the owner. RP_ALLOW_LAN opens it to other
-// devices on the network. The share tunnel's requests (Cloudflare's edge
-// headers) still get through, as the read-only guest they always were.
+// devices on the network (the server then listens on every interface; see
+// app.listen below), where they get the read-only guest view: only a
+// connection from this machine is ever the owner (lib/guest.js). The share
+// tunnel's requests (Cloudflare's edge headers) still get through, as the
+// read-only guest they always were.
 const lanAllowed = () => ['1', 'true', 'yes', 'on'].includes((process.env.RP_ALLOW_LAN || '').trim().toLowerCase());
 app.use((req, res, next) => {
   if (onRailway() || lanAllowed() || hostIsLocal(req) || viaCloudflare(req)) return next();
@@ -89,8 +92,8 @@ app.use((req, res, next) => {
 // POSTs the token to /invite/join, same-origin only; that redeems the one-time
 // token (only its hash is stored) into the signed, HttpOnly friend cookie and
 // redirects to onboarding for someone new, Picks for someone returning with a
-// re-issued link. The owner (owner cookie, or at localhost where every request
-// is the owner) is sent to Settings from either step, without using the link.
+// re-issued link. The owner (owner cookie, or a browser on this machine at
+// localhost) is sent to Settings from either step, without using the link.
 const firstParam = (v) => (Array.isArray(v) ? v[0] : v);
 const pageHeaders = (res) => res.set({
   'Cache-Control': 'no-store',
@@ -144,7 +147,7 @@ app.use('/api', (req, res, next) => {
 });
 
 // A change from another site's page is refused before it's read: at
-// localhost every request is the owner,
+// localhost the browser on this machine is the owner,
 // so a page elsewhere could otherwise post to this one. The browser marks
 // where a request came from; our own pages are same-origin.
 app.use('/api', (req, res, next) => {
@@ -221,7 +224,11 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: status < 500 || err.status ? err.message || 'Server error' : SERVER_LINE });
 });
 
-app.listen(config.port, () => {
+// Off Railway the server listens on 127.0.0.1 only, so another device can't
+// connect at all, unless RP_ALLOW_LAN is set. On Railway (and with
+// RP_ALLOW_LAN) it listens on every interface, as Railway's proxy needs.
+const listenHost = onRailway() || lanAllowed() ? undefined : '127.0.0.1';
+app.listen(config.port, listenHost, () => {
   if (DEMO) {
     // Demo mode runs none of the jobs below (refresh timers, backups,
     // alerts, push, Letterboxd): it builds its sample and serves copies.

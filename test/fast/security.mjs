@@ -213,15 +213,16 @@ async function main() {
     seen.push({ role: role.name, method, p, status: r.status, text: r.text, hdr: JSON.stringify([...r.headers]) });
     return r;
   };
-  const raw = (method, p, headers = {}, body = null) => new Promise((resolve) => {
-    const rq = http.request({ host: '127.0.0.1', port: port(), method, path: p, headers }, (res) => {
+  const raw = (method, p, headers = {}, body = null, at = '127.0.0.1') => new Promise((resolve) => {
+    const rq = http.request({ host: at, port: port(), method, path: p, headers }, (res) => {
       let t = ''; res.on('data', (d) => { t += d; }); res.on('end', () => {
         seen.push({ role: 'raw', method, p, status: res.statusCode, text: t, hdr: JSON.stringify(res.headers) });
         let json = null; try { json = JSON.parse(t); } catch { /* not JSON */ }
         resolve({ status: res.statusCode, headers: res.headers, text: t, json });
       });
     });
-    rq.on('error', (e) => resolve({ status: 0, headers: {}, text: e.message, json: null }));
+    rq.on('error', (e) => resolve({ status: 0, headers: {}, text: e.code || e.message, json: null }));
+    rq.setTimeout(10000, () => rq.destroy(new Error('no answer in 10 s')));
     if (body) rq.write(body); rq.end();
   });
   const OWNER = { name: 'owner', headers: {} };
@@ -585,13 +586,54 @@ async function main() {
     const lan = await rawHost(`192.168.1.20:${port()}`);
     S.check('RP_ALLOW_LAN=1: a LAN address is answered', lan.status === 200, `${lan.status}`);
     S.check('RP_ALLOW_LAN=1: localhost is still answered', (await rawHost(`localhost:${port()}`)).status === 200);
+    S.check('RP_ALLOW_LAN=1, GUEST_MODE off: a Host that isn\'t localhost is the guest, not the owner', lan.json?.guest === true && lan.json?.user?.isOwner !== true, JSON.stringify({ guest: lan.json?.guest, owner: lan.json?.user?.isOwner }));
+    S.check('RP_ALLOW_LAN=1: localhost from this machine is still the owner', (await rawHost(`localhost:${port()}`)).json?.user?.isOwner === true);
   });
+
+  // The owner at their own machine means a localhost Host AND a connection
+  // from this machine. These calls go to this Mac's own network address, so
+  // the server sees a non-loopback address, as it would from a phone.
+  const os = await import('node:os');
+  const lanIp = Object.values(os.networkInterfaces()).flat().find((a) => a && !a.internal && a.family === 'IPv4')?.address;
+  const atLan = (p, { method = 'GET', headers = {}, host = `localhost:${port()}` } = {}) => raw(method, p, { host, ...headers, ...(method === 'GET' ? {} : { 'content-type': 'application/json' }) }, method === 'GET' ? null : '{}', lanIp);
+  await S.step('a device on the network is never the owner', async () => {
+    if (!lanIp) { console.log('  - skipped: this machine has no network address, so the calls from the network were not made'); return; }
+    await w.restart({ env: { GUEST_MODE: '', RP_ALLOW_LAN: '' } });
+    const off = await atLan('/api/status');
+    S.check('off Railway without RP_ALLOW_LAN: the network address doesn\'t answer at all (it listens on 127.0.0.1)', off.status === 0 && /ECONNREFUSED/.test(off.text), `${off.status} ${off.text.slice(0, 80)}`);
+    S.check('off Railway without RP_ALLOW_LAN: localhost still answers as the owner', (await rawHost(`localhost:${port()}`)).json?.user?.isOwner === true);
+    for (const guestMode of ['', '1']) {
+      const tag = `RP_ALLOW_LAN=1, GUEST_MODE ${guestMode ? 'on' : 'off'}`;
+      await w.restart({ env: { GUEST_MODE: guestMode, RP_ALLOW_LAN: '1' } });
+      for (const h of ['localhost', '127.0.0.1', '[::1]']) {
+        const st = await atLan('/api/status', { host: `${h}:${port()}` });
+        S.check(`${tag}: from the network with Host ${h}, the read-only guest`, st.status === 200 && st.json?.guest === true && st.json?.user?.isOwner !== true, `${st.status} ${JSON.stringify({ guest: st.json?.guest, owner: st.json?.user?.isOwner })}`);
+      }
+      const fr = await atLan('/api/friends');
+      S.check(`${tag}: from the network, the friends list is refused`, fr.status === 403 && !/"friends"/.test(fr.text), `${fr.status}`);
+      const bk = await atLan('/api/backup/latest');
+      S.check(`${tag}: from the network, the backup download is refused`, bk.status === 403, `${bk.status}`);
+      const inv = await atLan('/?invite=not-a-real-token');
+      S.check(`${tag}: from the network, an invite link isn't sent on to Settings as the owner`, inv.status !== 302 && inv.headers?.location !== '/#/settings', `${inv.status} ${inv.headers?.location || ''}`);
+      const post = await atLan('/api/refresh', { method: 'POST', headers: { origin: `http://localhost:${port()}` } });
+      S.check(`${tag}: from the network, a write is refused`, post.status === 403, `${post.status}`);
+      S.check(`${tag}: from this machine, localhost is still the owner`, (await rawHost(`localhost:${port()}`)).json?.user?.isOwner === true);
+      const tunnel = await rawHost('quiet-lake-1234.trycloudflare.com', '/api/status', { headers: { 'cf-ray': 'abc123', 'cf-connecting-ip': '203.0.113.9' } });
+      S.check(`${tag}: the share tunnel is still the read-only guest`, tunnel.status === 200 && tunnel.json?.guest === true, `${tunnel.status}`);
+    }
+  });
+
   await S.step('on Railway any Host is answered', async () => {
     await w.restart({ env: { RAILWAY_ENVIRONMENT_NAME: 'production', RAILWAY_PROJECT_ID: 'test-project-id', GUEST_MODE: '1' } });
     const rw = await rawHost('reel-picks-production.up.railway.app');
     S.check('Railway: its own domain is answered without RP_ALLOW_LAN', rw.status === 200 && rw.json?.guest === true, `${rw.status}`);
     const rw2 = await rawHost('some-custom-domain.example');
     S.check('Railway: any Host is answered', rw2.status === 200, `${rw2.status}`);
+    // Railway's proxy reaches the app over the network, never loopback: a
+    // server listening on 127.0.0.1 there would take the site down.
+    if (!lanIp) { console.log('  - skipped: this machine has no network address, so the Railway call on it was not made'); return; }
+    const net = await atLan('/api/status', { host: 'reel-picks-production.up.railway.app' });
+    S.check('Railway: the server answers on the network address, without RP_ALLOW_LAN', net.status === 200 && net.json?.guest === true, `${net.status} ${net.text.slice(0, 80)}`);
   });
 
   await w.close();
