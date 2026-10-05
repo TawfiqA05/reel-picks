@@ -4,6 +4,9 @@
 //    time runs on from there. A suite can jump it through the control file
 //    (RP_CTRL_FILE, {"seq":n,"now":"<iso>"}); RP_TIMER_SCALE shortens the long
 //    scheduler intervals so a mocked week of background jobs runs in seconds.
+//    A file the server renames into its data folder (a backup) gets that time
+//    as its file time too, so the server compares a backup's time and a
+//    failure's time on the same clock, whatever the real date is.
 //
 // 2. The network. No request leaves the machine. TMDB is answered from saved
 //    sample responses (test/fixtures/tmdb) or else from the made-up catalog,
@@ -44,6 +47,21 @@ class FakeDate extends RealDate {
   static now() { return nowMs(); }
 }
 if (process.env.RP_FAKE_NOW) globalThis.Date = FakeDate;
+// Backups are written to a temp file and renamed into place. The real file
+// time would be today's, so a backup from the made-up Oct 4 would look newer
+// than a failure on the made-up Oct 5 once the real date passes it.
+const FILE_TIMES = process.env.RP_FAKE_NOW && process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : null;
+if (FILE_TIMES) {
+  const realRename = fs.renameSync;
+  fs.renameSync = (from, to) => {
+    realRename(from, to);
+    const abs = path.resolve(String(to));
+    if (abs.startsWith(`${FILE_TIMES}${path.sep}`)) {
+      const t = new RealDate(nowMs());
+      try { fs.utimesSync(abs, t, t); } catch { /* removed already */ }
+    }
+  };
+}
 let ctrl = {};
 let seq = null;
 const ctrlFile = process.env.RP_CTRL_FILE;
