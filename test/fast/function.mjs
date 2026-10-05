@@ -1585,6 +1585,25 @@ async function groupC() {
     const { page } = await g.open(imp, 390, 'light');
     await go(page, w, '#/rate', 500);
     await page.locator('button', { hasText: 'Show me how' }).click();
+    // FN_SLOW_READS=<ms> makes this page wait that long before it reads each
+    // file it's given, the way a slow machine can. Off unless set; keep it
+    // well under the stuck upload's 3 s. slowReads(ms, true) slows only the
+    // next file read.
+    const slowReads = (ms, once = false) => page.evaluate(([ms, once]) => {
+      if (!window.rpSlowReads) {
+        const read = Blob.prototype.text;
+        window.rpSlowReads = { ms: 0, next: null };
+        File.prototype.text = async function () {
+          const s = window.rpSlowReads;
+          const wait = s.next ?? s.ms;
+          s.next = null;
+          if (wait) await new Promise((ok) => setTimeout(ok, wait));
+          return read.call(this);
+        };
+      }
+      if (once) window.rpSlowReads.next = ms; else window.rpSlowReads.ms = ms;
+    }, [ms, once]);
+    if (process.env.FN_SLOW_READS) await slowReads(Number(process.env.FN_SLOW_READS));
     // Each upload waits at most 30s; a stuck one fails its check with where
     // it stopped (importFiles).
     const upload = (name, text) => importFiles(page, w, 'input[type=file][accept=".csv,text/csv"]', { name, mimeType: 'text/csv', buffer: Buffer.from(text) },
@@ -1623,6 +1642,12 @@ async function groupC() {
     check('imports: the deleted rating is back', (await api(imp, 'GET', '/api/ratings')).json.ratings.length === before);
     t = await upload('ratings.csv', 'Date,Name,Year,Letterboxd URI,Rating\n2024-01-01,Qqzx Vorpal Nonfilm Xyzzy,1901,https://boxd.it/q,3');
     check('imports: an unmatched title is reported as kept for retry', /couldn't be matched/.test(t) || /0 ratings imported/.test(t), t);
+    // A slow machine can take a while to read the picked file, and until the
+    // page writes something new the box still shows the upload before. The
+    // helper has to wait for this upload's own result.
+    await slowReads(1500, true);
+    t = await upload('watched.csv', 'Date,Name,Year,Letterboxd URI\n2024-01-01,The Ember,1980,https://boxd.it/a');
+    check('imports: an upload that starts late still gets its own result', /watched\.csv or watchlist\.csv/.test(t), t);
     // A stuck upload fails fast and says where it stopped (here the browser
     // holds the request back, so the server never sees it).
     await page.route('**/api/ratings/import', () => {});
