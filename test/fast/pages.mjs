@@ -14,12 +14,16 @@
 //                    refused there first. Every link the app makes opens a
 //                    page: the app moves between screens after the # only,
 //                    and the owner unlock lands on the front page.
+//   errors           an error on a page request (outside /api) gets a plain
+//                    error page with its status kept: a 5xx says the server
+//                    hit a problem, a 4xx that the request couldn't be read.
+//                    Under /api the answer is the same JSON as before.
 import crypto from 'node:crypto';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { suite } from '../lib/check.mjs';
-import { openWorld, startServer, tempDir, until, GUEST, REPO } from '../lib/world.mjs';
+import { openWorld, startServer, tempDir, until, sleep, GUEST, REPO } from '../lib/world.mjs';
 import * as C from '../lib/catalog.mjs';
 
 const S = suite('pages');
@@ -210,6 +214,48 @@ await S.step('the owner unlock lands on a page that is there', async () => {
     const next = await raw('GET', hdr(r, 'location') || '/x', GUEST);
     S.check(`${shown}: where it lands is the app page`, next.status === 200 && /js\/app\.js/.test(next.text), `${next.status}`);
   }
+});
+
+const SERVER_LINE = 'Something went wrong on the server. Try again.';
+const UNREADABLE = 'Reel Picks couldn\'t read that request. Reload the page and try again.';
+const TOO_BIG = 'That file is too big. Reel Picks takes files up to 20 MB.';
+const isErrorPage = (r, status, line) => r.status === status && /^text\/html/.test(hdr(r, 'content-type'))
+  && /<title>Something went wrong<\/title>/.test(r.text) && /<h1 class="empty-title">Something went wrong<\/h1>/.test(r.text)
+  && r.text.includes(line) && /<a class="btn" href="\/">Go to Reel Picks<\/a>/.test(r.text)
+  && !/js\/app\.js/.test(r.text) && !new RegExp(`\\b${C.OWNER_NAME}\\b`).test(r.text) && hdr(r, 'cache-control') === 'no-store';
+const LINE_5XX = 'Reel Picks hit a problem on its end. Try again in a moment.';
+const LINE_4XX = 'Reel Picks couldn’t read that request. Check the address, or go to the front page.';
+
+await S.step('errors: a page request gets a page, an API request JSON', async () => {
+  // A database failure behind the Join page (the invite lookup), and the
+  // same kind behind an API read.
+  w.writeCtrl({ dbFail: [{ sql: 'invite_token_hash' }, { sql: 'FROM ratings r LEFT JOIN movies m' }] });
+  await sleep(120);
+  const page = await raw('GET', `/?invite=${'a'.repeat(30)}`, GUEST);
+  S.check('a 500 on a page is the error page', isErrorPage(page, 500, LINE_5XX), `${page.status} ${hdr(page, 'content-type')} ${page.text.slice(0, 120)}`);
+  S.check('the error page shows nothing of the failure', !/database|disk is full|sqlite/i.test(page.text));
+  S.check('the error page says noindex too', hdr(page, 'x-robots-tag') === NOINDEX, hdr(page, 'x-robots-tag'));
+  const api = await raw('GET', '/api/ratings');
+  S.check('control: a 500 under /api is still the JSON server line', api.status === 500 && api.json?.error === SERVER_LINE, `${api.status} ${api.text.slice(0, 120)}`);
+  w.writeCtrl();
+  await sleep(120);
+  // A body that can't be read, sent to a page address.
+  const unreadable = await raw('POST', '/no-such-page', { ...GUEST, 'content-type': 'application/json' }, '{not json');
+  S.check('an unreadable body to a page address is the error page with its 400', isErrorPage(unreadable, 400, LINE_4XX), `${unreadable.status} ${unreadable.text.slice(0, 120)}`);
+  // A page address with broken %-escapes names no file: not found.
+  for (const p of ['/%zz', '/js/%E0%A4%A.js']) {
+    const r = await raw('GET', p, GUEST);
+    S.check(`a broken address ${p} is the not-found page`, isNotFound(r), `${r.status} ${r.text.slice(0, 120)}`);
+  }
+  const bad = await raw('GET', '/api/movies/%zz');
+  S.check('control: a broken address under /api is still the JSON 400', bad.status === 400 && bad.json?.error === UNREADABLE, `${bad.status} ${bad.text.slice(0, 120)}`);
+  // A Join form far bigger than any token.
+  const big = await raw('POST', '/invite/join', { ...GUEST, 'content-type': 'application/x-www-form-urlencoded', 'sec-fetch-site': 'same-origin' }, `token=${'a'.repeat(5000)}`);
+  S.check('a too-big Join form is the error page with its 413', isErrorPage(big, 413, LINE_4XX), `${big.status} ${big.text.slice(0, 120)}`);
+  const bigApi = await raw('POST', '/api/ratings', { 'content-type': 'application/json' }, JSON.stringify({ x: 'a'.repeat(300 * 1024) }));
+  S.check('control: a too-big body under /api is still the JSON 413', bigApi.status === 413 && bigApi.json?.error === TOO_BIG, `${bigApi.status} ${bigApi.text.slice(0, 120)}`);
+  const after = await raw('GET', '/', GUEST);
+  S.check('the server still answers after them', after.status === 200, `${after.status}`);
 });
 
 await demo.stop();

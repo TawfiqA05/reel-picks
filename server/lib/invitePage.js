@@ -105,3 +105,21 @@ export function notFoundPage() {
         </div>`,
   });
 }
+
+// A 4xx here is a request the server couldn't read (a broken address, a Join
+// form far too big); anything else went wrong on the server's side.
+export function errorPage({ status = 500 } = {}) {
+  const line = status < 500
+    ? 'Reel Picks couldn’t read that request. Check the address, or go to the front page.'
+    : 'Reel Picks hit a problem on its end. Try again in a moment.';
+  return shell({
+    title: 'Something went wrong',
+    description: 'Reel Picks couldn’t show this page.',
+    body: `<div class="empty">
+          <div class="empty-icon">${svg(TICKET, 32)}</div>
+          <h1 class="empty-title">Something went wrong</h1>
+          <p class="empty-msg">${line}</p>
+          ${HOME}
+        </div>`,
+  });
+}

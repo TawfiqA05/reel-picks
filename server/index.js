@@ -9,7 +9,7 @@ import {
   isGuest, isOwner, isLocalRequest, guestAllowed, guestModeEnabled, hostIsLocal, viaCloudflare, tokenMatches, ownerCookieName, ownerCookieValue, ownerCookieMaxAgeMs, requestUser, ownerName,
 } from './lib/guest.js';
 import { FRIEND_COOKIE, FRIEND_TTL_MS, findInvite, redeemInvite, signFriendCookie, touchLastSeen } from './lib/accounts.js';
-import { joinPage, expiredPage, notFoundPage } from './lib/invitePage.js';
+import { joinPage, expiredPage, notFoundPage, errorPage } from './lib/invitePage.js';
 import { getSetting, db, dataDir } from './db.js';
 import { refreshAll, shouldAutoRefresh, retryIfDue, state as refreshState } from './lib/refresh.js';
 import { runAs } from './lib/user.js';
@@ -224,21 +224,29 @@ const SERVER_LINE = 'Something went wrong on the server. Try again.';
 const TOO_BIG = `That file is too big. Reel Picks takes files up to ${UPLOAD_LIMIT_MB} MB.`;
 const UNREADABLE = 'Reel Picks couldn\'t read that request. Reload the page and try again.';
 
+// Under /api the answer is JSON, as Express routes it (any case, "/api" on
+// its own included). A page request gets a page.
+const isApi = (req) => /^\/api(?:\/|$)/i.test(req.path);
+
 app.use((err, req, res, next) => {
   console.error('[api error]', err.message);
   if (res.headersSent) return next(err);
   // The body parser's own errors (it sets err.type) and a web address with
   // broken %-escapes (a URIError from Express) keep their code but get a
   // plain line: their messages are the parser's, not written for anyone.
-  if (err.type === 'entity.too.large' || err.type === 'parameters.too.many') return res.status(413).json({ error: TOO_BIG });
-  if (typeof err.type === 'string' || err instanceof URIError) {
-    const code = err.status || err.statusCode || 400;
-    return res.status(code).json({ error: code < 500 ? UNREADABLE : SERVER_LINE });
-  }
   // A thrown error with a status was written for the reader; anything else is
   // internal (a database message, an upstream address) and stays in the log.
-  const status = err.status || err.statusCode || 500;
-  res.status(status).json({ error: status < 500 || err.status ? err.message || 'Server error' : SERVER_LINE });
+  let status; let error;
+  if (err.type === 'entity.too.large' || err.type === 'parameters.too.many') {
+    status = 413; error = TOO_BIG;
+  } else if (typeof err.type === 'string' || err instanceof URIError) {
+    status = err.status || err.statusCode || 400; error = status < 500 ? UNREADABLE : SERVER_LINE;
+  } else {
+    status = err.status || err.statusCode || 500;
+    error = status < 500 || err.status ? err.message || 'Server error' : SERVER_LINE;
+  }
+  if (isApi(req)) return res.status(status).json({ error });
+  res.status(status).set('Cache-Control', 'no-store').type('html').send(status === 404 ? notFoundPage() : errorPage({ status }));
 });
 
 // Off Railway the server listens on 127.0.0.1 only, so another device can't
