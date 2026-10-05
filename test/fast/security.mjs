@@ -129,7 +129,7 @@ const APP_ROUTES = [
   ['GET', '/styles.css', 'the stylesheet, its parts joined (server/lib/styles.js); checked with the static files'],
   ['GET', '/robots.txt', 'robots.txt (test/fast/pages.mjs)'],
   ['GET', 'static files', 'static'],
-  ['GET', '*', 'SPA fallback'],
+  ['ANY', 'anything else', 'the not-found page; JSON under /api (test/fast/pages.mjs)'],
 ];
 
 // The routes declared in the source, as "METHOD /path" (router paths without
@@ -237,7 +237,7 @@ async function main() {
   await S.step('the owner unlock link', async () => {
     const r = await raw('GET', `/settings?owner=${SECRETS.OWNER_TOKEN}&x=1`, { host: `localhost:${port()}`, 'cf-ray': 'test' });
     const sc = String(r.headers['set-cookie'] || '');
-    S.check('?owner= redirects to the same URL without the token', r.status === 302 && r.headers.location === '/settings?x=1', `${r.status} ${r.headers.location}`);
+    S.check('?owner= redirects to the front page without the token, other parameters kept', r.status === 302 && r.headers.location === '/?x=1', `${r.status} ${r.headers.location}`);
     S.check('the owner cookie is HttpOnly, Secure and SameSite=Lax', /rp_owner=/.test(sc) && /HttpOnly/i.test(sc) && /Secure/i.test(sc) && /SameSite=Lax/i.test(sc), sc.replace(/=[^;]+/, '=…'));
     S.check('the owner cookie and Location never carry the token', !sc.includes(SECRETS.OWNER_TOKEN) && !String(r.headers.location).includes(SECRETS.OWNER_TOKEN));
     const bad = await raw('GET', '/?owner=wrong', { host: `localhost:${port()}`, 'cf-ray': 'test' });
@@ -290,7 +290,7 @@ async function main() {
     }
     for (const p of ['/api/STATS', '/api/stats/', '/api//stats', '/api/movies/1/../../stats', '/api/movies/1%2F..%2F..%2Fstats', '/api/status/../stats', '/API/stats']) {
       const r = await raw('GET', p, { host: `localhost:${port()}`, 'cf-ray': 'test' });
-      S.check(`guest path trick ${p} doesn't reach an owner route`, r.status === 403 || r.status === 404 || (r.status === 200 && /<!doctype html>/i.test(r.text)), `${r.status}`);
+      S.check(`guest path trick ${p} doesn't reach an owner route`, r.status === 403 || (r.status === 404 && r.json?.error === 'Not found'), `${r.status} ${r.text.slice(0, 60)}`);
     }
     const unknown = await req(GUESTR, 'GET', '/api/movies/1');
     S.check('guest /api/movies/<unknown> is a 404 without a TMDB call', unknown.status === 404, `${unknown.status}`);
@@ -355,7 +355,7 @@ async function main() {
       }
     }
     const spa = await req(GUESTR, 'GET', '/some/deep/link');
-    S.check('the SPA fallback serves the page', spa.status === 200 && /<!doctype html>/i.test(spa.text), `${spa.status}`);
+    S.check('an unknown path gets the not-found page, not the app', spa.status === 404 && /There’s no page here/.test(spa.text) && !/js\/app\.js/.test(spa.text), `${spa.status}`);
   });
 
   // ---- input validation, as a friend who owns nothing else

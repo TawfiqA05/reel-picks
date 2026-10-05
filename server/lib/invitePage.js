@@ -3,6 +3,8 @@
 // that POSTs the token, the only thing that redeems it) and "This invite has
 // expired". Link-preview bots (iMessage, Slack, WhatsApp, …) fetch the link to
 // draw a card; they get the page, never a cookie, and the invite stays unused.
+// Also the not-found page, for an address that isn't part of the app, and
+// the page for an error on a page request (server/index.js).
 // Same stylesheet, fonts and components as the app.
 
 import fs from 'node:fs';
@@ -84,6 +86,22 @@ export function expiredPage({ owner }) {
           <div class="empty-icon">${svg(TICKET, 32)}</div>
           <h1 class="empty-title">This invite has expired</h1>
           <p class="empty-msg">Ask ${esc(owner)} for a new link.</p>
+        </div>`,
+  });
+}
+
+// The pages below name no one: a guest, or anyone with a mistyped link, can see them.
+const HOME = '<a class="btn" href="/">Go to Reel Picks</a>';
+
+export function notFoundPage() {
+  return shell({
+    title: 'Page not found',
+    description: 'There’s no Reel Picks page at this address.',
+    body: `<div class="empty">
+          <div class="empty-icon">${svg(TICKET, 32)}</div>
+          <h1 class="empty-title">There’s no page here</h1>
+          <p class="empty-msg">Check the address for a typo, or go to the front page.</p>
+          ${HOME}
         </div>`,
   });
 }

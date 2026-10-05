@@ -7,14 +7,23 @@
 //                    robots.txt allows crawling there, so a crawler can read
 //                    the header. The demo is meant to be found: no header, and
 //                    its robots.txt keeps crawlers off /api only.
+//   not found        an address that isn't part of the app (a mistyped image,
+//                    /js/typo.js, a deep link) gets a plain 404 page built like
+//                    the Join page, in both modes; one under /api gets a JSON
+//                    404 for the owner and friends, while a guest is still
+//                    refused there first. Every link the app makes opens a
+//                    page: the app moves between screens after the # only,
+//                    and the owner unlock lands on the front page.
+import crypto from 'node:crypto';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { suite } from '../lib/check.mjs';
-import { openWorld, startServer, tempDir, until, GUEST } from '../lib/world.mjs';
+import { openWorld, startServer, tempDir, until, GUEST, REPO } from '../lib/world.mjs';
+import * as C from '../lib/catalog.mjs';
 
 const S = suite('pages');
-const OWNER_TOKEN = 'pages-owner-token-0123456789abcdef';
+const OWNER_TOKEN = crypto.randomBytes(24).toString('base64url');
 const w = S.world(await openWorld('pages', { env: { OWNER_TOKEN } }));
 const friend = Object.values(w.friends)[0];
 
@@ -92,6 +101,115 @@ await S.step('demo: findable, crawlers kept off /api', async () => {
   }
   const page = await D.get('/');
   S.check('demo page: no robots meta either', page.status === 200 && !/name="robots"/.test(page.text), `${page.status}`);
+});
+
+// The not-found page: its heading and line, a way to the front page, the
+// app's stylesheet, and none of the app itself or anyone's name.
+const isNotFound = (r) => r.status === 404 && /^text\/html/.test(hdr(r, 'content-type'))
+  && /<title>Page not found<\/title>/.test(r.text) && /There’s no page here/.test(r.text)
+  && /Check the address for a typo, or go to the front page\./.test(r.text)
+  && /<a class="btn" href="\/">Go to Reel Picks<\/a>/.test(r.text) && /href="\/styles\.css"/.test(r.text)
+  && !/js\/app\.js/.test(r.text) && !new RegExp(`\\b${C.OWNER_NAME}\\b`).test(r.text);
+const hdr = (r, k) => (typeof r.headers.get === 'function' ? r.headers.get(k) : r.headers[k]) || '';
+const UNKNOWN = ['/no-such-page', '/js/typo.js', '/icons/typo.png', '/some/deep/link', '/settings', '/index', '/favicon.png'];
+
+await S.step('my own app: unknown paths get the not-found page', async () => {
+  for (const [who, h] of [['the owner', {}], ['a guest', GUEST], ['a friend', friend.headers]]) {
+    for (const p of UNKNOWN) {
+      const r = await raw('GET', p, h);
+      S.check(`${who}: GET ${p} is the not-found page`, isNotFound(r), `${r.status} ${hdr(r, 'content-type')} ${r.text.slice(0, 80)}`);
+    }
+  }
+  const r = await raw('GET', '/no-such-page', GUEST);
+  S.check('the not-found page is never cached', hdr(r, 'cache-control') === 'no-store', hdr(r, 'cache-control'));
+  const head = await raw('HEAD', '/no-such-page', GUEST);
+  S.check('HEAD of an unknown path is a 404', head.status === 404 && !head.text, `${head.status}`);
+  const post = await raw('POST', '/no-such-page', { 'content-type': 'application/json' }, '{}');
+  S.check('POST to an unknown path is the not-found page', isNotFound(post), `${post.status} ${post.text.slice(0, 80)}`);
+  // Control: the pages that are there still answer.
+  for (const p of ['/', '/index.html']) {
+    const ok = await raw('GET', p, GUEST);
+    S.check(`control: ${p} is still the app page`, ok.status === 200 && /js\/app\.js/.test(ok.text), `${ok.status}`);
+  }
+});
+
+await S.step('my own app: unknown /api paths get a JSON 404', async () => {
+  for (const [who, h] of [['the owner', {}], ['a friend', friend.headers]]) {
+    for (const [m, p] of [['GET', '/api/no-such-route'], ['GET', '/api'], ['GET', '/api/movies/1/extra'], ['POST', '/api/no-such-route'], ['DELETE', '/api/no-such-route']]) {
+      const body = m === 'POST' ? '{}' : null;
+      const r = await raw(m, p, { ...h, ...(body ? { 'content-type': 'application/json' } : {}) }, body);
+      S.check(`${who}: ${m} ${p} is a JSON 404`, r.status === 404 && /^application\/json/.test(hdr(r, 'content-type')) && r.json?.error === 'Not found', `${r.status} ${hdr(r, 'content-type')} ${r.text.slice(0, 80)}`);
+    }
+  }
+  // A guest is refused there first, as before.
+  for (const [m, p] of [['GET', '/api/no-such-route'], ['GET', '/api'], ['POST', '/api/no-such-route']]) {
+    const r = await raw(m, p, { ...GUEST, ...(m === 'GET' ? {} : { 'content-type': 'application/json' }) }, m === 'GET' ? null : '{}');
+    S.check(`a guest: ${m} ${p} is still the read-only 403`, r.status === 403 && r.json?.error === 'This shared link is read only.', `${r.status} ${r.text.slice(0, 80)}`);
+  }
+});
+
+await S.step('demo: unknown paths get the not-found page', async () => {
+  for (const p of ['/no-such-page', '/js/typo.js']) {
+    const r = await D.get(p);
+    S.check(`demo GET ${p} is the not-found page`, isNotFound(r), `${r.status} ${r.text.slice(0, 80)}`);
+  }
+  const api = await D.get('/api/no-such-route');
+  let json = null; try { json = JSON.parse(api.text); } catch { /* not JSON */ }
+  S.check('demo GET /api/no-such-route is a JSON 404', api.status === 404 && json?.error === 'Not found', `${api.status} ${api.text.slice(0, 80)}`);
+  const page = await D.get('/');
+  S.check('control: the demo page is still served', page.status === 200 && /js\/app\.js/.test(page.text), `${page.status}`);
+});
+
+// Every link the app makes, read from the source: notification and
+// redirect targets on the server, and navigations in the page. Each opens
+// the front page (its screen is after the #), or is an API or a static file.
+const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
+const LINK_CONTEXT = /\burl:|\b[A-Z_]*URL\s*=|\bredirect\(|\bnavigate\(|\bopenWindow\(|\blocation\.(?:replace|assign)\(|\blocation\.href\s*=|\bhref:|\breplaceState\(|\binvite:/;
+function appLinks(files) {
+  const out = [];
+  for (const f of files) {
+    fs.readFileSync(f, 'utf8').split('\n').forEach((line, i) => {
+      if (/^\s*\/\//.test(line) || !LINK_CONTEXT.test(line)) return;
+      for (const m of line.matchAll(/(['"`])(\/[^'"`\s]*)\1/g)) out.push({ at: `${path.relative(REPO, f)}:${i + 1}`, link: m[2] });
+    });
+  }
+  return out;
+}
+const opensAPage = (link) => {
+  const p = link.split(/[?#$]/)[0];
+  return p === '/' || p.startsWith('/api/') || (p.length > 1 && fs.existsSync(path.join(REPO, 'public', p)));
+};
+
+await S.step('every link the app makes opens a page', async () => {
+  const files = [...walk(path.join(REPO, 'server')), ...walk(path.join(REPO, 'public/js')), path.join(REPO, 'public/sw.js')].filter((f) => /\.m?js$/.test(f));
+  const links = appLinks(files);
+  S.check('the source scan finds the app\'s links (push, alerts, invites, redirects)', links.some((l) => l.link === '/#/home') && links.some((l) => l.link.startsWith('/?invite=')) && links.some((l) => l.link === '/#/settings') && links.length >= 10, `${links.length}`);
+  const bad = links.filter((l) => !opensAPage(l.link));
+  S.check('every link in the source opens the front page, an API or a file', !bad.length, bad.map((l) => `${l.at} ${l.link}`).join(', '));
+  // Positive control: a link with a path of its own is noticed.
+  const planted = path.join(w.dir, 'planted.js');
+  fs.writeFileSync(planted, "send({ url: '/settings' });\n");
+  S.check('control: a planted link with a path is caught', appLinks([planted]).filter((l) => !opensAPage(l.link)).length === 1);
+  const man = JSON.parse(fs.readFileSync(path.join(REPO, 'public/manifest.webmanifest'), 'utf8'));
+  for (const k of ['start_url', 'scope']) {
+    const r = await raw('GET', man[k], GUEST);
+    S.check(`the manifest's ${k} (${man[k]}) opens the app`, r.status === 200 && /js\/app\.js/.test(r.text), `${r.status}`);
+  }
+  // An invite link, made the way the owner makes one, opens the Join page.
+  const inv = await w.api('POST', '/api/friends', { body: { name: 'Link Check' } });
+  const join = await raw('GET', inv.json.invite, GUEST);
+  S.check('an invite link opens the Join page', inv.json.invite.startsWith('/?invite=') && join.status === 200 && /You’re invited by/.test(join.text), `${join.status}`);
+  await w.api('POST', `/api/friends/${inv.json.friend.id}/revoke`);
+});
+
+await S.step('the owner unlock lands on a page that is there', async () => {
+  for (const [from, to] of [[`/?owner=${OWNER_TOKEN}`, '/'], [`/settings?owner=${OWNER_TOKEN}&x=1`, '/?x=1'], [`/no-such-page?owner=${OWNER_TOKEN}`, '/'], ['/index.html?owner=wrong', '/']]) {
+    const r = await raw('GET', from, GUEST);
+    const shown = from.replace(OWNER_TOKEN, '<token>');
+    S.check(`${shown} redirects to ${to}`, r.status === 302 && hdr(r, 'location') === to, `${r.status} ${hdr(r, 'location').replace(OWNER_TOKEN, '<token>')}`);
+    const next = await raw('GET', hdr(r, 'location') || '/x', GUEST);
+    S.check(`${shown}: where it lands is the app page`, next.status === 200 && /js\/app\.js/.test(next.text), `${next.status}`);
+  }
 });
 
 await demo.stop();

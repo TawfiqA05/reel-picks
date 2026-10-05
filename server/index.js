@@ -9,7 +9,7 @@ import {
   isGuest, isOwner, isLocalRequest, guestAllowed, guestModeEnabled, hostIsLocal, viaCloudflare, tokenMatches, ownerCookieName, ownerCookieValue, ownerCookieMaxAgeMs, requestUser, ownerName,
 } from './lib/guest.js';
 import { FRIEND_COOKIE, FRIEND_TTL_MS, findInvite, redeemInvite, signFriendCookie, touchLastSeen } from './lib/accounts.js';
-import { joinPage, expiredPage } from './lib/invitePage.js';
+import { joinPage, expiredPage, notFoundPage } from './lib/invitePage.js';
 import { getSetting, db, dataDir } from './db.js';
 import { refreshAll, shouldAutoRefresh, retryIfDue, state as refreshState } from './lib/refresh.js';
 import { runAs } from './lib/user.js';
@@ -84,8 +84,10 @@ app.use((req, res, next) => {
   }
   const u = new URL(req.originalUrl, 'http://placeholder');
   u.searchParams.delete('owner');
-  // One leading slash only: "//evil.example" would send the browser off-site.
-  res.redirect(302, u.pathname.replace(/^\/+/, '/') + (u.search || ''));
+  // Always to the front page: the app's screens are all after the #, which
+  // the browser keeps across a redirect, and any other path is not found. A
+  // fixed path also can't send the browser off-site ("//evil.example").
+  res.redirect(302, `/${u.search || ''}`);
 });
 
 // Friend invites, in two steps so that merely opening a link changes nothing.
@@ -199,6 +201,8 @@ app.use('/api', (req, res, next) => {
 });
 if (DEMO) app.use('/api', demoGuard);
 app.use('/api', router);
+// An API address that isn't one gets its answer as JSON, like any other.
+app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
 const publicDir = fileURLToPath(new URL('../public/', import.meta.url));
 // The page itself carries the app version (lib/version.js), so it is never
@@ -210,13 +214,11 @@ app.get('/styles.css', sendStyles);
 // of the sample (server/demo/sessions.js) that a crawl could use up.
 const ROBOTS = DEMO ? 'User-agent: *\nDisallow: /api/\n' : 'User-agent: *\nAllow: /\n';
 app.get('/robots.txt', (req, res) => res.type('text/plain').send(ROBOTS));
-app.use(express.static(publicDir, { extensions: ['html'], index: false }));
+app.use(express.static(publicDir, { index: false }));
 
-// SPA fallback: send index.html for any non-API, non-file route.
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) return next();
-  sendIndex(req, res);
-});
+// Anything else isn't here. The app moves between its screens with the part
+// after the # only, so none of its own links needs a path of its own.
+app.use((req, res) => res.status(404).set('Cache-Control', 'no-store').type('html').send(notFoundPage()));
 
 const SERVER_LINE = 'Something went wrong on the server. Try again.';
 const TOO_BIG = `That file is too big. Reel Picks takes files up to ${UPLOAD_LIMIT_MB} MB.`;
