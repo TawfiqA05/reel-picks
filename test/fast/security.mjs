@@ -128,6 +128,7 @@ const APP_ROUTES = [
   ['GET', '/index.html', 'the page'],
   ['GET', '/styles.css', 'the stylesheet, its parts joined (server/lib/styles.js); checked with the static files'],
   ['GET', '/robots.txt', 'robots.txt (test/fast/pages.mjs)'],
+  ['GET', '/favicon.ico', 'the app\'s icon (test/fast/pages.mjs)'],
   ['GET', 'static files', 'static'],
   ['ANY', 'anything else', 'the not-found page; JSON under /api (test/fast/pages.mjs)'],
 ];

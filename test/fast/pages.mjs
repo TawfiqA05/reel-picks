@@ -18,6 +18,7 @@
 //                    error page with its status kept: a 5xx says the server
 //                    hit a problem, a 4xx that the request couldn't be read.
 //                    Under /api the answer is the same JSON as before.
+//   favicon          /favicon.ico is the app's own icon, byte for byte.
 import crypto from 'node:crypto';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -256,6 +257,19 @@ await S.step('errors: a page request gets a page, an API request JSON', async ()
   S.check('control: a too-big body under /api is still the JSON 413', bigApi.status === 413 && bigApi.json?.error === TOO_BIG, `${bigApi.status} ${bigApi.text.slice(0, 120)}`);
   const after = await raw('GET', '/', GUEST);
   S.check('the server still answers after them', after.status === 200, `${after.status}`);
+});
+
+await S.step('favicon: the app\'s own icon', async () => {
+  const icon = fs.readFileSync(path.join(REPO, 'public/icons/icon-192.png'));
+  for (const [where, get] of [['my own app', () => raw('GET', '/favicon.ico', GUEST)], ['the demo', () => fetch(`${demo.base}/favicon.ico`).then(async (r) => ({ status: r.status, headers: r.headers, buf: Buffer.from(await r.arrayBuffer()) }))]]) {
+    const r = await get();
+    S.check(`${where}: /favicon.ico is a PNG`, r.status === 200 && hdr(r, 'content-type') === 'image/png', `${r.status} ${hdr(r, 'content-type')}`);
+    S.check(`${where}: /favicon.ico is public/icons/icon-192.png byte for byte`, r.buf.equals(icon), `${r.buf.length} bytes vs ${icon.length}`);
+  }
+  const head = await raw('HEAD', '/favicon.ico', GUEST);
+  S.check('HEAD /favicon.ico answers', head.status === 200, `${head.status}`);
+  const n = await raw('GET', '/favicon.ico', GUEST);
+  S.check('noindex: /favicon.ico', hdr(n, 'x-robots-tag') === NOINDEX, hdr(n, 'x-robots-tag'));
 });
 
 await demo.stop();

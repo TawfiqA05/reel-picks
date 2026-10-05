@@ -214,6 +214,9 @@ app.get('/styles.css', sendStyles);
 // of the sample (server/demo/sessions.js) that a crawl could use up.
 const ROBOTS = DEMO ? 'User-agent: *\nDisallow: /api/\n' : 'User-agent: *\nAllow: /\n';
 app.get('/robots.txt', (req, res) => res.type('text/plain').send(ROBOTS));
+// For anything that asks for /favicon.ico: the app's own icon, as a PNG
+// (every browser takes one there).
+app.get('/favicon.ico', (req, res, next) => res.sendFile('icons/icon-192.png', { root: publicDir }, (err) => err && next(err)));
 app.use(express.static(publicDir, { index: false }));
 
 // Anything else isn't here. The app moves between its screens with the part
