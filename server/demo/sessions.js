@@ -4,6 +4,13 @@
 // deleted an hour after it was made, or after half an hour without a request,
 // whichever comes first (or sooner when the busiest hour needs the room).
 //
+// At most 150 copies at once. When all are taken, the one idle longest makes
+// room; when every visitor is mid-request, a new visitor is asked to try
+// again instead. One address makes at most 50 new copies an hour (Railway's
+// X-Real-IP, lib/guest.js clientAddress; no limit when there's no address),
+// so a burst of requests without a cookie can't clear out everyone else. The
+// count lives in memory only (lib/limits.js) and no address is written down.
+//
 // The sample itself is built once at start (build.js) into the folder
 // server/db.js made for this run, and again when the date changes, so the
 // showtimes always run from today. A copy made from the old sample keeps it
@@ -17,7 +24,9 @@ import { closeBase, withDb } from './scope.js';
 import { buildSample } from './build.js';
 import { installDemoNet } from './net.js';
 import { localYMD } from '../lib/util.js';
-import { readCookie } from '../lib/guest.js';
+import { readCookie, clientAddress } from '../lib/guest.js';
+import { room, take } from '../lib/limits.js';
+import { DEMO_FULL } from './mode.js';
 
 const COOKIE = 'rp_demo';
 const MAX_AGE_MS = 60 * 60 * 1000;
@@ -75,14 +84,9 @@ export function startDemo() {
   closeBase();
   const first = rebuild();
   setInterval(sweep, SWEEP_MS).unref();
-  // A stop takes the whole folder with it: the sample and every visitor's copy.
-  for (const sig of ['SIGTERM', 'SIGINT']) {
-    process.once(sig, () => {
-      closeAll();
-      fs.rmSync(dataDir, { recursive: true, force: true });
-      process.exit(0);
-    });
-  }
+  // A stop takes the whole folder with it, the sample and every visitor's
+  // copy: server/db.js removes it on the way out, however the process ends.
+  process.on('exit', closeAll);
   return first;
 }
 
@@ -110,11 +114,16 @@ export function sweep(now = Date.now()) {
   }
 }
 
-function newVisitor(now) {
+// A new visitor's copy, or null when there's no room for one: their address
+// has made its 50 this hour, or all 150 visitors are mid-request.
+function newVisitor(now, addr) {
+  const who = addr ? `ip:${addr}` : null;
+  if (who && room('newCopy', who, 'demo', now) < 1) return null;
   // Full: the one idle longest makes room.
   if (visitors.size >= MAX_VISITORS) {
     const oldest = [...visitors.values()].filter((v) => !v.busy).sort((a, b) => a.last - b.last)[0];
-    if (oldest) drop(oldest);
+    if (!oldest) return null;
+    drop(oldest);
   }
   const id = crypto.randomBytes(18).toString('base64url');
   const file = path.join(visitorDir, `${id}.db`);
@@ -128,6 +137,7 @@ function newVisitor(now) {
   }
   const v = { id, handle, file, created: now, last: now, busy: 0 };
   visitors.set(id, v);
+  if (who) take('newCopy', who, 'demo', now);
   return v;
 }
 
@@ -153,7 +163,8 @@ export async function demoVisitor(req, res, next) {
     let v = visitors.get(readCookie(req, COOKIE) || '');
     if (v && (now - v.created > MAX_AGE_MS || now - v.last > IDLE_MS) && !v.busy) { drop(v); v = null; }
     if (!v) {
-      v = newVisitor(now);
+      v = newVisitor(now, clientAddress(req));
+      if (!v) return res.status(503).json({ error: DEMO_FULL });
       const left = Math.round((v.created + MAX_AGE_MS - now) / 1000);
       res.cookie(COOKIE, v.id, { httpOnly: true, sameSite: 'lax', secure: isHttps(req), maxAge: left * 1000, path: '/' });
     }

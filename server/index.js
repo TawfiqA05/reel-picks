@@ -32,7 +32,7 @@ import { sendDueLater as sendWatchlistAlerts } from './lib/watchalerts.js';
 import { DEMO } from './demo/mode.js';
 import { installDemoNet } from './demo/net.js';
 import { startDemo, demoVisitor } from './demo/sessions.js';
-import demoGuard from './demo/guard.js';
+import demoGuard, { uploadsOff as demoUploadsOff } from './demo/guard.js';
 import { withDb } from './demo/scope.js';
 
 const AUTO_REFRESH_CHECK_MS = 15 * 60 * 1000;
@@ -136,7 +136,10 @@ app.post('/invite/join', express.urlencoded({ extended: false, limit: '2kb' }), 
   res.redirect(303, onboarded ? '/' : '/#/onboarding');
 });
 
-// Demo mode: each visitor's own copy of the sample (server/demo/sessions.js).
+// Demo mode: the imports are off, answered before a byte of their body is
+// read or a copy made (server/demo/guard.js); then each visitor's own copy of
+// the sample (server/demo/sessions.js).
+if (DEMO) app.use('/api', demoUploadsOff);
 if (DEMO) app.use('/api', demoVisitor);
 
 // Read-only guard for the public tunnel: reject guest writes and owner-only
@@ -164,8 +167,9 @@ app.use('/api', (req, res, next) => {
 // express.json holds each to its limit while it arrives: past it nothing more
 // is kept or parsed, and the rest is drained before the 413, so the browser
 // reads that answer rather than a dropped connection.
+// Demo mode has no file to take: those routes are answered above.
 const UPLOAD_LIMIT_MB = 20;
-app.use(['/api/ratings/import', '/api/state'], express.json({ limit: `${UPLOAD_LIMIT_MB}mb` }));
+if (!DEMO) app.use(['/api/ratings/import', '/api/state'], express.json({ limit: `${UPLOAD_LIMIT_MB}mb` }));
 app.use(express.json({ limit: '200kb' }));
 
 // Every API request runs as one user (lib/user.js): the owner, a signed-in

@@ -19,6 +19,15 @@ const dataDir = DEMO
     ? path.resolve(process.env.DATA_DIR)
     : fileURLToPath(new URL('../data/', import.meta.url));
 fs.mkdirSync(dataDir, { recursive: true });
+// The demo's folder (the sample and every visitor's copy) goes with the
+// process, however it ends: a stop signal, a failed start, a crash. Only a
+// SIGKILL can leave it, and the next start makes a new one.
+if (DEMO) {
+  process.on('exit', () => {
+    try { fs.rmSync(dataDir, { recursive: true, force: true }); } catch { /* nothing more to do on the way out */ }
+  });
+  for (const sig of ['SIGTERM', 'SIGINT']) process.once(sig, () => process.exit(0));
+}
 const dbPath = path.join(dataDir, 'reelpicks.db');
 // Exported for the status diagnostics: "where is my data actually living?" is
 // the first question on a deployment whose volume may not be mounted.

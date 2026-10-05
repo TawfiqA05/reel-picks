@@ -828,9 +828,10 @@ that one variable and nothing else. It's the demo linked at the top.
   chance come from the same code as the real thing.
 - Sam starts with 150 ratings, a watch log, a watchlist, a few notes, an I'm going plan
   and a pick sent by Maya, so every screen has something on it.
-- Each visitor gets a private copy of that database, named by a cookie. Nobody else sees
-  what they do, and their copy is deleted an hour after it was made, or after half an hour
-  without a request.
+- Each visitor gets a private copy of that database, named by a cookie, unless the demo
+  is full (150 copies at once, and 50 new ones an hour from one address), and then they're
+  asked to try again in a bit. Nobody else sees what they do, and their copy is deleted an
+  hour after it was made, or after half an hour without a request.
 - It never opens `DATA_DIR` or `./data`, reads no `.env` and no key, and nothing leaves the
   server: TMDB and OMDb are answered from `server/demo/snapshot.json`, AMC from the made-up
   theaters, and everything else (drive times, place lookups, push) acts as if offline.

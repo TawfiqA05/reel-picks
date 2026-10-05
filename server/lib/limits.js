@@ -5,6 +5,8 @@
 //   search    the Rate tab's TMDB search
 //   place     home-base lookups (Nominatim asks for one request a second)
 //   note      saving or deleting a note on a rating (lib/notes.js)
+//   newCopy   demo mode only: a new visitor's copy of the sample, counted by
+//             address (server/demo/sessions.js)
 //
 // Friends get room for far more than a busy evening; the guest link, keyed
 // by address (lib/guest.js clientAddress), gets less. Of these the guest can
@@ -16,6 +18,7 @@
 const LIMITS = {
   friend: { newFilm: 200, search: 300, place: 30, note: 300 },
   guest: { newFilm: 20, search: 30, place: 3, note: 0 },
+  demo: { newCopy: 50 },
 };
 const WINDOW_MS = 3600 * 1000;
 export const LIMIT_MESSAGE = 'Slow down a bit, try again in a few minutes.';

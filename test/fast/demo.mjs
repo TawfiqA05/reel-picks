@@ -25,6 +25,8 @@
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import http from 'node:http';
+import net from 'node:net';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { suite } from '../lib/check.mjs';
@@ -321,6 +323,196 @@ await S.step('crashes: a copy that can\'t be made or dropped gets an answer, and
   } finally {
     await disk.stop();
   }
+});
+
+// ================================================================ load
+// Each of these runs its own demo server "on Railway" (canaryEnv), with its
+// temp folder inside this suite's folder, so its copies can be counted.
+// Visitors are told apart by X-Real-IP, as Railway's edge sets it; the
+// addresses are documentation ones (198.51.100.0/24).
+const FULL = 'The demo is full right now. Try again in a bit.';
+const LIMIT_PER_ADDRESS = 50;
+const MAX = 150;
+async function loadServer(label) {
+  const tmp = path.join(dir, `tmp-${label}`);
+  fs.mkdirSync(tmp);
+  const s = await start(label, { ...canaryEnv, DEMO_MODE: '1', TMPDIR: tmp }, 'Demo sample ready');
+  const made = fs.readdirSync(tmp).find((n) => n.startsWith('reel-picks-demo-'));
+  s.tmp = tmp;
+  s.folder = made ? path.join(tmp, made) : null;
+  s.copies = () => fs.readdirSync(path.join(s.folder, 'visitors')).filter((f) => f.endsWith('.db')).length;
+  return s;
+}
+// One visitor with a cookie jar, from one address (or none).
+function from(s, ip) {
+  const v = visitor(s);
+  v.call = async (method, p, body) => {
+    const res = await fetch(s.base + p, {
+      method, redirect: 'manual',
+      headers: { ...(ip ? { 'x-real-ip': ip } : {}), ...(v.cookie ? { cookie: v.cookie } : {}), ...(body !== undefined ? { 'content-type': 'application/json' } : {}), origin: s.base },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const set = res.headers.get('set-cookie') || '';
+    const m = set.match(/rp_demo=([^;]+)/);
+    if (m) { v.cookie = `rp_demo=${m[1]}`; v.ids.push(m[1]); }
+    const text = await res.text();
+    let json = null; try { json = JSON.parse(text); } catch { /* not JSON */ }
+    return { status: res.status, json, text, setCookie: set };
+  };
+  return v;
+}
+const cookieless = (s, ip, p = '/api/version') => from(s, ip).call('GET', p);
+const statuses = (list) => [...new Set(list.map((r) => r.status))].join('/');
+// A POST whose body is sent only in part: resolves with the answer, or with
+// status 0 when none came within `ms`. `.rq` hangs it up.
+function partial(s, p, { ip, length, sent = 1024, ms = 3000 } = {}) {
+  const u = new URL(s.base + p);
+  const rq = http.request({ host: '127.0.0.1', port: u.port, method: 'POST', path: u.pathname, headers: { 'content-type': 'application/json', 'content-length': String(length), ...(ip ? { 'x-real-ip': ip } : {}) } });
+  const done = new Promise((resolve) => {
+    const t = setTimeout(() => resolve({ status: 0, text: `no answer in ${ms} ms` }), ms);
+    rq.on('response', (res) => {
+      let text = ''; res.on('data', (d) => { text += d; });
+      res.on('end', () => { clearTimeout(t); let json = null; try { json = JSON.parse(text); } catch { /* not JSON */ } resolve({ status: res.statusCode, text, json }); });
+    });
+    rq.on('error', () => { clearTimeout(t); resolve({ status: 0, text: 'hung up' }); });
+  });
+  rq.write('['.padEnd(sent, ' '));
+  done.rq = rq;
+  return done;
+}
+const used = new Set(); // every address sent, to look for afterwards
+const ipOf = (n) => { const ip = `198.51.100.${n}`; used.add(ip); return ip; };
+// No address may be written anywhere: not in the server's output, not in any
+// file in its temp folder (the sample and every copy).
+function noAddressWritten(s, label) {
+  const files = [];
+  const walk = (d) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p); else files.push(p); } };
+  if (s.folder && fs.existsSync(s.folder)) walk(s.folder);
+  const hits = files.filter((f) => { const b = fs.readFileSync(f); return [...used].some((ip) => b.includes(ip)); });
+  const outHit = [...used].some((ip) => s.out.text.includes(ip));
+  S.check(`${label}: no visitor address is in the server's output or in any of its ${files.length} files`, files.length > 0 && !hits.length && !outHit, `${hits.map((f) => path.basename(f)).join(', ')}${outHit ? ' + output' : ''}`);
+}
+
+await S.step('load: a big body to an upload route is refused before it is read', async () => {
+  const s = await loadServer('body');
+  try {
+    for (const p of ['/api/state', '/api/ratings/import']) {
+      const before = s.copies();
+      const q = partial(s, p, { length: 15 * 1024 * 1024 });
+      const r = await q;
+      q.rq.destroy();
+      S.check(`POST ${p} with 15 MB on the way is answered "Off in the demo." after 1 KB of it`, r.status === 403 && r.json?.error === 'Off in the demo.', `${r.status} ${r.text.slice(0, 100)}`);
+      S.check(`POST ${p} made no visitor copy`, s.copies() === before, `${before} -> ${s.copies()}`);
+    }
+    const small = await from(s, ipOf(1)).call('POST', '/api/state', { ratings: [] });
+    S.check('a small body to the same route gets the same answer', small.status === 403 && small.json?.error === 'Off in the demo.' && small.json?.demoOff === true, `${small.status} ${small.text.slice(0, 100)}`);
+    S.check('the demo is still running', s.alive());
+  } finally { await s.stop(); }
+});
+
+await S.step(`load: one address makes at most ${LIMIT_PER_ADDRESS} new copies an hour`, async () => {
+  const s = await loadServer('perip');
+  try {
+    const real = from(s, ipOf(21));
+    const first = await real.call('GET', '/api/status');
+    S.check('a visitor gets their copy', first.status === 200 && real.cookie, `${first.status}`);
+    const burst = [];
+    for (let i = 0; i < LIMIT_PER_ADDRESS; i++) burst.push(await cookieless(s, ipOf(66)));
+    S.check(`${LIMIT_PER_ADDRESS} cookie-less calls from one address each get a copy`, burst.every((r) => r.status === 200 && /rp_demo=/.test(r.setCookie)), statuses(burst));
+    const over = await cookieless(s, ipOf(66));
+    S.check(`the ${LIMIT_PER_ADDRESS + 1}st from that address gets 503 and the line, with no cookie`, over.status === 503 && over.json?.error === FULL && !/rp_demo=/.test(over.setCookie), `${over.status} ${over.text.slice(0, 100)}`);
+    S.check(`copies made: the visitor's and ${LIMIT_PER_ADDRESS}, no more`, s.copies() === 1 + LIMIT_PER_ADDRESS, `${s.copies()}`);
+    const again = await real.call('GET', '/api/ratings');
+    S.check('the visitor who was there keeps their copy (same cookie, answered)', again.status === 200 && real.ids.length === 1, `${again.status} ${real.ids.length} cookies`);
+    const other = await cookieless(s, ipOf(67));
+    S.check('another address still gets in', other.status === 200 && /rp_demo=/.test(other.setCookie), `${other.status}`);
+    const none = [];
+    for (let i = 0; i < LIMIT_PER_ADDRESS + 10; i++) none.push(await cookieless(s, null));
+    S.check(`with no address there is no per-address limit (${LIMIT_PER_ADDRESS + 10} copies made)`, none.every((r) => r.status === 200 && /rp_demo=/.test(r.setCookie)), statuses(none));
+    s.clock(61 * 60 * 1000);
+    await sleep(150);
+    const later = await cookieless(s, ipOf(66));
+    S.check('an hour later that address gets a copy again', later.status === 200 && /rp_demo=/.test(later.setCookie), `${later.status}`);
+    noAddressWritten(s, 'per address');
+  } finally { s.clock(0); await s.stop(); }
+});
+
+await S.step(`load: at the cap of ${MAX}, a burst from one address can't wipe the visitors who are there`, async () => {
+  const s = await loadServer('cap');
+  try {
+    const there = [];
+    for (let a = 0; a < MAX / LIMIT_PER_ADDRESS; a++) {
+      for (let i = 0; i < LIMIT_PER_ADDRESS; i++) { const v = from(s, ipOf(100 + a)); await v.call('GET', '/api/version'); there.push(v); }
+    }
+    S.check(`${MAX} visitors from ${MAX / LIMIT_PER_ADDRESS} addresses fill the demo`, s.copies() === MAX && there.every((v) => v.cookie), `${s.copies()}`);
+    const burst = [];
+    for (let i = 0; i < LIMIT_PER_ADDRESS + 20; i++) burst.push(await cookieless(s, ipOf(200)));
+    const got = burst.filter((r) => r.status === 200).length;
+    S.check(`a burst of ${LIMIT_PER_ADDRESS + 20} cookie-less calls from one address: ${LIMIT_PER_ADDRESS} get in, the rest get 503 and the line`, got === LIMIT_PER_ADDRESS && burst.slice(LIMIT_PER_ADDRESS).every((r) => r.status === 503 && r.json?.error === FULL), `${got} in, ${statuses(burst)}`);
+    S.check(`still ${MAX} copies`, s.copies() === MAX, `${s.copies()}`);
+    let kept = 0;
+    for (const v of there) { const before = v.ids.length; const r = await v.call('GET', '/api/version'); if (r.status === 200 && v.ids.length === before) kept++; }
+    S.check(`at least ${MAX - LIMIT_PER_ADDRESS} of the ${MAX} visitors kept their copies`, kept >= MAX - LIMIT_PER_ADDRESS, `${kept} kept`);
+    noAddressWritten(s, 'at the cap');
+  } finally { await s.stop(); }
+});
+
+await S.step(`load: with every visitor busy, the cap of ${MAX} holds`, async () => {
+  const s = await loadServer('busy');
+  const open = [];
+  try {
+    // Each of these is a visitor mid-request: their copy is made, then the
+    // body they promised never finishes arriving, so they stay busy.
+    for (let a = 0; a < MAX / LIMIT_PER_ADDRESS; a++) {
+      for (let i = 0; i < LIMIT_PER_ADDRESS; i++) open.push(partial(s, '/api/ratings', { ip: ipOf(150 + a), length: 4096, sent: 10, ms: 60000 }));
+    }
+    const filled = await until(() => s.copies() >= MAX, 20000, 100);
+    S.check(`${MAX} busy visitors, ${MAX} copies`, filled && s.copies() === MAX, `${s.copies()}`);
+    const late = await cookieless(s, ipOf(190));
+    S.check('a new visitor gets 503 and the line, with no cookie', late.status === 503 && late.json?.error === FULL && !/rp_demo=/.test(late.setCookie), `${late.status} ${late.text.slice(0, 100)}`);
+    const none = await cookieless(s, null);
+    S.check('one with no address gets the same', none.status === 503 && none.json?.error === FULL, `${none.status}`);
+    S.check(`still ${MAX} copies: nobody busy was dropped and none was added`, s.copies() === MAX, `${s.copies()}`);
+    // They finish (hang up); the next new visitor gets in, in their place.
+    for (const q of open) q.rq.destroy();
+    await Promise.all(open);
+    await sleep(300);
+    const after = await cookieless(s, ipOf(191));
+    S.check('once they hang up, a new visitor gets in', after.status === 200 && /rp_demo=/.test(after.setCookie), `${after.status} ${after.text.slice(0, 100)}`);
+    S.check(`and the count is still ${MAX}`, s.copies() === MAX, `${s.copies()}`);
+    noAddressWritten(s, 'all busy');
+  } finally { for (const q of open) q.rq.destroy(); await s.stop(); }
+});
+
+await S.step('exit: the temp folder goes however the server ends', async () => {
+  const demoFolders = (tmp) => fs.readdirSync(tmp).filter((n) => n.startsWith('reel-picks-demo-'));
+  for (const sig of ['SIGTERM', 'SIGINT']) {
+    const tmp = path.join(dir, `tmp-exit-${sig}`);
+    fs.mkdirSync(tmp);
+    await start(`exit-${sig}`, { ...canaryEnv, DEMO_MODE: '1', TMPDIR: tmp }, 'Demo sample ready');
+    const had = demoFolders(tmp).length;
+    await new Promise((r) => { const c = children[children.length - 1]; c.once('exit', r); c.kill(sig); });
+    S.check(`${sig}: the temp folder is gone`, had === 1 && demoFolders(tmp).length === 0, `${had} -> ${demoFolders(tmp).join(',')}`);
+  }
+  // A start that fails: the port is taken, so listening throws and the
+  // process ends on its own, with no signal.
+  const tmp = path.join(dir, 'tmp-exit-fail');
+  fs.mkdirSync(tmp);
+  const blocker = net.createServer();
+  await new Promise((r) => blocker.listen(0, r));
+  const port = blocker.address().port;
+  const child = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', `--import=${CANARY_PRELOAD}`, 'server/index.js'], {
+    cwd: app, env: { ...baseEnv, ...canaryEnv, DEMO_MODE: '1', TMPDIR: tmp, PORT: String(port), RP_CANARY_LOG: path.join(dir, 'canary-exit-fail.jsonl') }, stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  children.push(child);
+  let out = '';
+  child.stdout.on('data', (d) => { out += d; });
+  child.stderr.on('data', (d) => { out += d; });
+  const code = await Promise.race([new Promise((r) => child.once('exit', (c) => r(c))), sleep(20000).then(() => 'still running')]);
+  blocker.close();
+  if (code === 'still running') child.kill('SIGKILL');
+  S.check('control: the server could not start on a taken port and ended by itself', code !== 'still running' && code !== 0 && /EADDRINUSE/.test(out), `${code} ${out.slice(-200)}`);
+  S.check('a failed start leaves no temp folder', demoFolders(tmp).length === 0, demoFolders(tmp).join(','));
 });
 
 if (!process.env.RP_KEEP_TEMP) fs.rmSync(dir, { recursive: true, force: true });

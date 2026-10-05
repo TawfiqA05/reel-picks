@@ -19,3 +19,6 @@ if (DEMO && !process.env.TZ) process.env.TZ = 'America/Chicago';
 
 export const DEMO_REPO = 'https://github.com/TawfiqA05/reel-picks';
 export const DEMO_OFF = 'Off in the demo.';
+// A new visitor when every copy is taken, or when their address has made its
+// hour's worth (server/demo/sessions.js).
+export const DEMO_FULL = 'The demo is full right now. Try again in a bit.';

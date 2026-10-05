@@ -16,6 +16,10 @@
 // Everything else (rating, watchlist, Not for me, I'm going, Send a pick
 // without a note, search, Stats, What should I watch?) works as on the real
 // app, in the visitor's own copy.
+//
+// The two imports are refused by uploadsOff instead, which index.js mounts
+// ahead of the body parsers and the visitor's copy: their bodies can be
+// 20 MB on the real app, and the demo reads none of it.
 import jpeg from 'jpeg-js';
 import { Router } from 'express';
 import { get } from '../db.js';
@@ -40,8 +44,6 @@ guard.post('/theatre', off);
 guard.post('/theatres/follow', off);
 guard.delete('/theatres/follow/:id', off);
 guard.post('/theatres/primary', off);
-guard.post('/ratings/import', off);
-guard.post('/state', off);
 guard.get('/backup/latest', off);
 guard.post('/offsite/upload', off);
 
@@ -85,5 +87,9 @@ guard.get('/year/poster/:id', (req, res) => {
   res.set('Cache-Control', 'private, max-age=86400');
   res.send(block(/^#[0-9a-f]{6}$/i.test(c || '') ? c : '#3a3f52'));
 });
+
+export const uploadsOff = Router();
+uploadsOff.post('/ratings/import', off);
+uploadsOff.post('/state', off);
 
 export default guard;
