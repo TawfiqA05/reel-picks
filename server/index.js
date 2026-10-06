@@ -103,9 +103,12 @@ app.use((req, res, next) => {
 // re-issued link. The owner (owner cookie, or a browser on this machine at
 // localhost) is sent to Settings from either step, without using the link.
 const firstParam = (v) => (Array.isArray(v) ? v[0] : v);
+// The token is in the page's address: same-origin keeps it from ever going
+// to another site, and still lets the Join form carry the site's own Origin
+// (with no-referrer the browser sends Origin "null", which is refused).
 const pageHeaders = (res) => res.set({
   'Cache-Control': 'no-store',
-  'Referrer-Policy': 'no-referrer', // the token is in the URL
+  'Referrer-Policy': 'same-origin',
   'X-Robots-Tag': 'noindex, nofollow',
 });
 
@@ -120,12 +123,13 @@ app.use((req, res, next) => {
 });
 
 // A form POST from our own Join page: the browser marks it same-origin
-// (Sec-Fetch-Site), or at least sends our own Origin. Anything else — another
-// site's form, a request with no provenance at all — is refused.
+// (Sec-Fetch-Site), or, in one that doesn't (Safari before 16.4), sends our
+// own Origin. Anything else is refused: another site's form, Origin "null",
+// no Origin at all (a Referer alone included).
 function sameOriginPost(req) {
   const site = req.get('sec-fetch-site');
   if (site) return site === 'same-origin';
-  const from = req.get('origin') || req.get('referer');
+  const from = req.get('origin');
   if (!from) return false;
   try { return new URL(from).host === req.get('host'); } catch { return false; }
 }

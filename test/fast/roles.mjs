@@ -93,7 +93,7 @@ await S.step('the invite flow', async () => {
       const text = await r.text();
       S.check(`${m} invite link as "${ua.slice(0, 24)}" shows the Join page and sets no cookie`, r.status === 200 && !r.headers.get('set-cookie') && (m === 'HEAD' || /<form/i.test(text)), `${r.status}`);
       if (m === 'GET') {
-        S.check('the invite page sends Referrer-Policy: no-referrer', r.headers.get('referrer-policy') === 'no-referrer');
+        S.check('the invite page sends Referrer-Policy: same-origin', r.headers.get('referrer-policy') === 'same-origin');
         S.check('the invite page is Cache-Control: no-store', /no-store/.test(r.headers.get('cache-control') || ''));
       }
     }
@@ -145,6 +145,16 @@ await S.step('the invite flow', async () => {
   const ownerAs = `rp_user=v1.1.${ver2}.${exp2}.${sig2}`;
   S.check('the new session\'s cookie is the handle kind', cookieD2.startsWith('rp_user=v2.'));
   S.check('a friend cookie edited to user 1 is refused', (await w.api('GET', '/api/friends', { as: { headers: { 'cf-ray': 'test', cookie: ownerAs } } })).status === 403);
+  // Safari before 16.4 sends no Sec-Fetch-Site: the Join page's own Origin is
+  // what lets it in. Its Referer alone is not enough.
+  const E = await mk('Old Safari');
+  const refOnly = await join(E.token, { referer: `${base()}/?invite=${E.token}` });
+  S.check('invite join is refused with our own Referer but no Origin', refOnly.status === 403 && !refOnly.headers.get('set-cookie'), `${refOnly.status}`);
+  const old = await join(E.token, { origin: base() });
+  S.check('a join with the site\'s own Origin and no Sec-Fetch-Site works', old.status === 303 && (old.headers.get('set-cookie') || '').startsWith('rp_user=') && /onboarding/.test(old.headers.get('location') || ''), `${old.status} ${old.headers.get('location')}`);
+  const expired = await fetch(`${base()}/?invite=${E.token}`, { headers: { 'cf-ray': 'test' } });
+  await expired.text();
+  S.check('the expired page sends Referrer-Policy: same-origin', expired.status === 410 && expired.headers.get('referrer-policy') === 'same-origin', `${expired.status} ${expired.headers.get('referrer-policy')}`);
 });
 
 // ---------------------------------------------------------------- Railway, GUEST_MODE missing
