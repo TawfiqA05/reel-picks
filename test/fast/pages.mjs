@@ -272,6 +272,51 @@ await S.step('favicon: the app\'s own icon', async () => {
   S.check('noindex: /favicon.ico', hdr(n, 'x-robots-tag') === NOINDEX, hdr(n, 'x-robots-tag'));
 });
 
+// The security headers (server/lib/headers.js) on every kind of answer, in
+// both modes, the refusals included. The Join and expired pages keep their
+// own Referrer-Policy (same-origin), so the Join form carries the site's
+// Origin while the invite link never leaves the site.
+const SITE_REFERRER = 'strict-origin-when-cross-origin';
+await S.step('headers: every answer carries the security headers', async () => {
+  const inv = await w.api('POST', '/api/friends', { body: { name: 'Header Test' } });
+  const token = new URL(inv.json.invite, 'http://x').searchParams.get('invite');
+  const join = { ...GUEST, 'content-type': 'application/x-www-form-urlencoded' };
+  const answers = [
+    ['the page', 'GET', '/', {}],
+    ['the page as a guest', 'GET', '/', GUEST],
+    ['the stylesheet', 'GET', '/styles.css', GUEST],
+    ['a static script', 'GET', '/js/app.js', GUEST],
+    ['the service worker', 'GET', '/sw.js', GUEST],
+    ['an icon', 'GET', '/icons/icon.svg', GUEST],
+    ['robots.txt', 'GET', '/robots.txt', GUEST],
+    ['/favicon.ico', 'GET', '/favicon.ico', GUEST],
+    ['the owner\'s API', 'GET', '/api/status', {}],
+    ['a friend\'s API', 'GET', '/api/settings', friend.headers],
+    ['the guest\'s API', 'GET', '/api/recommendations', GUEST],
+    ['a guest refused an owner route', 'GET', '/api/stats', GUEST],
+    ['a cross-site change refused', 'PUT', '/api/settings', { 'sec-fetch-site': 'cross-site', 'content-type': 'application/json' }, '{}'],
+    ['a JSON 404', 'GET', '/api/no-such-route', {}],
+    ['the not-found page', 'GET', '/no-such-page', GUEST],
+    ['the error page (a Join form far too big)', 'POST', '/invite/join', { ...join, 'sec-fetch-site': 'same-origin' }, `token=${'a'.repeat(5000)}`],
+    ['the off-Railway Host refusal', 'GET', '/', { host: 'example.com' }],
+    ['the owner unlock', 'GET', '/?owner=wrong', GUEST],
+    ['the Join page', 'GET', `/?invite=${token}`, GUEST, null, 'same-origin'],
+    ['the expired page', 'GET', '/?invite=not-a-real-invite-token-at-all', GUEST, null, 'same-origin'],
+    ['a Join from another site', 'POST', '/invite/join', { ...join, 'sec-fetch-site': 'cross-site' }, 'token=x', 'same-origin'],
+  ];
+  for (const [label, method, p, headers, body = null, referrer = SITE_REFERRER] of answers) {
+    const r = await raw(method, p, headers, body);
+    S.check(`headers: ${label}: Referrer-Policy ${referrer}`, r.status > 0 && r.headers['referrer-policy'] === referrer, `${r.status} ${r.headers['referrer-policy']}`);
+    S.check(`headers: ${label}: nosniff and no framing`, r.headers['x-content-type-options'] === 'nosniff' && r.headers['x-frame-options'] === 'DENY', `${r.status} ${r.headers['x-content-type-options']} ${r.headers['x-frame-options']}`);
+    S.check(`headers: ${label}: no Strict-Transport-Security`, !r.headers['strict-transport-security'], r.headers['strict-transport-security']);
+  }
+  for (const p of ['/', '/js/app.js', '/api/status', '/no-such-page']) {
+    const r = await D.get(p);
+    S.check(`headers: demo ${p}: Referrer-Policy ${SITE_REFERRER}`, r.headers.get('referrer-policy') === SITE_REFERRER, `${r.status} ${r.headers.get('referrer-policy')}`);
+    S.check(`headers: demo ${p}: nosniff and no framing`, r.headers.get('x-content-type-options') === 'nosniff' && r.headers.get('x-frame-options') === 'DENY');
+  }
+});
+
 await demo.stop();
 fs.rmSync(demoDir, { recursive: true, force: true });
 await w.close();

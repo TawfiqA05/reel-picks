@@ -10,6 +10,7 @@ import {
 } from './lib/guest.js';
 import { FRIEND_COOKIE, FRIEND_TTL_MS, findInvite, redeemInvite, signFriendCookie, touchLastSeen } from './lib/accounts.js';
 import { joinPage, expiredPage, notFoundPage, errorPage } from './lib/invitePage.js';
+import { securityHeaders } from './lib/headers.js';
 import { getSetting, db, dataDir } from './db.js';
 import { refreshAll, shouldAutoRefresh, retryIfDue, state as refreshState } from './lib/refresh.js';
 import { runAs } from './lib/user.js';
@@ -50,6 +51,8 @@ app.disable('x-powered-by');
 // below), since that is how they read this; link previews ignore it. The
 // demo is meant to be found.
 if (!DEMO) app.use((req, res, next) => { res.set('X-Robots-Tag', 'noindex, nofollow'); next(); });
+// The security headers (lib/headers.js), on every answer, refusals included.
+app.use(securityHeaders);
 
 // Off Railway, only requests addressed to this machine are answered: a page
 // on another site can point its own hostname at 127.0.0.1 (DNS rebinding) and
@@ -67,8 +70,6 @@ app.use((req, res, next) => {
 // Gzip or Brotli for anything worth it: the Picks list alone is ~900 KB of
 // JSON and ~70 KB compressed.
 app.use(compression({ threshold: 1024 }));
-// Nothing here is meant to be framed or sniffed as another type.
-app.use((req, res, next) => { res.set({ 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY' }); next(); });
 
 // Owner unlock: ?owner=<OWNER_TOKEN> sets a signed, HttpOnly cookie and then 302s
 // to a token-free URL, so the secret never lands in history, Referer, or a link
