@@ -195,7 +195,11 @@ export async function importFiles(page, w, input, files, done, { result = '.impo
       window[key] = seen;
     }, [key, result]);
     await page.locator(input).setInputFiles(files);
-    const ok = await page.waitForFunction(`window[${JSON.stringify(key)}]?.changes > 0 && (${done})()`, null, { timeout }).then(() => true, () => false);
+    // A function, not a string: Playwright runs a string through eval() on
+    // every check after the first, and the app's Content-Security-Policy
+    // refuses that. A function is built once.
+    const settledNow = new Function('key', `return window[key]?.changes > 0 && (${done})();`);
+    const ok = await page.waitForFunction(settledNow, key, { timeout }).then(() => true, () => false);
     const text = (await page.locator(result).first().textContent({ timeout: 2000 }).catch(() => null)) ?? '';
     if (ok) return text;
     const changes = await page.evaluate((key) => window[key]?.changes, key).catch(() => null);
