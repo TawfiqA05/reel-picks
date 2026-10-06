@@ -91,10 +91,22 @@ export async function open(browser, w, {
 
 export function watch(page, w, tag, errors, { allow403 = false } = {}) {
   const base = () => w.base;
+  // A screenshot in WebKit adds a <style> of Playwright's own to the page,
+  // which the app's Content-Security-Policy refuses. That one line, logged
+  // while a screenshot is being taken, is the tool's and not the app's.
+  let shooting = 0;
+  if (page.context().browser()?.browserType().name() === 'webkit') {
+    const shot = page.screenshot.bind(page);
+    page.screenshot = async (...a) => {
+      shooting++;
+      try { return await shot(...a); } finally { setTimeout(() => { shooting--; }, 250); }
+    };
+  }
   page.on('console', (m) => {
     if (m.type() !== 'error') return;
     const t = m.text();
     if (/ERR_BLOCKED_BY_CLIENT/.test(t)) return; // a refused outside request, recorded in `outside`
+    if (shooting && /^Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline'/.test(t)) return;
     if (allow403 && /status of 403/.test(t)) return;
     errors.push(`${tag} console: ${t.slice(0, 200)} @${page.url().replace(base(), '')}`);
   });

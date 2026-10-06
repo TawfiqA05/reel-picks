@@ -65,12 +65,14 @@ const FONTS = ['Big Shoulders Display', 'IBM Plex Sans'];
 // shows its own no-showtimes state, which design.mjs covers on its own day).
 async function designFindings(page) {
   await page.mouse.move(1, 1);
+  // A constructed sheet: the page's Content-Security-Policy refuses an added <style>.
   await page.evaluate(() => {
-    const st = document.createElement('style'); st.id = 'probe-scope';
-    st.textContent = 'body * { visibility: hidden !important; transition: none !important; } .year-sheet, .year-sheet *, .year-entry, .year-entry * { visibility: visible !important; }';
-    document.head.appendChild(st);
+    const st = new CSSStyleSheet();
+    st.replaceSync('body * { visibility: hidden !important; transition: none !important; } .year-sheet, .year-sheet *, .year-entry, .year-entry * { visibility: visible !important; }');
+    window.__probeScope = st;
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, st];
   });
-  try { return await probe(page); } finally { await page.evaluate(() => document.getElementById('probe-scope')?.remove()); }
+  try { return await probe(page); } finally { await page.evaluate(() => { document.adoptedStyleSheets = document.adoptedStyleSheets.filter((x) => x !== window.__probeScope); }); }
 }
 async function probe(page) {
   const bad = [];
@@ -271,7 +273,8 @@ await S.step('viewer: tap, swipe, keys, close and focus', async () => {
   const best = await cardNow(p.page);
   S.check('viewer: the highest-rated card shows their note', best.kind === 'best' && best.text.includes(NOTE), best.text.slice(0, 120));
   // The control for the design checks: a card broken on purpose is caught.
-  await p.page.addStyleTag({ content: '.yr-title { font-size: 16px !important; text-transform: uppercase !important; border: 1px solid var(--text) !important; } .yr-kicker { color: rgb(255, 0, 170) !important; }' });
+  // A constructed sheet: the page's Content-Security-Policy refuses an added <style>.
+  await p.page.evaluate((css) => { const sheet = new CSSStyleSheet(); sheet.replaceSync(css); document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]; }, '.yr-title { font-size: 16px !important; text-transform: uppercase !important; border: 1px solid var(--text) !important; } .yr-kicker { color: rgb(255, 0, 170) !important; }');
   const caught = (await designFindings(p.page)).join(' || ');
   S.check('viewer: the design checks catch a card broken on purpose (the control)', /type: size 16px/.test(caught) && /words: capitals/.test(caught) && /outlined: h3\.yr-title/.test(caught) && /colour rgb\(255, 0, 170\)/.test(caught), caught.slice(0, 500));
   S.check('viewer: no console error or failed request', !p.errors.length, p.errors.slice(0, 3).join(' | '));

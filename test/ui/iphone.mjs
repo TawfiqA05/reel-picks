@@ -437,7 +437,8 @@ await S.step('controls: the measures catch planted faults', async () => {
     const brandBox = () => page.evaluate(() => { const r = document.querySelector('.app-header .brand').getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; });
     const inkNow = async () => { const png = readPng(await page.screenshot()); return inkShare(png, await brandBox(), png.width / 390); };
     const top = await inkNow();
-    await page.addStyleTag({ content: '.app-header .brand { color: transparent !important; text-shadow: none !important; } .app-header .brand > * { visibility: hidden !important; }' });
+    // A constructed sheet: the page's Content-Security-Policy refuses an added <style>.
+    await page.evaluate((css) => { const sheet = new CSSStyleSheet(); sheet.replaceSync(css); document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]; }, '.app-header .brand { color: transparent !important; text-shadow: none !important; } .app-header .brand > * { visibility: hidden !important; }');
     await page.evaluate(() => window.scrollTo(0, 900)); await page.waitForTimeout(400);
     const share = await inkNow();
     // The same rule the header checks use: under half the ink it had at the top.

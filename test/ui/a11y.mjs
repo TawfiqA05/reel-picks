@@ -255,11 +255,12 @@ async function selfTest(browser) {
       const b1 = document.createElement('button'); b1.textContent = 'planted'; b1.style.cssText = 'outline: none !important';
       document.querySelector('#main').prepend(b1); b1.focus(); out.noRing = K.stop().issues.join('; ');
       b1.style.cssText = 'outline: 2px solid rgb(0,0,0,0.02) !important; outline-offset: 2px'; out.faint = K.stop().issues.join('; ');
-      const st = document.createElement('style'); st.textContent = '#planted-p { position: relative; outline: none !important } #planted-p::after { content: ""; position: absolute; inset: -4px; outline: 2px solid currentColor } #planted-q { outline: none !important } #planted-q::after { content: ""; display: inline-block; width: 2px; height: 2px; outline: 2px solid currentColor }';
-      document.head.appendChild(st);
+      // A constructed sheet: the page's Content-Security-Policy refuses an added <style>.
+      const st = new CSSStyleSheet(); st.replaceSync('#planted-p { position: relative; outline: none !important } #planted-p::after { content: ""; position: absolute; inset: -4px; outline: 2px solid currentColor } #planted-q { outline: none !important } #planted-q::after { content: ""; display: inline-block; width: 2px; height: 2px; outline: 2px solid currentColor }');
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, st];
       b1.style.cssText = 'outline: none'; b1.id = 'planted-p'; b1.focus(); out.pseudo = K.stop().issues.join('; ');
       b1.id = 'planted-q'; b1.focus(); out.tinyPseudo = K.stop().issues.join('; ');
-      b1.id = ''; st.remove();
+      b1.id = ''; document.adoptedStyleSheets = document.adoptedStyleSheets.filter((x) => x !== st);
       b1.style.cssText = 'position: fixed; top: 10px; left: 120px; z-index: 1'; b1.focus(); out.behind = K.stop().issues.join('; ');
       b1.remove();
       const d = document.createElement('div'); d.style.cssText = 'cursor: pointer'; d.textContent = 'click me'; document.querySelector('#main').prepend(d);

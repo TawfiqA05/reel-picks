@@ -331,10 +331,33 @@ async function main() {
   // ---- headers, cross-site posts, static files
   await S.step('HTTP headers', async () => {
     const r = await fetch(`${base()}/`, { headers: { 'cf-ray': 'test' } });
-    await r.text();
+    const page = await r.text();
     S.check('no X-Powered-By header', !r.headers.get('x-powered-by'));
     S.check('X-Content-Type-Options: nosniff on pages', r.headers.get('x-content-type-options') === 'nosniff');
     S.check('pages refuse framing', /frame-ancestors|DENY|SAMEORIGIN/i.test(`${r.headers.get('content-security-policy')} ${r.headers.get('x-frame-options')}`));
+    // The Content-Security-Policy: the page's inline scripts by hash, as the
+    // browser hashes them (the text between the tags), and nothing inline
+    // beyond them.
+    const csp = r.headers.get('content-security-policy') || '';
+    const dir = Object.fromEntries(csp.split(';').map((d) => d.trim().split(/\s+/)).filter((a) => a[0]).map(([k, ...v]) => [k, v]));
+    const hashes = (html) => [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].filter(([, a]) => !/\bsrc=/.test(a))
+      .map(([, , b]) => `'sha256-${crypto.createHash('sha256').update(b, 'utf8').digest('base64')}'`);
+    const own = hashes(page);
+    S.check('the page has its two inline scripts', own.length === 2, `${own.length}`);
+    S.check('CSP: scripts from the site and the page\'s two inline scripts by sha256 only', JSON.stringify(dir['script-src']) === JSON.stringify(["'self'", ...own]), JSON.stringify(dir['script-src']));
+    S.check('CSP: no unsafe-inline, unsafe-eval or nonce', csp && !/unsafe-inline|unsafe-eval|nonce-/.test(csp), csp);
+    S.check('CSP: forms go to the site only, and nothing may frame a page', dir['form-action']?.join() === "'self'" && dir['frame-ancestors']?.join() === "'none'", csp);
+    S.check('CSP: images from the site, TMDB and the year recap\'s blob only', dir['img-src']?.join(' ') === "'self' https://image.tmdb.org blob:", dir['img-src']?.join(' '));
+    S.check('CSP: no plugin, and no base address', dir['object-src']?.join() === "'none'" && dir['base-uri']?.join() === "'none'", csp);
+    S.check('CSP: enforced, not report-only', !r.headers.get('content-security-policy-report-only'));
+    const tok = new URL((await req(OWNER, 'POST', '/api/friends', { body: { name: 'Csp Test' }, headers: { origin: base() } })).json.invite, 'http://x').searchParams.get('invite');
+    for (const [label, p] of [['the Join page', `/?invite=${tok}`], ['the expired page', '/?invite=no-such-invite-token'], ['the not-found page', '/no-such-page']]) {
+      const x = await fetch(`${base()}${p}`, { headers: { 'cf-ray': 'test' } });
+      const t = await x.text();
+      const h = hashes(t);
+      S.check(`CSP: ${label} carries the policy, and its inline script is allowed by hash`, x.headers.get('content-security-policy') === csp && h.length >= 1 && h.every((y) => dir['script-src']?.includes(y)), `${x.status} ${h.join(' ')}`);
+    }
+    S.check('no Strict-Transport-Security header', !r.headers.get('strict-transport-security'));
   });
   await S.step('a change from another site is refused', async () => {
     const s = await raw('POST', '/api/friends/999999/revoke', { host: `localhost:${port()}`, origin: 'https://evil.example', 'content-type': 'text/plain' }, 'x');

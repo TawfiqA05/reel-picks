@@ -287,7 +287,18 @@ const PERMISSIONS = [
   ...['camera', 'microphone', 'payment', 'usb', 'serial', 'hid', 'bluetooth', 'midi', 'display-capture', 'magnetometer', 'xr-spatial-tracking',
     'screen-wake-lock', 'idle-detection', 'browsing-topics', 'clipboard-read', 'local-fonts', 'window-management', 'autoplay'].map((f) => `${f}=()`),
 ].join(', ');
+// Scripts from the site and the page's two inline scripts by their sha256
+// (worked out here from the page as served), styles from the site and
+// Google Fonts, TMDB's images, the trailer's player, forms to the site only.
+const sha = (body) => `'sha256-${crypto.createHash('sha256').update(body, 'utf8').digest('base64')}'`;
+const inlineScripts = (html) => [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].filter(([, a]) => !/\bsrc=/.test(a)).map(([, , b]) => b);
+const policyFor = (hashes) => [
+  "default-src 'self'", `script-src 'self' ${hashes.join(' ')}`, "style-src 'self' https://fonts.googleapis.com", 'font-src https://fonts.gstatic.com',
+  "img-src 'self' https://image.tmdb.org blob:", 'frame-src https://www.youtube-nocookie.com', "connect-src 'self'", "object-src 'none'",
+  "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'",
+].join('; ');
 await S.step('headers: every answer carries the security headers', async () => {
+  const CSP = policyFor(inlineScripts((await raw('GET', '/', GUEST)).text).map(sha));
   const inv = await w.api('POST', '/api/friends', { body: { name: 'Header Test' } });
   const token = new URL(inv.json.invite, 'http://x').searchParams.get('invite');
   const join = { ...GUEST, 'content-type': 'application/x-www-form-urlencoded' };
@@ -320,12 +331,14 @@ await S.step('headers: every answer carries the security headers', async () => {
     S.check(`headers: ${label}: nosniff and no framing`, r.headers['x-content-type-options'] === 'nosniff' && r.headers['x-frame-options'] === 'DENY', `${r.status} ${r.headers['x-content-type-options']} ${r.headers['x-frame-options']}`);
     S.check(`headers: ${label}: no Strict-Transport-Security`, !r.headers['strict-transport-security'], r.headers['strict-transport-security']);
     S.check(`headers: ${label}: the Permissions-Policy`, r.headers['permissions-policy'] === PERMISSIONS, r.headers['permissions-policy']);
+    S.check(`headers: ${label}: the Content-Security-Policy, enforced`, r.headers['content-security-policy'] === CSP && !r.headers['content-security-policy-report-only'], r.headers['content-security-policy']);
   }
   for (const p of ['/', '/js/app.js', '/api/status', '/no-such-page']) {
     const r = await D.get(p);
     S.check(`headers: demo ${p}: Referrer-Policy ${SITE_REFERRER}`, r.headers.get('referrer-policy') === SITE_REFERRER, `${r.status} ${r.headers.get('referrer-policy')}`);
     S.check(`headers: demo ${p}: nosniff and no framing`, r.headers.get('x-content-type-options') === 'nosniff' && r.headers.get('x-frame-options') === 'DENY');
     S.check(`headers: demo ${p}: the Permissions-Policy`, r.headers.get('permissions-policy') === PERMISSIONS, r.headers.get('permissions-policy'));
+    S.check(`headers: demo ${p}: the Content-Security-Policy, enforced`, r.headers.get('content-security-policy') === CSP && !r.headers.get('content-security-policy-report-only'), r.headers.get('content-security-policy'));
   }
 });
 

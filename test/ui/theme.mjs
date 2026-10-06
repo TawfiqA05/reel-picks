@@ -29,6 +29,7 @@
 //              failed request or sideways scroll, and the right theme.
 //
 // RP_THEME_SHOTS=<folder> also saves screenshots of the control there.
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { suite } from '../lib/check.mjs';
@@ -314,12 +315,18 @@ const FIRST = () => {
     window.__themeSeen = { at: performance.now(), body: Boolean(document.body), attr: document.documentElement.getAttribute('data-theme') };
   }).observe(document, { attributes: true, subtree: true, attributeFilter: ['data-theme'] });
 };
+// The probe is an inline script of the test's own: the page's
+// Content-Security-Policy is given its hash, the way it lists the app's.
+const PROBE = 'window.__bodyStart = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim().toLowerCase();';
+const PROBE_HASH = `'sha256-${crypto.createHash('sha256').update(PROBE).digest('base64')}'`;
 async function bodyStartProbe(ctx, guest) {
   await ctx.route((u) => u.pathname === '/' || u.pathname === '/index.html', async (r) => {
     if (r.request().resourceType() !== 'document') return r.fallback();
     const res = await r.fetch({ headers: { ...r.request().headers(), ...(guest ? { 'cf-ray': 'test' } : {}) } });
-    const html = (await res.text()).replace('<body>', '<body><script>window.__bodyStart = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim().toLowerCase();</script>');
-    return r.fulfill({ response: res, body: html, headers: { ...res.headers(), 'content-type': 'text/html; charset=utf-8' } });
+    const html = (await res.text()).replace('<body>', `<body><script>${PROBE}</script>`);
+    const h = res.headers();
+    const csp = (h['content-security-policy'] || '').replace("script-src 'self'", `script-src 'self' ${PROBE_HASH}`);
+    return r.fulfill({ response: res, body: html, headers: { ...h, 'content-type': 'text/html; charset=utf-8', ...(csp ? { 'content-security-policy': csp } : {}) } });
   });
 }
 await S.step('flash: the chosen theme is set before the first paint', async () => {
@@ -518,10 +525,11 @@ async function scene(p, s) {
 async function shot(page) {
   await page.waitForLoadState('networkidle').catch(() => {});
   await page.evaluate(async () => {
-    if (!document.getElementById('rp-test-render-all')) {
-      const st = document.createElement('style'); st.id = 'rp-test-render-all';
-      st.textContent = '* { content-visibility: visible !important; }';
-      document.head.appendChild(st);
+    // A constructed sheet: the page's Content-Security-Policy refuses an added <style>.
+    if (!window.__rpRenderAll) {
+      const st = new CSSStyleSheet(); st.replaceSync('* { content-visibility: visible !important; }');
+      window.__rpRenderAll = st;
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, st];
     }
     for (const i of document.querySelectorAll('img[loading="lazy"]')) i.loading = 'eager';
     await Promise.all([...document.images].map((i) => (i.complete ? null : new Promise((r) => { i.onload = i.onerror = r; setTimeout(r, 3000); }))));
