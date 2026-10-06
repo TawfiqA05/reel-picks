@@ -14,15 +14,6 @@ const S = suite('cleanup');
 const { check, step } = S;
 const status = async (w) => (await w.api('GET', '/api/status')).json;
 const lbCsv = (rows) => ['Date,Name,Year,Letterboxd URI,Rating', ...rows.map((r, i) => `2024-01-01,"${r.title}",${r.year},https://boxd.it/c${i},${r.rating}`)].join('\n');
-// The most calls that landed in any one second.
-const busiestSecond = (times) => {
-  let best = 0;
-  for (let i = 0, j = 0; i < times.length; i++) {
-    while (times[i] - times[j] >= 1000) j++;
-    best = Math.max(best, i - j + 1);
-  }
-  return best;
-};
 const tableHash = (d, t) => crypto.createHash('sha256').update(JSON.stringify(d.prepare(`SELECT * FROM "${t}" ORDER BY 1, 2`).all())).digest('hex');
 
 await step('throttle: the import matcher waits for the shared TMDB throttle', async () => {
@@ -32,15 +23,27 @@ await step('throttle: the import matcher waits for the shared TMDB throttle', as
     // each: with the year, then without).
     const rows = Array.from({ length: 16 }, (_, i) => ({ title: `Qqzx Throttle Nonfilm ${i + 1}`, year: 1990 + i, rating: 3 }));
     const since = Date.now();
-    const before = (await status(w)).lastDrain?.finishedAt || null;
+    const s0 = await status(w);
+    const before = s0.lastDrain?.finishedAt || null;
     const r = await w.api('POST', '/api/ratings/import', { body: { csv: lbCsv(rows) } });
     check('throttle: the import is queued for matching', r.status === 200 && r.json?.received === 16, `${r.status} ${r.text.slice(0, 200)}`);
     const done = await until(async () => { const s = await status(w); return s && !s.matching && (s.lastDrain?.finishedAt || null) !== before && s; }, 60000, 150);
     check('throttle: the matching run finished', Boolean(done));
-    const times = w.net().filter((e) => e.path === '/3/search/movie' && e.at >= since).map((e) => e.at).sort((a, b) => a - b);
-    check('throttle: every title was searched live', times.length >= 32, String(times.length));
-    const most = busiestSecond(times);
-    check('throttle: at most 4 live TMDB searches in any second while an import drains', most <= 4, `${most} in one second (${times.length} calls over ${times.length ? times[times.length - 1] - times[0] : 0} ms)`);
+    const searches = w.net().filter((e) => e.path === '/3/search/movie' && e.at >= since).length;
+    check('throttle: every title was searched live', searches >= 32, String(searches));
+    // The rate is judged by the app's own counts in /api/status, not by when
+    // the TMDB stand-in wrote its log line: a stall between the app letting a
+    // call through and the stand-in stamping it once made five calls sent
+    // 1,020 ms apart look like five in one second. creditsBackfill is the
+    // shared throttle's count, stamped with the same time that sets the next
+    // call's earliest start; tmdbCalls counts every live call as it goes out,
+    // throttled or not. Neither is moved by a late log line.
+    const s1 = await status(w);
+    const passed = s1.creditsBackfill.calls - s0.creditsBackfill.calls;
+    const sent = s1.tmdbCalls.calls - s0.tmdbCalls.calls;
+    check('throttle: no backfill run reset the throttle\'s count while the import drained', s1.creditsBackfill.startedAt === s0.creditsBackfill.startedAt, `${s0.creditsBackfill.startedAt} -> ${s1.creditsBackfill.startedAt}`);
+    check('throttle: every live TMDB call during the import waited its turn at the shared throttle', sent >= 32 && passed === sent, `${sent} live calls, ${passed} let through by the throttle`);
+    check('throttle: at most 4 live TMDB searches in any second while an import drains', s1.creditsBackfill.maxPerSecond <= 4 && s1.tmdbCalls.maxPerSecond <= 4, `the throttle let through at most ${s1.creditsBackfill.maxPerSecond} in a second, at most ${s1.tmdbCalls.maxPerSecond} live calls went out in a second (${sent} calls)`);
   } finally { await w.close(); }
 });
 
