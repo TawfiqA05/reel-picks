@@ -277,6 +277,16 @@ await S.step('favicon: the app\'s own icon', async () => {
 // own Referrer-Policy (same-origin), so the Join form carries the site's
 // Origin while the invite link never leaves the site.
 const SITE_REFERRER = 'strict-origin-when-cross-origin';
+// What the app uses (the home lookup's location, the year recap's share
+// sheet, the invite link's copy) and what the trailer frame asks for, on;
+// the rest off.
+const YT = '"https://www.youtube-nocookie.com"';
+const PERMISSIONS = [
+  'geolocation=(self)', 'web-share=(self)', `clipboard-write=(self ${YT})`, `fullscreen=(self ${YT})`, `accelerometer=(self ${YT})`,
+  `gyroscope=(self ${YT})`, `encrypted-media=(self ${YT})`, `picture-in-picture=(self ${YT})`, `compute-pressure=(self ${YT})`,
+  ...['camera', 'microphone', 'payment', 'usb', 'serial', 'hid', 'bluetooth', 'midi', 'display-capture', 'magnetometer', 'xr-spatial-tracking',
+    'screen-wake-lock', 'idle-detection', 'browsing-topics', 'clipboard-read', 'local-fonts', 'window-management', 'autoplay'].map((f) => `${f}=()`),
+].join(', ');
 await S.step('headers: every answer carries the security headers', async () => {
   const inv = await w.api('POST', '/api/friends', { body: { name: 'Header Test' } });
   const token = new URL(inv.json.invite, 'http://x').searchParams.get('invite');
@@ -309,11 +319,13 @@ await S.step('headers: every answer carries the security headers', async () => {
     S.check(`headers: ${label}: Referrer-Policy ${referrer}`, r.status > 0 && r.headers['referrer-policy'] === referrer, `${r.status} ${r.headers['referrer-policy']}`);
     S.check(`headers: ${label}: nosniff and no framing`, r.headers['x-content-type-options'] === 'nosniff' && r.headers['x-frame-options'] === 'DENY', `${r.status} ${r.headers['x-content-type-options']} ${r.headers['x-frame-options']}`);
     S.check(`headers: ${label}: no Strict-Transport-Security`, !r.headers['strict-transport-security'], r.headers['strict-transport-security']);
+    S.check(`headers: ${label}: the Permissions-Policy`, r.headers['permissions-policy'] === PERMISSIONS, r.headers['permissions-policy']);
   }
   for (const p of ['/', '/js/app.js', '/api/status', '/no-such-page']) {
     const r = await D.get(p);
     S.check(`headers: demo ${p}: Referrer-Policy ${SITE_REFERRER}`, r.headers.get('referrer-policy') === SITE_REFERRER, `${r.status} ${r.headers.get('referrer-policy')}`);
     S.check(`headers: demo ${p}: nosniff and no framing`, r.headers.get('x-content-type-options') === 'nosniff' && r.headers.get('x-frame-options') === 'DENY');
+    S.check(`headers: demo ${p}: the Permissions-Policy`, r.headers.get('permissions-policy') === PERMISSIONS, r.headers.get('permissions-policy'));
   }
 });
 

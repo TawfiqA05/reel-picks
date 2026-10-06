@@ -9,10 +9,15 @@
 //   saves     The app's own saves go through with and without Sec-Fetch-Site
 //             (the write check refuses Origin "null" now, so they must carry
 //             the site's own Origin).
+//   features  With the Permissions-Policy on: Use my location fills the home
+//             fields, the year recap's share call takes its image, Copy puts
+//             the invite link on the clipboard, and the trailer frame gets
+//             what it asks for. What the policy switches off is off.
 import http from 'node:http';
 import { suite } from '../lib/check.mjs';
 import { openWorld } from '../lib/world.mjs';
-import { launch, open, go } from '../lib/browser.mjs';
+import { launch, open, go, settle, toastText } from '../lib/browser.mjs';
+import { waitDialog } from '../lib/ui-helpers.mjs';
 import * as C from '../lib/catalog.mjs';
 
 const S = suite('headers');
@@ -112,6 +117,71 @@ await S.step('saves: the app\'s own saves work with and without Sec-Fetch-Site',
     }
     await px.close();
   }
+});
+
+// ------------------------------------------------------------------ features
+const TRAILER_FILM = C.PLAYING.find((f) => f.trailer);
+const PNG_BYTES = [137, 80, 78, 71, 13, 10, 26, 10];
+await S.step('features: what the Permissions-Policy leaves on works', async () => {
+  const p = await open(chromium, w, { width: 390 });
+  const policyLines = [];
+  p.page.on('console', (m) => { if (/permissions.policy|feature.policy|unrecognized feature/i.test(m.text())) policyLines.push(`${m.type()}: ${m.text().slice(0, 160)}`); });
+  await p.ctx.grantPermissions(['geolocation', 'clipboard-read', 'clipboard-write'], { origin: w.base });
+  await p.ctx.setGeolocation({ latitude: C.HOME.lat, longitude: C.HOME.lng });
+  const res = await p.page.goto(`${w.base}/#/settings`);
+  await settle(p.page, 700);
+  S.check('features: the page carries the Permissions-Policy', /^geolocation=\(self\), web-share=\(self\), /.test(res.headers()['permissions-policy'] || ''), res.headers()['permissions-policy']);
+
+  // The home lookup asks for the location (views/settings.js).
+  await p.page.locator('button', { hasText: 'Use my location' }).click();
+  await p.page.waitForFunction(() => /^(Found|Coordinates set)/.test(document.querySelector('.geo-status')?.textContent || ''), null, { timeout: 10000 }).catch(() => {});
+  const geo = await p.page.evaluate(() => ({ status: document.querySelector('.geo-status')?.textContent, lat: document.querySelector('input[placeholder="lat"]')?.value }));
+  S.check('features: Use my location gets the position and fills the home fields', /^Found /.test(geo.status || '') && Number(geo.lat) === Math.round(C.HOME.lat * 100) / 100, JSON.stringify(geo));
+
+  // The invite link is copied (views/settings/owner.js).
+  const fc = p.page.locator('.settings-group', { has: p.page.locator('.group-title', { hasText: /^Friends$/ }) });
+  await fc.locator('input[aria-label="Friend\'s name"]').fill('Copy Test');
+  await fc.locator('button', { hasText: 'Create invite link' }).click();
+  await p.page.waitForSelector('input[aria-label="Invite link for Copy Test"]', { timeout: 8000 });
+  await p.page.locator('.import-box button', { hasText: 'Copy' }).click();
+  const copied = await toastText(p.page, /copied|copy it/i);
+  S.check('features: Copy puts the invite link on the clipboard', copied === 'Link copied', copied);
+
+  // The year recap's share call (year.js): canShare with its image file.
+  const share = await p.page.evaluate((bytes) => {
+    const file = new File([new Uint8Array(bytes)], 'reel-picks-2026.png', { type: 'image/png' });
+    return { has: typeof navigator.share === 'function', can: Boolean(navigator.canShare?.({ files: [file] })) };
+  }, PNG_BYTES);
+  S.check('features: the share sheet takes the year recap\'s image', share.has && share.can, JSON.stringify(share));
+
+  // What the policy switches off is off here (each one this browser knows).
+  const off = await p.page.evaluate(() => {
+    const fp = document.featurePolicy;
+    const known = new Set(fp.features());
+    const list = ['camera', 'microphone', 'payment', 'usb', 'serial', 'hid', 'bluetooth', 'midi', 'display-capture', 'magnetometer',
+      'xr-spatial-tracking', 'screen-wake-lock', 'idle-detection', 'browsing-topics', 'clipboard-read', 'local-fonts', 'window-management', 'autoplay'];
+    return { unknown: list.filter((f) => !known.has(f)), on: list.filter((f) => known.has(f) && fp.allowsFeature(f)) };
+  });
+  console.log(`  (switched-off features this Chromium doesn't know: ${off.unknown.join(', ') || 'none'})`);
+  S.check('features: every switched-off feature this browser knows is off', !off.on.length, off.on.join(', '));
+
+  // The trailer frame (views/detail.js), for the player's own origin.
+  await go(p.page, w, `movie/${TRAILER_FILM.id}`, 500);
+  await p.page.locator('.detail-actions button', { hasText: 'Trailer' }).click();
+  await waitDialog(p.page);
+  let frame = null;
+  for (let i = 0; i < 40 && !frame; i++) { frame = p.page.frames().find((f) => /youtube-nocookie\.com\/embed\//.test(f.url())); if (!frame) await p.page.waitForTimeout(100); }
+  const allowed = frame ? await frame.evaluate(() => document.featurePolicy.allowedFeatures()) : [];
+  const want = ['fullscreen', 'accelerometer', 'clipboard-write', 'compute-pressure', 'encrypted-media', 'gyroscope', 'picture-in-picture'];
+  S.check('features: the trailer frame loads', Boolean(frame), p.page.frames().map((f) => f.url()).join(' '));
+  S.check('features: the trailer frame may use fullscreen, accelerometer, clipboard-write, compute-pressure, encrypted-media, gyroscope and picture-in-picture', frame && want.every((f) => allowed.includes(f)), want.filter((f) => !allowed.includes(f)).join(', '));
+  S.check('features: the trailer frame gets no camera, microphone, location or autoplay', frame && !['camera', 'microphone', 'geolocation', 'autoplay'].some((f) => allowed.includes(f)), allowed.join(' '));
+  await p.page.keyboard.press('Escape');
+
+  console.log(`  (policy lines in the console: ${policyLines.join(' | ') || 'none'})`);
+  S.check('features: no Permissions-Policy error in the console', !policyLines.some((l) => l.startsWith('error')), policyLines.join(' | '));
+  S.check('features: no console error or failed request', !p.errors.length, p.errors.slice(0, 3).join(' | '));
+  await p.ctx.close();
 });
 
 await chromium.close();
