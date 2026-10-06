@@ -6,10 +6,14 @@
 //             page still signs the friend in, because the page's
 //             Referrer-Policy (same-origin) lets its form carry the site's own
 //             Origin. Chromium and WebKit.
+//   saves     The app's own saves go through with and without Sec-Fetch-Site
+//             (the write check refuses Origin "null" now, so they must carry
+//             the site's own Origin).
 import http from 'node:http';
 import { suite } from '../lib/check.mjs';
 import { openWorld } from '../lib/world.mjs';
-import { launch, open } from '../lib/browser.mjs';
+import { launch, open, go } from '../lib/browser.mjs';
+import * as C from '../lib/catalog.mjs';
 
 const S = suite('headers');
 const w = S.world(await openWorld('headers'));
@@ -69,6 +73,45 @@ await S.step('join: Join works in a browser that sends no Sec-Fetch-Site', async
     await p.ctx.close();
   }
   await px.close();
+});
+
+// ------------------------------------------------------------------ saves
+await S.step('saves: the app\'s own saves work with and without Sec-Fetch-Site', async () => {
+  const film = C.PLAYING[0];
+  const listed = () => w.q('SELECT 1 FROM watchlist WHERE user_id = 1 AND tmdb_id = ?', film.id).length > 0;
+  const pressed = (page, v) => page.waitForFunction((x) => document.querySelector('.detail-actions .wl-btn')?.getAttribute('aria-pressed') === String(x), v, { timeout: 8000 }).catch(() => {});
+  for (const strip of [false, true]) {
+    const px = await proxy({ strip });
+    const how = strip ? 'without Sec-Fetch-Site' : 'with Sec-Fetch-Site';
+    for (const [engine, browser] of ENGINES) {
+      const p = await open(browser, px.world, { width: 1280 });
+      await go(p.page, px.world, `movie/${film.id}`, 500);
+      const was = listed();
+      const n0 = px.writes.length;
+      await p.page.locator('.detail-actions .wl-btn').click();
+      await pressed(p.page, !was);
+      const mid = listed();
+      await p.page.locator('.detail-actions .wl-btn').click();
+      await pressed(p.page, was);
+      // A PUT and a DELETE through the app's own request code (js/api.js).
+      const more = await p.page.evaluate(async (id) => {
+        const { api } = await import('/js/api.js');
+        const out = [];
+        try { const s = await api.settings(); await api.saveSettings({ previewsMinutes: s.previewsMinutes }); out.push('put ok'); } catch (e) { out.push(`put ${e.message}`); }
+        try { await api.hide(id, 'x'); await api.unhide(id); out.push('hide ok'); } catch (e) { out.push(`hide ${e.message}`); }
+        return out;
+      }, film.id);
+      const mine = px.writes.slice(n0);
+      S.check(`saves: ${engine} ${how}: the watchlist button saved both ways`, mid === !was && listed() === was && mine.filter((x) => x.path === '/api/watchlist/toggle' && x.status === 200).length === 2, JSON.stringify(mine.slice(0, 2)));
+      S.check(`saves: ${engine} ${how}: a settings save and a hide and unhide went through`, more.join() === 'put ok,hide ok', more.join());
+      S.check(`saves: ${engine} ${how}: every write answered 200`, mine.length >= 5 && mine.every((x) => x.status === 200), JSON.stringify(mine.map((x) => `${x.method} ${x.path} ${x.status}`)));
+      S.check(`saves: ${engine} ${how}: every write carried the site's own Origin`, mine.every((x) => x.origin === px.base), JSON.stringify(mine.map((x) => x.origin)));
+      S.check(`saves: ${engine} ${how}: the server saw ${strip ? 'no' : 'the browser\'s'} Sec-Fetch-Site`, mine.length > 0 && mine.every((x) => x.sent === 'same-origin' && x.passed === (strip ? null : 'same-origin')), JSON.stringify(mine.map((x) => [x.sent, x.passed])));
+      S.check(`saves: ${engine} ${how}: no console error or failed request`, !p.errors.length, p.errors.slice(0, 3).join(' | '));
+      await p.ctx.close();
+    }
+    await px.close();
+  }
 });
 
 await chromium.close();

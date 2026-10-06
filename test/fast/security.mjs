@@ -341,6 +341,29 @@ async function main() {
     S.check('a cross-site POST to the owner API is refused (Origin)', s.status === 403, `${s.status}`);
     const s2 = await raw('PUT', '/api/settings', { host: `localhost:${port()}`, 'sec-fetch-site': 'cross-site', 'content-type': 'application/json' }, '{"previewsMinutes":5}');
     S.check('a cross-site PUT is refused (Sec-Fetch-Site)', s2.status === 403, `${s2.status}`);
+    // Origin "null" is what a sandboxed frame, a data: page or a page with
+    // no-referrer sends: not this site's.
+    const at = { host: `localhost:${port()}`, 'content-type': 'application/json' };
+    const mins = async () => (await req(OWNER, 'GET', '/api/settings')).json?.previewsMinutes;
+    const before = await mins();
+    const n1 = await raw('PUT', '/api/settings', { ...at, origin: 'null' }, JSON.stringify({ previewsMinutes: before + 7 }));
+    S.check('a PUT with Origin null and no Sec-Fetch-Site is refused', n1.status === 403, `${n1.status}`);
+    S.check('the refused PUT changed nothing', await mins() === before, `${before} -> ${await mins()}`);
+    const n2 = await raw('POST', '/api/friends', { ...at, origin: 'null' }, '{"name":"Null Origin"}');
+    S.check('a POST with Origin null and no Sec-Fetch-Site is refused', n2.status === 403, `${n2.status}`);
+    S.check('the refused POST added no friend', !(await req(OWNER, 'GET', '/api/friends')).json?.friends?.some((f) => f.name === 'Null Origin'));
+    const n3 = await raw('DELETE', `/api/hidden/${vals.film}`, { ...at, origin: 'null' });
+    S.check('a DELETE with Origin null and no Sec-Fetch-Site is refused', n3.status === 403, `${n3.status}`);
+    // The browser's own word that the request came from this site.
+    const same = JSON.stringify({ previewsMinutes: before });
+    const s3 = await raw('PUT', '/api/settings', { ...at, 'sec-fetch-site': 'same-origin', origin: 'null' }, same);
+    S.check('Sec-Fetch-Site same-origin goes through, whatever the Origin says', s3.status === 200, `${s3.status}`);
+    const s4 = await raw('PUT', '/api/settings', { ...at, 'sec-fetch-site': 'same-origin' }, same);
+    S.check('Sec-Fetch-Site same-origin with no Origin goes through', s4.status === 200, `${s4.status}`);
+    const s5 = await raw('PUT', '/api/settings', { ...at, origin: `http://localhost:${port()}` }, same);
+    S.check('the site\'s own Origin with no Sec-Fetch-Site goes through', s5.status === 200, `${s5.status}`);
+    const s6 = await raw('PUT', '/api/settings', { ...at, 'sec-fetch-site': 'same-site', origin: `http://localhost:${port()}` }, same);
+    S.check('Sec-Fetch-Site same-site is refused', s6.status === 403, `${s6.status}`);
   });
   await S.step('static files serve no source or secret', async () => {
     for (const p of ['/../server/index.js', '/%2e%2e/server/index.js', '/js/..%2f..%2fserver%2findex.js', '/..%5c..%5cserver%5cindex.js', '/.env', '/%2e%2e/.env', '/../.env', '/data/reelpicks.db', '/../data/reelpicks.db', '/.git/config', '/..%2f.git%2fconfig', '/package.json', '/../package.json']) {

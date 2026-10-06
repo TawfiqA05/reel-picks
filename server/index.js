@@ -164,13 +164,16 @@ app.use('/api', (req, res, next) => {
 // A change from another site's page is refused before it's read: at
 // localhost the browser on this machine is the owner,
 // so a page elsewhere could otherwise post to this one. The browser marks
-// where a request came from; our own pages are same-origin.
+// where a request came from; our own pages are same-origin. Without that
+// mark the Origin decides, and "null" (a sandboxed frame, a data: page, a
+// page with no-referrer) is another site's.
 app.use('/api', (req, res, next) => {
   if (req.method === 'GET' || req.method === 'HEAD') return next();
   const site = req.get('sec-fetch-site');
+  if (site === 'same-origin') return next();
   const origin = req.get('origin');
   let foreign = site === 'cross-site' || site === 'same-site';
-  if (!foreign && origin && origin !== 'null') { try { foreign = new URL(origin).host !== req.get('host'); } catch { foreign = true; } }
+  if (!foreign && origin) { try { foreign = new URL(origin).host !== req.get('host'); } catch { foreign = true; } }
   if (foreign) return res.status(403).json({ error: 'Changes have to come from Reel Picks itself.' });
   next();
 });
