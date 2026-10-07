@@ -6,6 +6,9 @@
 //             at 320; the phone grid, the note's indent and the row estimate
 //             for rows past the first 60 follow the poster
 //   x         a small grey x with no box, still a 44 x 44 tap area
+//   stars     empty stars are outlines and filled ones solid gold, so the two
+//             differ in shape, not colour alone; as big as main's on a touch
+//             screen; stars elsewhere keep their look
 import fs from 'node:fs';
 import path from 'node:path';
 import { suite } from '../lib/check.mjs';
@@ -156,6 +159,43 @@ await S.step('x: a small grey x with no box, 44 x 44', async () => {
         const hov = await look();
         S.check(`x ${tag}: no box on hover either`, /rgba\(0, 0, 0, 0\)|transparent/.test(hov.bg), JSON.stringify(hov));
         await page.mouse.move(0, 0);
+      }
+      await p.ctx.close();
+    }
+  }
+});
+
+// ------------------------------------------------------------------ stars
+await S.step('stars: empty ones are outlines, filled ones solid gold; as big as before', async () => {
+  for (const width of [320, 390, 1280]) {
+    for (const theme of ['light', 'dark']) {
+      const tag = `${width} ${theme}`;
+      const p = await openList(width, theme);
+      const { page } = p;
+      const gold = await token(page, 'gold');
+      const st = await page.locator(`#rating-list [data-rating-id="${F2.id}"] .stars`).evaluate((wrap) => {
+        const base = getComputedStyle(wrap.querySelector('.stars-base svg')); const fill = getComputedStyle(wrap.querySelector('.stars-fill svg'));
+        let bg = null;
+        for (let e = wrap; e && !bg; e = e.parentElement) { const c = getComputedStyle(e).backgroundColor; if (c !== 'rgba(0, 0, 0, 0)') bg = c; }
+        return { baseFill: base.fill, baseStroke: base.stroke, baseWidth: parseFloat(base.strokeWidth), baseColor: base.color, fillFill: fill.fill, size: wrap.querySelector('.stars-base svg').getBoundingClientRect().height, bg: bg || getComputedStyle(document.body).backgroundColor };
+      });
+      const pal = await Promise.all(['muted', 'field-edge', 'text'].map((n) => token(page, n)));
+      const strokeRatio = st.baseStroke === 'none' ? 0 : ratio(parse(st.baseStroke), parse(st.bg));
+      S.check(`stars ${tag}: empty stars are outlines`, st.baseFill === 'none' && st.baseStroke !== 'none' && st.baseWidth >= 1.5, JSON.stringify(st));
+      S.check(`stars ${tag}: the outline is a palette colour at 3:1 or more on the page`, pal.includes(st.baseStroke) && strokeRatio >= 3, `${st.baseStroke} on ${st.bg}: ${strokeRatio.toFixed(2)}:1`);
+      S.check(`stars ${tag}: filled stars are solid gold`, st.fillFill === gold, `${st.fillFill} vs ${gold}`);
+      S.check(`stars ${tag}: at least as big as on main (${MAIN_STARS[width]} px)`, st.size >= MAIN_STARS[width] - 0.5, String(st.size));
+      if (width === 1280) {
+        // Stars elsewhere keep their look: the search results' stars on Rate.
+        await page.locator('.page > input.input.big').fill(C.CLASSICS[0].title.replace(/^The /, ''));
+        await page.waitForSelector('.search-row .stars', { timeout: 10000 });
+        const sr = await page.locator('.search-row .stars-base svg').first().evaluate((s) => getComputedStyle(s).fill);
+        S.check(`stars ${tag}: the search results' empty stars are still solid`, sr !== 'none', sr);
+        await page.locator('.page > input.input.big').fill('');
+        await go(page, w, '#/stats', 600);
+        await page.waitForSelector('.bar-row .stars', { timeout: 15000 });
+        const stats = await page.locator('.bar-row .stars-base svg').first().evaluate((s) => getComputedStyle(s).fill);
+        S.check(`stars ${tag}: the Stats stars are still solid`, stats !== 'none', stats);
       }
       await p.ctx.close();
     }
