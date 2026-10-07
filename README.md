@@ -220,7 +220,8 @@ ends, whether it fits my preferred times, Book), and tapping anywhere on the row
 Format tags are tinted by kind (IMAX blue, Dolby purple, RealD 3D teal, 70mm amber), and
 so are status tags (Back in theaters teal, Last chance red, New this week amber). The main
 button on a screen is filled, other choices are soft, and anything that removes or hides
-is soft red. Stats and Settings are plain grouped lists; only the hero, sheets and dialogs
+is soft red, apart from the small grey x on my ratings list, which asks before it removes
+anything. Stats and Settings are plain grouped lists; only the hero, sheets and dialogs
 sit in boxes. The seat line reads like "Seat by 12:05 PM · out around 3:06 PM".
 
 A few smaller things make the lists easier to read:
@@ -357,8 +358,8 @@ restores ratings and watch history.
 You can also just search and rate in the app. The quick rate flow covers about twenty
 popular films in a minute or two, and Re-run quick rate in Settings → Data brings it back.
 Under all that, my ratings list opens on the newest 60, with Show all for the rest and a
-forgiving filter box that searches every one of them. Every star rating works from the
-keyboard as well: Tab to the stars, arrow keys move half a star at a time, Enter or Space
+forgiving filter box that searches every one of them. Wherever I rate, the stars work from
+the keyboard as well: Tab to the stars, arrow keys move half a star at a time, Enter or Space
 saves, Delete or Backspace clears, and a screen reader hears the value ("3.5 stars") as
 it changes.
 
@@ -381,7 +382,7 @@ Any rating can carry a note: one line of plain text, up to 280 characters, for w
 want to remember about the film. It's never required and never slows a quick star tap.
 After the stars there's only a small "Add a note", and tapping it opens a one-line field
 right there, not a popup, with Save and Cancel. Enter saves and Escape cancels. It's there
-wherever I rate: the movie page, Rate (the search and my ratings list), the Stats sheets,
+wherever I rate: the movie page, Rate's search (and that film's row in my ratings list), the Stats sheets,
 a person page and the "Did you see it?" card on Picks. That card's rating sheet still
 closes on its own after a star tap, unless I've opened the note field.
 
