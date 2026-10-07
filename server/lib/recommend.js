@@ -16,7 +16,7 @@ import {
   finalScore, buildReason, reasonFacts, bestShowtime, showtimeFits, endTimeLabel, beThereByLabel, urgencyBoost, excludedBySettings,
 } from './ranking.js';
 import { getLastChance, dailyBreadth, computeHorizon, lineupExodus } from './leaving.js';
-import { followedTheatres, homeBase, readDistance } from './theatres.js';
+import { followedTheatres, homeBase, readDistance, lineupIds } from './theatres.js';
 import { computeRunway, runwayDates, handoffLine, goneAfterPhrase } from './runway.js';
 import { localYMD, addDays, timeLabel, weekStartFriday } from './util.js';
 import { currentUserId } from './user.js';
@@ -493,6 +493,12 @@ function splitLineup(ctx, playing) {
   return { main, nearby };
 }
 
+// This person's Coming Soon films (theatres.js lineupIds), as full rows.
+function comingSoonMovies() {
+  const ids = [...lineupIds().coming];
+  return ids.length ? all(`SELECT * FROM movies WHERE tmdb_id IN (${ids.map(() => '?').join(',')}) ORDER BY tmdb_id`, ...ids).map(hydrate) : [];
+}
+
 // The films at the current user's theatres this week (the Picks page's list
 // plus "Also nearby") and the Coming Soon films, for Stats' genre sheets.
 // Read only: unlike getRecommendations it records nothing in weekly4_log.
@@ -501,7 +507,7 @@ export function userLineup() {
   const { main, nearby } = splitLineup(ctx, all('SELECT * FROM movies WHERE playing = 1').map(hydrate));
   return {
     playing: [...main, ...nearby.map(({ m }) => m)],
-    upcoming: all('SELECT * FROM movies WHERE upcoming = 1').map(hydrate),
+    upcoming: comingSoonMovies(),
   };
 }
 
@@ -708,8 +714,7 @@ export function getRecommendations({ guest = false, lockHow = null } = {}) {
 // the owner's taste or hidden films.
 export function getComingSoon({ guest = false } = {}) {
   const ctx = buildCtx({ guest });
-  const up = all('SELECT * FROM movies WHERE upcoming = 1').map(hydrate)
-    .filter((m) => !ctx.hidden.has(m.tmdb_id));
+  const up = comingSoonMovies().filter((m) => !ctx.hidden.has(m.tmdb_id));
   // Advance screenings at this user's own theatres only.
   const advanceIds = new Set(
     all('SELECT DISTINCT tmdb_id, theatre_id FROM showtimes WHERE tmdb_id IS NOT NULL AND date > ?', ctx.weekEnd)
@@ -788,6 +793,10 @@ export function getMovieDetail(tmdbId, { guest = false } = {}) {
   if (!guest) ensurePosterColor(tmdbId);
   const ctx = buildCtx({ guest });
   const ev = evaluate(m, ctx, scoredAt(ctx, tmdbId));
+  // Playing and coming soon as this person sees them, from their own theaters.
+  const mine = lineupIds();
+  const playing = mine.playing.has(tmdbId);
+  const upcoming = mine.coming.has(tmdbId);
 
   // Full schedule (every published date) at each followed theatre that has it.
   const showtimesByTheatre = ctx.theatres
@@ -827,8 +836,8 @@ export function getMovieDetail(tmdbId, { guest = false } = {}) {
       handoff: e.handoff,
       theatres: theatreList(ctx).map(guestTheatre),
       multiTheatre: ctx.theatres.length > 1,
-      playing: Boolean(m.playing),
-      upcoming: Boolean(m.upcoming),
+      playing,
+      upcoming,
     };
   }
 
@@ -853,8 +862,8 @@ export function getMovieDetail(tmdbId, { guest = false } = {}) {
     urgencyBoost: ev.urgencyBoost,
     theatres: theatreList(ctx),
     multiTheatre: ctx.theatres.length > 1,
-    playing: Boolean(m.playing),
-    upcoming: Boolean(m.upcoming),
+    playing,
+    upcoming,
     match: match
       ? { amc_movie_id: match.amc_movie_id, amc_title: match.amc_title, confidence: match.confidence, manual: Boolean(match.manual), low: !match.manual && (match.confidence ?? 0) < 0.5 }
       : null,

@@ -11,7 +11,7 @@ import { getMovie } from '../lib/movies.js';
 import { unmatchedTitles, reviewTitles } from '../lib/match.js';
 import * as tmdb from '../lib/tmdb.js';
 import * as amc from '../lib/amc.js';
-import { followedTheatres, homeBase, readDistance, MAX_THEATRES, sharedTheatreIds } from '../lib/theatres.js';
+import { followedTheatres, homeBase, readDistance, MAX_THEATRES, sharedTheatreIds, lineupIds } from '../lib/theatres.js';
 import { localYMD } from '../lib/util.js';
 import { isGuest, ownerName } from '../lib/guest.js';
 import { currentUserId, currentUser } from '../lib/user.js';
@@ -149,7 +149,7 @@ router.get('/status', (req, res) => {
     enriching: backfillState.running,
     counts: {
       playing: get('SELECT COUNT(*) AS n FROM movies WHERE playing = 1').n,
-      upcoming: get('SELECT COUNT(*) AS n FROM movies WHERE upcoming = 1').n,
+      upcoming: lineupIds(s).coming.size,
       showtimes: get('SELECT COUNT(*) AS n FROM showtimes').n,
       ratings: ratingsCount(),
       unmatched: unmatchedCount(),

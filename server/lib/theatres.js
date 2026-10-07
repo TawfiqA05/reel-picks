@@ -47,6 +47,31 @@ export function followedTheatres(settings = getSettings()) {
   return list.map((t) => ({ ...t, short: shortName(t.name) }));
 }
 
+// What this person sees as playing this week and as coming soon, worked out
+// from their own theaters only. Playing: a showtime this week at one of
+// their theaters, or a film on the lineup with no showtime this week anywhere
+// (the TMDB fallback). Coming soon: TMDB's upcoming list (movies.upcoming,
+// a fact about the film, not a theater) plus advance screenings after this
+// week at their theaters, less what is playing for them. Showtimes at
+// theaters only other people follow change neither.
+export function lineupIds(settings = getSettings()) {
+  const today = localYMD();
+  const weekEnd = localYMD(addDays(new Date(), 6));
+  const mine = new Set(followedTheatres(settings).map((t) => t.id).filter(Boolean));
+  const playing = new Set();
+  const later = new Set();
+  const weekAnywhere = new Set();
+  for (const r of all('SELECT DISTINCT tmdb_id, theatre_id, date <= ? AS week FROM showtimes WHERE tmdb_id IS NOT NULL AND date >= ?', weekEnd, today)) {
+    if (r.week) weekAnywhere.add(r.tmdb_id);
+    if (!mine.has(String(r.theatre_id))) continue;
+    (r.week ? playing : later).add(r.tmdb_id);
+  }
+  for (const r of all('SELECT tmdb_id FROM movies WHERE playing = 1')) if (!weekAnywhere.has(r.tmdb_id)) playing.add(r.tmdb_id);
+  const coming = new Set();
+  for (const id of [...all('SELECT tmdb_id FROM movies WHERE upcoming = 1').map((r) => r.tmdb_id), ...later]) if (!playing.has(id)) coming.add(id);
+  return { playing, coming };
+}
+
 // Users whose theatres the refresh covers: the owner and every friend who
 // hasn't been revoked, owner first.
 export function activeUserIds() {

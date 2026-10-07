@@ -7,7 +7,7 @@
 import { all, get, run } from '../db.js';
 import * as tmdb from './tmdb.js';
 import { tmdbThrottle } from './backfill.js';
-import { followedTheatres } from './theatres.js';
+import { followedTheatres, lineupIds } from './theatres.js';
 import { currentUserId } from './user.js';
 import { localYMD } from './util.js';
 import { findPeople } from './people.js';
@@ -48,8 +48,10 @@ function mine(uid) {
 }
 
 // The films the app already knows for this person, as search candidates.
+// Coming soon is theirs too: TMDB's list and advance screenings at their own
+// theaters, not someone else's (theatres.js lineupIds).
 function localFilms(me) {
-  const upcoming = all('SELECT tmdb_id FROM movies WHERE upcoming = 1').map((r) => r.tmdb_id);
+  const upcoming = [...lineupIds().coming];
   const ids = [...new Set([...me.playing, ...upcoming, ...me.ratings.keys(), ...me.watchlist, ...me.hidden.keys()])];
   if (!ids.length) return [];
   const rows = new Map(all(`SELECT tmdb_id, title, year, poster, tmdb_votes FROM movies WHERE tmdb_id IN (${placeholders(ids.length)})`, ...ids).map((r) => [r.tmdb_id, r]));

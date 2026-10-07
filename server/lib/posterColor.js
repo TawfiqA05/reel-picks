@@ -87,12 +87,13 @@ async function colorOf(posterUrl) {
   return dominantColor(img);
 }
 
-// Films that need a colour: playing or coming soon, with a poster that has
-// none worked out (or one worked out from a different poster).
+// Films that need a colour: playing or coming soon (on TMDB's list, or with
+// advance showtimes somewhere), with a poster that has none worked out (or
+// one worked out from a different poster).
 function needing(limit) {
   return all(`SELECT tmdb_id, poster FROM movies
     WHERE poster IS NOT NULL AND (poster_color IS NULL OR poster_color_src IS NOT poster)
-      AND (playing = 1 OR upcoming = 1)
+      AND (playing = 1 OR upcoming = 1 OR tmdb_id IN (SELECT tmdb_id FROM showtimes WHERE tmdb_id IS NOT NULL))
     ORDER BY playing DESC LIMIT ?`, limit);
 }
 

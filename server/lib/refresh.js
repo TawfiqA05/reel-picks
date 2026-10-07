@@ -527,10 +527,10 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
         today, weekEnd,
       );
     }
-    // What's playing now isn't "coming" any more, even before step 5 redoes the list.
-    run('UPDATE movies SET upcoming = 0 WHERE playing = 1');
-
-    // 5. Coming Soon: TMDB upcoming + any advance showtimes beyond this week.
+    // 5. Coming Soon: the flag is TMDB's upcoming list and nothing else.
+    //    Whether a film is still coming or already playing depends on whose
+    //    theaters, so that, and advance showtimes beyond this week, are
+    //    worked out per person (theatres.js lineupIds).
     if (tmdb.tmdbConfigured()) {
       const up = [
         ...(await safe(tmdb.upcoming(1), (e) => log.errors.push(`TMDB upcoming: ${e.message}`))),
@@ -545,13 +545,8 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
       // Rebuilt in one go, as with playing above.
       run('UPDATE movies SET upcoming = 0');
       if (upIds.length) {
-        run(`UPDATE movies SET upcoming = 1 WHERE playing = 0 AND tmdb_id IN (${upIds.map(() => '?').join(',')})`, ...upIds);
+        run(`UPDATE movies SET upcoming = 1 WHERE tmdb_id IN (${upIds.map(() => '?').join(',')})`, ...upIds);
       }
-      run(
-        `UPDATE movies SET upcoming = 1
-          WHERE playing = 0 AND tmdb_id IN (SELECT DISTINCT tmdb_id FROM showtimes WHERE tmdb_id IS NOT NULL AND date > ?)`,
-        weekEnd,
-      );
       log.sources.upcoming = { movies: upIds.length };
     } else run('UPDATE movies SET upcoming = 0');
 

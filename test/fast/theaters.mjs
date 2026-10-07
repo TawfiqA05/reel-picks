@@ -4,6 +4,8 @@
 //            now (showtimes, cached pages, the playing flag), and showtimes
 //            at a theater nobody follows are never filed under anyone's
 //            primary.
+//   coming:  Coming Soon, search and the movie page work out "coming soon"
+//            and "playing" from the caller's own theaters.
 //   ids:     a theater id from the caller is 1 to 10 digits everywhere, and
 //            the showtime cache is cleared by plain-text prefix.
 import fs from 'node:fs';
@@ -154,4 +156,74 @@ const showtimePages = (w, like = 'amc:showtimes:v2:%') => w.q1('SELECT COUNT(*) 
   await w.close();
 }
 
+// ---------------------------------------------------------------- coming soon
+{
+  // The refresh runs here (the made-up AMC), so each version of the app
+  // works its own flags out. TMDB's upcoming list also names a film that
+  // plays only at 9101.
+  const k9 = film(9);
+  const w = S.world(await openWorld('theaters-coming', {
+    refresh: true,
+    prepare(d) {
+      const row = d.prepare("SELECT value FROM cache WHERE key = 'tmdb:upcoming:1'").get();
+      if (!row) throw new Error('the sample has no cached TMDB upcoming list');
+      const v = JSON.parse(row.value);
+      v.results = [...(v.results || []), C.light(k9)];
+      d.prepare("UPDATE cache SET value = ? WHERE key = 'tmdb:upcoming:1'").run(JSON.stringify(v));
+    },
+  }));
+  const { robin: R, casey: K } = w.friends; // robin follows 9101, casey 9102
+  const refreshed = async () => {
+    const before = (await w.api('GET', '/api/status')).json?.lastRefresh;
+    const r = await w.api('POST', '/api/refresh', { body: {} });
+    if (r.status !== 200) throw new Error(`refresh: ${r.status}`);
+    const done = await until(async () => { const s = (await w.api('GET', '/api/status')).json; return s && !s.refreshing && s.lastRefresh && s.lastRefresh !== before && s; }, 60000, 200);
+    if (!done) throw new Error('the refresh did not finish');
+    await settled(w.base);
+  };
+  const coming = async (as) => ((await w.api('GET', '/api/coming-soon', { as })).json?.list || []).map((e) => e.tmdb_id);
+  const page = async (as, id) => (await w.api('GET', `/api/movies/${id}`, { as })).json;
+
+  await S.step('coming: a film playing only at someone else\'s theater stays coming soon', async () => {
+    // The sample's Set primary kept the owner's 9101 for casey: 9102 only now.
+    await w.api('DELETE', '/api/theatres/follow/9101', { as: K });
+    S.check('coming: setup: casey follows 9102 only', JSON.stringify(await ids(K)(w)) === '["9102"]', JSON.stringify(await ids(K)(w)));
+    await refreshed();
+    S.check('coming: setup: the film plays this week at 9101 only', w.q1("SELECT COUNT(*) AS n FROM showtimes WHERE tmdb_id = ? AND theatre_id = '9102'", k9.id).n === 0 && w.q1("SELECT COUNT(*) AS n FROM showtimes WHERE tmdb_id = ? AND theatre_id = '9101'", k9.id).n > 0);
+    S.check('coming: a friend at 9102 has it in Coming Soon', (await coming(K)).includes(k9.id), JSON.stringify(await coming(K)));
+    const pk = await page(K, k9.id);
+    S.check('coming: their movie page says coming soon, not playing', pk?.upcoming === true && pk?.playing === false, JSON.stringify([pk?.upcoming, pk?.playing]));
+    S.check('coming: a friend at 9101 doesn\'t: it\'s playing for them', !(await coming(R)).includes(k9.id));
+    const pr = await page(R, k9.id);
+    S.check('coming: their movie page says playing, not coming soon', pr?.upcoming === false && pr?.playing === true, JSON.stringify([pr?.upcoming, pr?.playing]));
+    S.check('coming: nor does the owner (9101 and 9102)', !(await coming(OWNER)).includes(k9.id));
+  });
+
+  await S.step('coming: advance showtimes at someone else\'s theater put nothing in Coming Soon', async () => {
+    // Nothing this week anywhere: every showtime left is an advance one.
+    w.q("DELETE FROM cache WHERE key LIKE 'amc:showtimes:%'");
+    for (let i = 0; i < 7; i++) w.amc.missing.add(ymd(i));
+    await refreshed();
+    const only9101 = C.PLAYING.filter((f) => f !== k9 && f.at[9101] && !f.at[9102] && f.at[9101].some((s) => s.days.some((d) => d >= 7))).map((f) => f.id);
+    const at9102 = C.PLAYING.filter((f) => f.at[9102] && f.at[9102].some((s) => s.days.some((d) => d >= 7))).map((f) => f.id);
+    S.check('coming: setup: films with advance showtimes only at 9101, and some at 9102', only9101.length >= 3 && at9102.length >= 3 && w.q1("SELECT COUNT(*) AS n FROM showtimes WHERE date <= ?", ymd(6)).n === 0, JSON.stringify([only9101.length, at9102.length]));
+    const k = await coming(K);
+    S.check('coming: a friend at 9102 gets none of the films booked only at 9101', !only9101.some((id) => k.includes(id)), JSON.stringify(only9101.filter((id) => k.includes(id))));
+    S.check('coming: and does get the ones booked at 9102', at9102.every((id) => k.includes(id)), JSON.stringify(at9102.filter((id) => !k.includes(id))));
+    const r = await coming(R);
+    S.check('coming: a friend at 9101 gets the films booked there', only9101.every((id) => r.includes(id)), JSON.stringify(only9101.filter((id) => !r.includes(id))));
+    const p = await page(K, only9101[0]);
+    S.check('coming: the 9102 friend\'s movie page doesn\'t call it coming soon', p && p.upcoming === false && p.playing === false, JSON.stringify([p?.upcoming, p?.playing]));
+    // Search with TMDB down answers from the films the app holds for this
+    // person: a film booked only at someone else's theater isn't one of them.
+    w.ctrl.tmdb = 'down'; w.writeCtrl();
+    const title = C.PLAYING.find((f) => f.id === only9101[0]).title;
+    const sk = (await w.api('GET', `/api/search?q=${encodeURIComponent(title)}`, { as: K })).json;
+    const sr = (await w.api('GET', `/api/search?q=${encodeURIComponent(title)}`, { as: R })).json;
+    w.ctrl.tmdb = 'ok'; w.writeCtrl();
+    S.check('coming: search: the 9101 friend finds it with TMDB down (control)', (sr?.results || []).some((x) => x.tmdb_id === only9101[0]), JSON.stringify((sr?.results || []).map((x) => x.tmdb_id)));
+    S.check('coming: search: the 9102 friend doesn\'t get it from someone else\'s bookings', !(sk?.results || []).some((x) => x.tmdb_id === only9101[0]), JSON.stringify((sk?.results || []).map((x) => x.tmdb_id)));
+  });
+  await w.close();
+}
 S.finish();

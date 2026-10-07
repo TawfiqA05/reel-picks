@@ -143,7 +143,7 @@ export async function buildSample({ now = Date.now(), log = () => {} } = {}) {
   if (!result?.finishedAt) throw new Error(`the demo refresh did not finish: ${JSON.stringify(result).slice(0, 300)}`);
 
   // Watchlists: films playing, two coming soon, two classics nobody rated.
-  const coming = all('SELECT tmdb_id FROM movies WHERE upcoming = 1 ORDER BY release_date LIMIT 6').map((r) => r.tmdb_id);
+  const coming = all('SELECT tmdb_id FROM movies WHERE upcoming = 1 AND playing = 0 ORDER BY release_date LIMIT 6').map((r) => r.tmdb_id);
   const unrated = F.classics.filter((id) => !get('SELECT 1 FROM ratings WHERE user_id = ? AND tmdb_id = ?', OWNER_ID, id));
   const samList = [playingIds[2], playingIds[6], playingIds[9], coming[0], coming[2], ...unrated.slice(0, 2)].filter(Boolean);
   await ensureFilms(samList, { scores: false });
