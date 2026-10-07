@@ -299,6 +299,9 @@ export async function render(root, params, ctx) {
   // lookup delayed by the geocoder's 1 req/s throttle landing after a faster,
   // newer one — or after Clear).
   let geoSeq = 0;
+  // A look-up or a location fix fills these fields when its answer comes
+  // back, with no tap or key after it, so it checks the Save bar itself.
+  const homeFilled = () => onEdit();
 
   // Fill the fields from a geocoder hit. Nothing is stored until Save settings;
   // a failed or empty lookup never touches the fields.
@@ -308,6 +311,7 @@ export async function render(root, params, ctx) {
     if (r.lat != null) homeLat.value = String(r.lat);
     if (r.lng != null) homeLng.value = String(r.lng);
     setGeoStatus(`Found ${r.label} (${r.lat}, ${r.lng}). Save settings to keep it.`);
+    homeFilled();
   };
 
   const placeIn = h('input', { class: 'input', type: 'search', placeholder: 'City, ZIP or address', 'aria-label': 'Look up a place: city and state, ZIP, or address, like Springfield IL' });
@@ -358,6 +362,7 @@ export async function render(root, params, ctx) {
     const unnamed = (lat, lng) => {
       homeLabelIn.value = `${lat}, ${lng}`;
       setGeoStatus(`Coordinates set (${lat}, ${lng}). Couldn't name the place, so edit the label if you like, then Save settings.`);
+      homeFilled();
     };
     navigator.geolocation.getCurrentPosition(async (pos) => {
       if (seq !== geoSeq) { locBtn.disabled = false; return; }
@@ -366,6 +371,7 @@ export async function render(root, params, ctx) {
       homeLat.value = String(lat);
       homeLng.value = String(lng);
       setGeoStatus(`Got it (${lat}, ${lng}). Naming the place…`);
+      homeFilled();
       try {
         const { result } = await api.reverseGeocode(lat, lng);
         if (seq !== geoSeq) return;
