@@ -7,6 +7,12 @@
 //   location  Use my location fills Home base and the bar shows
 //   save      after that look-up, a normal click on the bar's Save settings
 //             stores the place, and it is still there after a reload
+//   clear     Clear home base alone leaves the bar down, a tap elsewhere
+//             doesn't bring it up, and the saved snapshot's home is blank
+//             while the rest of it is as it was
+//   edited    with another field changed, the bar stays up through a
+//             look-up of the place already saved and through Clear home
+//             base, and Save stores that field
 //   keep      several matches and Use; nothing found; a failed look-up; a
 //             look-up of the place already saved
 //
@@ -18,7 +24,7 @@
 // the position are held back about 300 ms.
 import { suite } from '../lib/check.mjs';
 import { openWorld, sleep } from '../lib/world.mjs';
-import { launch, open, go } from '../lib/browser.mjs';
+import { launch, open, go, toastText } from '../lib/browser.mjs';
 import * as C from '../lib/catalog.mjs';
 
 const S = suite('savebar');
@@ -78,6 +84,13 @@ async function lookUp(page, q) {
   const hb = card(page, 'Home base');
   await hb.locator('input[type=search]').fill(q);
   await hb.locator('button', { hasText: 'Look up' }).click();
+}
+
+async function clearHome(page) {
+  await card(page, 'Home base').locator('button', { hasText: 'Clear home base' }).click();
+  const t = await toastText(page, /Home base cleared/);
+  await calm(page);
+  return t;
 }
 
 // A normal click on the visible button, then the server's answer to the save.
@@ -156,6 +169,62 @@ await S.step('location: Use my location', async () => {
     S.check('location: unnamed: the Save bar is showing', await barUp(q.page));
     noErrors('location: unnamed', q);
   } finally { await q.ctx.close(); }
+});
+
+// ------------------------------------------------------------------ clear
+await S.step('clear: Clear home base with nothing else changed', async () => {
+  await saveHome(OTHER);
+  const before = await getSettings();
+  const p = await settings();
+  try {
+    const ticket = await field(p.page, 'Avg ticket').inputValue();
+    const t = await clearHome(p.page);
+    const f = await homeFields(p.page);
+    S.check('clear: the fields are blank', /Home base cleared/.test(t) && !f.label && !f.lat && !f.lng, `${t} ${JSON.stringify(f)}`);
+    S.check('clear: the bar is down', !(await barUp(p.page)));
+    await card(p.page, 'Home base').locator('p.muted').last().click();
+    await calm(p.page);
+    S.check('clear: a tap elsewhere doesn\'t bring the bar up', !(await barUp(p.page)));
+    // The saved snapshot: home blank, everything else as it was.
+    await field(p.page, 'Avg ticket').fill('18.75');
+    await calm(p.page);
+    const upAfterEdit = await barUp(p.page);
+    await field(p.page, 'Avg ticket').fill(ticket);
+    await calm(p.page);
+    S.check('clear: another field changed and changed back takes the bar up and down again', upAfterEdit && !(await barUp(p.page)), `up after edit ${upAfterEdit}`);
+    await field(p.page, 'Label').fill(OTHER.label);
+    await calm(p.page);
+    const upWithOld = await barUp(p.page);
+    await field(p.page, 'Label').fill('');
+    await calm(p.page);
+    S.check('clear: the old home typed back counts as a change, blank again doesn\'t', upWithOld && !(await barUp(p.page)), `up with the old label ${upWithOld}`);
+    const after = await getSettings();
+    const rest = (s) => JSON.stringify({ ...s, home: null });
+    S.check('clear: the server has no home base and the rest as it was', after.home?.label == null && after.home?.lat == null && after.home?.lng == null && rest(after) === rest(before), JSON.stringify(after.home));
+    noErrors('clear', p);
+  } finally { await p.ctx.close(); }
+});
+
+await S.step('edited: another field changed, then a look-up of the saved place and Clear', async () => {
+  await saveHome({ ...C.HOME });
+  const p = await settings();
+  try {
+    await field(p.page, 'Avg ticket').fill('17.75');
+    await calm(p.page);
+    S.check('edited: the bar is up for the changed field', await barUp(p.page));
+    await lookUp(p.page, 'Testville');
+    await statusIs(p.page, /^Found /);
+    await calm(p.page);
+    S.check('edited: it stays up through a look-up of the place already saved', await barUp(p.page));
+    await clearHome(p.page);
+    S.check('edited: it stays up through Clear home base', await barUp(p.page));
+    const r = await pressSave(p.page);
+    const s = await getSettings();
+    S.check('edited: Save stores that field', r.clicked && r.status === 200 && s.avgTicketPrice === 17.75 && s.home?.lat == null, `${r.why || r.status} ${s.avgTicketPrice} ${JSON.stringify(s.home)}`);
+    await calm(p.page);
+    S.check('edited: the bar goes down once saved', !(await barUp(p.page)));
+    noErrors('edited', p);
+  } finally { await p.ctx.close(); }
 });
 
 // ------------------------------------------------------------------ keep

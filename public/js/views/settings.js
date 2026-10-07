@@ -299,8 +299,8 @@ export async function render(root, params, ctx) {
   // lookup delayed by the geocoder's 1 req/s throttle landing after a faster,
   // newer one — or after Clear).
   let geoSeq = 0;
-  // A look-up or a location fix fills these fields when its answer comes
-  // back, with no tap or key after it, so it checks the Save bar itself.
+  // A look-up, a location fix or Clear fills these fields when its answer
+  // comes back, with no tap or key after it, so it checks the Save bar itself.
   const homeFilled = () => onEdit();
 
   // Fill the fields from a geocoder hit. Nothing is stored until Save settings;
@@ -397,6 +397,10 @@ export async function render(root, params, ctx) {
       const r = await api.clearHome();
       if (seq !== geoSeq) return;
       homeLabelIn.value = ''; homeLat.value = ''; homeLng.value = ''; placeIn.value = '';
+      // The server has already dropped the stored home base, so what was last
+      // saved has none either; any other change keeps the Save bar up.
+      saved = JSON.stringify({ ...JSON.parse(saved), home: { label: null, lat: null, lng: null } });
+      homeFilled();
       clear(geoResults);
       setGeoStatus('Cleared. The stored location, cached lookups, and cached drive times are gone. Drive times stay hidden until you set a home base again.');
       toast('Home base cleared');
