@@ -291,7 +291,8 @@ export async function render(root, params, ctx) {
   const homeLat = h('input', { class: 'input num', type: 'number', step: '0.0001', placeholder: 'lat', value: home.lat == null ? '' : String(home.lat) });
   const homeLng = h('input', { class: 'input num', type: 'number', step: '0.0001', placeholder: 'lng', value: home.lng == null ? '' : String(home.lng) });
 
-  const geoStatus = h('div', { class: 'muted small geo-status' });
+  // tabindex -1: an Enter look-up moves the focus here (see lookup), never Tab.
+  const geoStatus = h('div', { class: 'muted small geo-status', tabindex: '-1' });
   const geoResults = h('div', { class: 'theatre-results' });
   const setGeoStatus = (msg) => { geoStatus.textContent = msg || ''; };
   // Monotonic ticket per look-up / locate / clear: a slow response that isn't
@@ -316,6 +317,17 @@ export async function render(root, params, ctx) {
 
   const placeIn = h('input', { class: 'input', type: 'search', placeholder: 'City, ZIP or address', 'aria-label': 'Look up a place: city and state, ZIP, or address, like Springfield IL' });
   const lookupBtn = h('button', { class: 'btn' }, 'Look up');
+  // A look-up started with Enter leaves the focus in the box, so a phone keeps
+  // its keyboard up over the Save bar. When there's an answer to act on, the
+  // focus moves to the line that says what was found: the keyboard closes, a
+  // screen reader reads the line, and Tab goes on to the matches or the
+  // fields. It waits a frame so the bar (and the room kept for it) is in
+  // place first, and stays put if the focus has gone elsewhere since.
+  const leaveBox = () => requestAnimationFrame(() => {
+    if (document.activeElement !== placeIn) return;
+    geoStatus.focus();
+    geoStatus.scrollIntoView({ block: 'nearest' });
+  });
   const lookup = async () => {
     const q = placeIn.value.trim();
     if (!q) { setGeoStatus('Type a city & state, a ZIP, or an address first.'); return; }
@@ -330,12 +342,14 @@ export async function render(root, params, ctx) {
         setGeoStatus(`Nothing found for "${q}". Try adding a city, state, or ZIP. Your saved home base is unchanged.`);
       } else if (results.length === 1) {
         applyPlace(results[0]);
+        leaveBox();
       } else {
         setGeoStatus('More than one match. Pick the right one:');
         results.forEach((r) => geoResults.appendChild(h('div', { class: 'theatre-row' },
           h('div', {}, h('div', {}, r.label), h('div', { class: 'muted small' }, r.place)),
           h('button', { class: 'btn small', onClick: () => applyPlace(r) }, 'Use'),
         )));
+        leaveBox();
       }
     } catch (e) {
       if (seq === geoSeq) setGeoStatus(`${e.message} Your saved home base is unchanged.`);

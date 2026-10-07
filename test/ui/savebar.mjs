@@ -15,6 +15,11 @@
 //             base, and Save stores that field
 //   keep      several matches and Use; nothing found; a failed look-up; a
 //             look-up of the place already saved
+//   enter     a real Enter in the look-up box: with one match or several the
+//             focus leaves the box (so a phone's keyboard closes) for a
+//             ringed element on screen and clear of the bar; with nothing
+//             found or a failed look-up it stays in the box to retype; a tap
+//             on Look up leaves the focus where the tap put it
 //
 // Two things would hide the fault in the test world. The sample home base is
 // the place the stand-in gives for every one-match and reverse look-up
@@ -25,6 +30,7 @@
 import { suite } from '../lib/check.mjs';
 import { openWorld, sleep } from '../lib/world.mjs';
 import { launch, open, go, toastText } from '../lib/browser.mjs';
+import { kit } from '../lib/a11y-helpers.mjs';
 import * as C from '../lib/catalog.mjs';
 
 const S = suite('savebar');
@@ -60,6 +66,8 @@ const calm = (page) => page.waitForTimeout(600);
 
 async function settings({ geo = false } = {}) {
   const p = await open(browser, w, { width: 390 });
+  // The a11y suite's focus measures (window.__a11y.stop()).
+  await p.ctx.addInitScript(kit);
   if (geo) {
     await p.ctx.grantPermissions(['geolocation'], { origin: w.base });
     await p.ctx.setGeolocation(SPOT);
@@ -92,6 +100,30 @@ async function clearHome(page) {
   await calm(page);
   return t;
 }
+
+// Types a place into the look-up box and presses a real Enter there, with the
+// box sitting just above the bottom of the screen (where a phone's keyboard
+// leaves it, and where the bar comes up). Says whether the box had the focus.
+async function enterLookUp(page, q) {
+  const box = card(page, 'Home base').locator('input[type=search]');
+  await box.fill(q);
+  await box.evaluate((el) => window.scrollTo({ top: scrollY + el.getBoundingClientRect().bottom - (innerHeight - 90), behavior: 'instant' }));
+  const inBox = await box.evaluate((el) => document.activeElement === el);
+  await page.keyboard.press('Enter');
+  return inBox;
+}
+// Where the focus is, and the a11y suite's measure of it.
+const focusNow = (page) => page.evaluate(() => {
+  const a = document.activeElement;
+  const body = !a || a === document.body || a === document.documentElement;
+  return {
+    body, field: Boolean(a?.matches('input, select, textarea')), inBox: Boolean(a?.matches('.geo-row input[type=search]')),
+    visible: !body && window.__a11y.visible(a), desc: window.__a11y.desc(a), stop: window.__a11y.stop(),
+  };
+});
+const leftBox = (f) => !f.body && !f.field && f.visible;
+const stopOk = (f) => !f.stop.body && f.stop.issues.length === 0;
+const say = (f) => `${f.desc}${f.stop.issues?.length ? `: ${f.stop.issues.join('; ')}` : ''}`;
 
 // A normal click on the visible button, then the server's answer to the save.
 async function pressSave(page) {
@@ -280,6 +312,78 @@ await S.step('keep: what already worked', async () => {
     await calm(p.page);
     S.check('keep: a look-up of the place already saved leaves the bar down', !(await barUp(p.page)));
     noErrors('keep: same place', p);
+  } finally { await p.ctx.close(); }
+});
+
+// ------------------------------------------------------------------ enter
+await S.step('enter: a real Enter in the look-up box', async () => {
+  await saveHome(OTHER);
+  let p = await settings();
+  try {
+    const inBox = await enterLookUp(p.page, 'Testville');
+    S.check('enter: the focus is in the look-up box when Enter is pressed', inBox);
+    await statusIs(p.page, /^Found /);
+    await calm(p.page);
+    const f = await homeFields(p.page);
+    S.check('enter: one match: the fields hold the place it found', f.label === C.HOME.label && f.lat === String(C.HOME.lat) && f.lng === String(C.HOME.lng), JSON.stringify(f));
+    const at = await focusNow(p.page);
+    S.check('enter: one match: the focus leaves the box for a visible element that isn\'t a field', leftBox(at), say(at));
+    S.check('enter: one match: where the focus lands has a ring, is on screen and isn\'t behind a bar', stopOk(at), say(at));
+    S.check('enter: one match: the Save bar is showing', await barUp(p.page));
+    noErrors('enter: one match', p);
+  } finally { await p.ctx.close(); }
+
+  p = await settings();
+  try {
+    await enterLookUp(p.page, 'two Testvilles');
+    await statusIs(p.page, /^More than one/);
+    await calm(p.page);
+    const at = await focusNow(p.page);
+    S.check('enter: several: the focus leaves the box for a visible element that isn\'t a field', leftBox(at), say(at));
+    S.check('enter: several: where the focus lands has a ring, is on screen and isn\'t behind a bar', stopOk(at), say(at));
+    S.check('enter: several: the bar stays down while I pick', !(await barUp(p.page)));
+    await p.page.keyboard.press('Tab');
+    const next = await p.page.evaluate(() => window.__a11y.desc(document.activeElement));
+    S.check('enter: several: Tab from the focus reaches the first Use', /^button.*"Use"$/.test(next), next);
+    await card(p.page, 'Home base').locator('.theatre-results button', { hasText: 'Use' }).nth(1).click();
+    await calm(p.page);
+    S.check('enter: several: Use fills the fields and shows the bar', (await homeFields(p.page)).lat === '40.5' && await barUp(p.page));
+    noErrors('enter: several', p);
+  } finally { await p.ctx.close(); }
+
+  p = await settings();
+  try {
+    await enterLookUp(p.page, 'nowhere at all');
+    await statusIs(p.page, /^Nothing found/);
+    await calm(p.page);
+    const at = await focusNow(p.page);
+    S.check('enter: nothing found: the focus is still in the box', at.inBox, say(at));
+    S.check('enter: nothing found: the fields and the bar stay as they were', (await homeFields(p.page)).label === OTHER.label && !(await barUp(p.page)));
+    noErrors('enter: nothing found', p);
+  } finally { await p.ctx.close(); }
+
+  p = await settings();
+  try {
+    await p.page.route((u) => u.pathname === '/api/geocode', (r) => r.fulfill({ status: 502, contentType: 'application/json', body: JSON.stringify({ error: 'Couldn\'t reach the place lookup.' }) }));
+    await enterLookUp(p.page, 'Testville');
+    await statusIs(p.page, /unchanged/);
+    await calm(p.page);
+    const at = await focusNow(p.page);
+    S.check('enter: a failed look-up: the focus is still in the box', at.inBox, say(at));
+    noErrors('enter: failed', p);
+  } finally { await p.ctx.close(); }
+
+  // A tap on Look up: the focus goes where the tap put it and stays there.
+  p = await settings();
+  try {
+    await lookUp(p.page, 'Testville');
+    const tapped = await p.page.evaluate(() => { window.__tapped = document.activeElement; return window.__a11y.desc(document.activeElement); });
+    await statusIs(p.page, /^Found /);
+    await calm(p.page);
+    const after = await p.page.evaluate(() => ({ same: document.activeElement === window.__tapped, desc: window.__a11y.desc(document.activeElement) }));
+    S.check('tap: a tap on Look up leaves the focus where the tap put it', after.same && !/geo-status/.test(after.desc), `${tapped} -> ${after.desc}`);
+    S.check('tap: the Save bar is showing', await barUp(p.page));
+    noErrors('tap', p);
   } finally { await p.ctx.close(); }
 });
 
