@@ -368,7 +368,7 @@ export async function render(root, params, ctx) {
       ),
       makeStars({ value: r.rating, interactive: true, size: 18, allowClear: true, onChange: (v) => rateMovie(r, v), label: `Your rating of ${title}` }),
       h('button', {
-        class: 'icon-btn danger ri-remove', type: 'button', title: 'Remove rating', 'aria-label': `Remove your rating of ${title}`,
+        class: 'icon-btn ri-remove', type: 'button', title: 'Remove rating', 'aria-label': `Remove your rating of ${title}`,
         onClick: async () => {
           try {
             await api.unrate(r.tmdb_id);
@@ -377,7 +377,7 @@ export async function render(root, params, ctx) {
             loadRecent();
           } catch (e) { toast(e.message, 'error'); }
         },
-      }, icon('x', { size: 18 })),
+      }, icon('x', { size: 14 })),
       slot?.el,
     );
   };

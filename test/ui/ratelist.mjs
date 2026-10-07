@@ -5,6 +5,7 @@
 //             for at least twice as wide as drawn; a long title still has room
 //             at 320; the phone grid, the note's indent and the row estimate
 //             for rows past the first 60 follow the poster
+//   x         a small grey x with no box, still a 44 x 44 tap area
 import fs from 'node:fs';
 import path from 'node:path';
 import { suite } from '../lib/check.mjs';
@@ -34,8 +35,8 @@ const w = S.world(await openWorld('ratelist-ui', {
 const F = w.friends;
 const browser = await launch();
 const shot = async (page, name) => { if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `${name}.png`) }); };
-// Main's sizes for the list's stars: 26 on a touch screen (22 at 320), 18 with a mouse.
-const MAIN_STARS = { 320: 22, 390: 26, 1280: 18 };
+// Main's sizes for the list's stars: 26 on a touch screen, 18 with a mouse.
+const MAIN_STARS = { 320: 26, 390: 26, 1280: 18 };
 
 async function findings(page, phone, scope) {
   const palette = await textPalette(page);
@@ -129,6 +130,35 @@ await S.step('posters: the note lines up under the title; rows past 60 are estim
     });
     S.check(`posters ${tag}: rows past 60 are estimated within 12 px of a real row`, est.cv === 'auto' && Math.abs(est.estimate - est.median) <= 12, JSON.stringify(est));
     await r.ctx.close();
+  }
+});
+
+// ------------------------------------------------------------------ x
+await S.step('x: a small grey x with no box, 44 x 44', async () => {
+  for (const width of [390, 1280]) {
+    for (const theme of ['light', 'dark']) {
+      const tag = `${width} ${theme}`;
+      const p = await openList(width, theme);
+      const { page } = p;
+      const muted = await token(page, 'muted');
+      const x = page.locator(`#rating-list [data-rating-id="${F1.id}"] .ri-remove`);
+      const look = async () => x.evaluate((b) => {
+        const s = getComputedStyle(b); const r = b.getBoundingClientRect(); const svg = b.querySelector('svg').getBoundingClientRect();
+        return { danger: b.classList.contains('danger'), bg: s.backgroundColor, border: parseFloat(s.borderTopWidth) && s.borderTopStyle !== 'none' ? s.borderTopColor : 'none', shadow: s.boxShadow, color: s.color, w: r.width, h: r.height, icon: svg.width };
+      });
+      const rest = await look();
+      S.check(`x ${tag}: no soft red box`, !rest.danger && /rgba\(0, 0, 0, 0\)|transparent/.test(rest.bg) && (rest.border === 'none' || /rgba\(0, 0, 0, 0\)/.test(rest.border)) && rest.shadow === 'none', JSON.stringify(rest));
+      S.check(`x ${tag}: a small grey x`, rest.icon < 18 && rest.icon >= 12 && rest.color === muted, JSON.stringify({ ...rest, muted }));
+      S.check(`x ${tag}: still a 44 x 44 tap area`, Math.round(rest.w) === 44 && Math.round(rest.h) === 44, JSON.stringify(rest));
+      if (width === 1280) {
+        await x.hover();
+        await page.waitForTimeout(200);
+        const hov = await look();
+        S.check(`x ${tag}: no box on hover either`, /rgba\(0, 0, 0, 0\)|transparent/.test(hov.bg), JSON.stringify(hov));
+        await page.mouse.move(0, 0);
+      }
+      await p.ctx.close();
+    }
   }
 });
 

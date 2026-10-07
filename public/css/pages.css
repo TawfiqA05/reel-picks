@@ -115,7 +115,9 @@ a.person-link:hover { background: color-mix(in srgb, var(--chip) 82%, var(--text
 .ri-poster.ph { background: var(--chip); }
 .ri-info { flex: 1; min-width: 0; }
 .ri-title { font-weight: 600; font-size: var(--fs-base); }
-.ri-remove { color: var(--muted); background: none; border-color: transparent; }
+/* The x is a small grey x with no box (no soft red here): removing asks first. */
+.icon-btn.ri-remove, .icon-btn.ri-remove:hover { background: none; }
+.ri-remove { color: var(--muted); }
 .ri-remove:hover { color: var(--text); }
 /* Phones: the stars go under the title, so a long title keeps its width. */
 @media (max-width: 480px) {
