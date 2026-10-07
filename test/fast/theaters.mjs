@@ -1,5 +1,9 @@
 // Theaters never give other people away. To a friend the app should look
 // like it has two people in it: them and the owner.
+//   follow:  what anyone may follow depends only on their own list (the owner
+//            5, a friend 3, no cap across everyone); only theaters in AMC's
+//            own list, under AMC's name; every friend theater change queues
+//            the same ordinary refresh, followed by others or not.
 //   revoke:  revoking a friend clears the data of a theater nobody follows
 //            now (showtimes, cached pages, the playing flag), and showtimes
 //            at a theater nobody follows are never filed under anyone's
@@ -36,7 +40,7 @@ const ids = (as) => async (w) => {
 };
 const showtimePages = (w, like = 'amc:showtimes:v2:%') => w.q1('SELECT COUNT(*) AS n FROM cache WHERE key LIKE ?', like).n;
 
-// ---------------------------------------------------------------- ids
+// ---------------------------------------------------------------- follow and ids
 {
   const w = S.world(await openWorld('theaters', { prepare: addTheaters }));
   const { robin: R, casey: K, jordan: J } = w.friends;
@@ -45,6 +49,81 @@ const showtimePages = (w, like = 'amc:showtimes:v2:%') => w.q1('SELECT COUNT(*) 
   const lastRequest = async () => JSON.stringify((await w.api('GET', '/api/status')).json?.lastRefreshRequest ?? null);
   const refusals = [];
   const note = (r) => { if (r.status >= 400) refusals.push(r.json?.error || r.text); return r; };
+
+  await S.step('follow: a friend theater change queues the same ordinary refresh, followed by others or not', async () => {
+    let before = await lastRequest();
+    const shared = note(await follow(J, '9102'));
+    let after = await lastRequest();
+    S.check('follow: setup: a friend follows a theater the owner follows', shared.status === 200, `${shared.status} ${shared.text.slice(0, 120)}`);
+    S.check('follow: following a theater someone else follows queues a refresh', after !== before, after);
+    const reqShared = JSON.parse(after);
+    before = after;
+    note(await follow(J, '9103'));
+    after = await lastRequest();
+    S.check('follow: following a theater nobody follows queues a refresh', after !== before, after);
+    const reqNew = JSON.parse(after);
+    S.check('follow: both are ordinary refreshes, never forced, with the same reason', reqShared?.force === false && reqNew?.force === false && reqShared.reason === reqNew.reason, JSON.stringify([reqShared, reqNew]));
+    before = after;
+    const p = note(await primary(J, '9102'));
+    after = await lastRequest();
+    S.check('follow: Set primary to a theater someone else follows queues the same refresh', p.status === 200 && after !== before && JSON.parse(after).force === false && JSON.parse(after).reason === reqNew.reason, `${p.status} ${after}`);
+    // Back to how the sample had it: 9101 primary, nothing else.
+    await primary(J, '9101');
+    for (const t of ['9102', '9103']) await w.api('DELETE', `/api/theatres/follow/${t}`, { as: J });
+  });
+
+  await S.step('follow: what a friend may follow depends only on their own list', async () => {
+    await w.api('DELETE', '/api/theatres/follow/9101', { as: K });
+    S.check('follow: setup: casey follows 9102 only', JSON.stringify(await ids(K)(w)) === '["9102"]', JSON.stringify(await ids(K)(w)));
+    // Nine theaters followed across everyone: more than the old cap of eight.
+    for (const t of ['9103', '9104', '9105']) S.check(`follow: setup: the owner follows ${t}`, note(await follow(OWNER, t)).status === 200);
+    for (const t of ['9106', '9107']) S.check(`follow: setup: a friend follows ${t}`, note(await follow(R, t)).status === 200);
+    S.check('follow: setup: a third friend follows 9108', note(await follow(J, '9108')).status === 200);
+    const taken = note(await follow(K, '9104'));
+    const fresh = note(await follow(K, '9109'));
+    S.check('follow: a friend can follow a theater someone else follows', taken.status === 200, `${taken.status} ${taken.text.slice(0, 160)}`);
+    S.check('follow: and one nobody follows, the same way', fresh.status === 200, `${fresh.status} ${fresh.text.slice(0, 160)}`);
+    const st = (await w.api('GET', '/api/status')).json;
+    S.check('follow: every theater anyone follows is in the refresh (nine, no cap of eight)', st?.sharedTheatres === 9, `${st?.sharedTheatres}`);
+    // At three, a theater someone follows and one nobody follows get the same answer.
+    const a = note(await follow(K, '9105'));
+    const b = note(await follow(K, '9110'));
+    S.check('follow: a friend stops at three theaters', a.status === 400 && a.json?.error === 'You can follow up to 3 theaters (primary + 2). Remove one first.', `${a.status} ${a.text.slice(0, 160)}`);
+    S.check('follow: with the same answer for a theater nobody follows', b.status === a.status && b.json?.error === a.json?.error, `${b.status} ${b.text.slice(0, 160)}`);
+    const sp = note(await primary(K, '9110'));
+    S.check('follow: Set primary that would make four says so, with AMC\'s name', sp.status === 400 && sp.json?.error === 'Making AMC Test Plaza 10 primary would mean following 4 theaters (max 3). Remove one first.', `${sp.status} ${sp.text.slice(0, 160)}`);
+    S.check('follow: the refusals left the friend\'s theaters as they were', JSON.stringify(await ids(K)(w)) === JSON.stringify(['9102', '9104', '9109']), JSON.stringify(await ids(K)(w)));
+    const o = note(await follow(OWNER, '9106'));
+    S.check('follow: the owner still stops at five', o.status === 400 && o.json?.error === 'You can follow up to 5 theaters (primary + 4). Remove one first.', `${o.status} ${o.text.slice(0, 160)}`);
+    const fs1 = (await w.api('GET', '/api/status', { as: K })).json;
+    const os1 = (await w.api('GET', '/api/status')).json;
+    S.check('follow: status tells a friend 3 and the owner 5', fs1?.maxTheatres === 3 && os1?.maxTheatres === 5, `${fs1?.maxTheatres} ${os1?.maxTheatres}`);
+  });
+
+  await S.step('follow: only theaters in AMC\'s own list, under AMC\'s name', async () => {
+    await w.api('DELETE', '/api/theatres/follow/9108', { as: J });
+    const before = await ids(J)(w);
+    const f = note(await follow(J, '424242', { name: 'Made Up Cinema 9' }));
+    S.check('follow: an id outside AMC\'s list is refused', f.status === 400 && f.json?.error === 'That isn\'t a theater in AMC\'s list. Pick one from the search.', `${f.status} ${f.text.slice(0, 160)}`);
+    const p = note(await primary(J, '424242', { name: 'Made Up Cinema 9' }));
+    S.check('follow: and so is Set primary to one', p.status === 400 && p.json?.error === 'That isn\'t a theater in AMC\'s list. Pick one from the search.', `${p.status} ${p.text.slice(0, 160)}`);
+    S.check('follow: neither changed the friend\'s theaters', JSON.stringify(await ids(J)(w)) === JSON.stringify(before), JSON.stringify(await ids(J)(w)));
+    const ok = note(await follow(J, '9110', { name: 'Totally Real Theater', slug: 'evil-slug' }));
+    const s = (await w.api('GET', '/api/settings', { as: J })).json;
+    const t = (s?.extraTheatres || []).find((x) => String(x.id) === '9110');
+    S.check('follow: the stored name and slug are AMC\'s, not the caller\'s', ok.status === 200 && t?.name === 'AMC Test Plaza 10' && t?.slug === 'amc-test-plaza-10', JSON.stringify(t));
+    const pp = note(await primary(J, '9103', { name: 'Not Its Name', slug: 'nope' }));
+    const s2 = (await w.api('GET', '/api/settings', { as: J })).json;
+    S.check('follow: Set primary stores AMC\'s name and slug too', pp.status === 200 && s2?.theatreName === 'AMC Lakeview 16' && s2?.theatreSlug === 'amc-lakeview-16', `${pp.status} ${s2?.theatreName} ${s2?.theatreSlug}`);
+    await primary(J, '9101');
+    for (const id of ['9103', '9110']) await w.api('DELETE', `/api/theatres/follow/${id}`, { as: J });
+  });
+
+  await S.step('follow: no refusal speaks of anyone else', async () => {
+    S.check('follow: refusals were collected', refusals.length >= 5, `${refusals.length}`);
+    const bad = refusals.filter((m) => /everyone|already followed|someone|other people|across|friend|shared/i.test(String(m)));
+    S.check('follow: no refusal mentions other people or what they follow', !bad.length, bad.slice(0, 3).join(' | '));
+  });
 
   await S.step('ids: a theater id from the caller is 1 to 10 digits', async () => {
     const n0 = showtimePages(w);
@@ -98,6 +177,17 @@ const showtimePages = (w, like = 'amc:showtimes:v2:%') => w.q1('SELECT COUNT(*) 
     S.check('ids: the owner\'s theaters are as they were', after.theatreId === before.theatreId && JSON.stringify(after.extraTheatres) === JSON.stringify(before.extraTheatres), JSON.stringify([after.theatreId, (after.extraTheatres || []).map((t) => t.id)]));
   });
 
+  await S.step('follow: AMC unreachable', async () => {
+    const saved = w.q1("SELECT value FROM cache WHERE key = 'amc:theatres:all'").value;
+    w.q("DELETE FROM cache WHERE key = 'amc:theatres:all'");
+    w.amc.mode = '500';
+    const before = await ids(J)(w);
+    const r = await follow(J, '9103');
+    w.amc.mode = 'ok';
+    w.q("INSERT INTO cache(key, value, fetched_at, ttl) VALUES('amc:theatres:all', ?, ?, ?)", saved, new Date(C.T0_MS).toISOString(), 30 * 86400);
+    S.check('follow: AMC down and no saved list: the follow says so', r.status === 502 && r.json?.error === 'Couldn\'t reach AMC to check that theater. Try again in a bit.', `${r.status} ${r.text.slice(0, 160)}`);
+    S.check('follow: and changes nothing', JSON.stringify(await ids(J)(w)) === JSON.stringify(before), JSON.stringify(await ids(J)(w)));
+  });
   await w.close();
 }
 
@@ -183,6 +273,19 @@ const showtimePages = (w, like = 'amc:showtimes:v2:%') => w.q1('SELECT COUNT(*) 
   };
   const coming = async (as) => ((await w.api('GET', '/api/coming-soon', { as })).json?.list || []).map((e) => e.tmdb_id);
   const page = async (as, id) => (await w.api('GET', `/api/movies/${id}`, { as })).json;
+
+  await S.step('follow: a friend\'s theater change runs a refresh that locks no one\'s four', async () => {
+    const eve = await makeFriend(w.base, 'Eve');
+    const before = (await w.api('GET', '/api/status')).json?.lastRefresh;
+    const set = await w.api('POST', '/api/theatre', { as: eve, body: { id: '9102', name: 'AMC Riverside 8', slug: 'amc-riverside-8' } });
+    S.check('follow: setup: a new friend picks a theater the owner follows', set.status === 200, `${set.status} ${set.text.slice(0, 120)}`);
+    const done = await until(async () => { const s = (await w.api('GET', '/api/status')).json; return s && !s.refreshing && s.lastRefresh && s.lastRefresh !== before && s; }, 30000, 200);
+    S.check('follow: that runs a refresh, as a theater nobody follows would', Boolean(done));
+    await settled(w.base);
+    S.check('follow: the refresh locked no four: the new friend has none yet', !w.q1('SELECT 1 AS x FROM weekly4_lock WHERE user_id = ?', eve.id));
+    await w.api('GET', '/api/recommendations', { as: eve });
+    S.check('follow: their four locks when they first open Picks', w.q1('SELECT how FROM weekly4_lock WHERE user_id = ?', eve.id)?.how === 'first-view', JSON.stringify(w.q1('SELECT how FROM weekly4_lock WHERE user_id = ?', eve.id)));
+  });
 
   await S.step('coming: a film playing only at someone else\'s theater stays coming soon', async () => {
     // The sample's Set primary kept the owner's 9101 for casey: 9102 only now.

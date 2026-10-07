@@ -11,7 +11,7 @@ import { getMovie } from '../lib/movies.js';
 import { unmatchedTitles, reviewTitles } from '../lib/match.js';
 import * as tmdb from '../lib/tmdb.js';
 import * as amc from '../lib/amc.js';
-import { followedTheatres, homeBase, readDistance, MAX_THEATRES, sharedTheatreIds, lineupIds } from '../lib/theatres.js';
+import { followedTheatres, homeBase, readDistance, MAX_THEATRES, FRIEND_MAX_THEATRES, sharedTheatreIds, lineupIds } from '../lib/theatres.js';
 import { localYMD } from '../lib/util.js';
 import { isGuest, ownerName } from '../lib/guest.js';
 import { currentUserId, currentUser } from '../lib/user.js';
@@ -73,7 +73,7 @@ router.get('/status', (req, res) => {
       keys: { tmdb: keyStatus().tmdb, omdb: true, amc: true },
       theatre: { ...theatres[0] },
       theatres,
-      maxTheatres: MAX_THEATRES,
+      maxTheatres: FRIEND_MAX_THEATRES,
       home: homeBase(s),
       onboardingDone: Boolean(s.onboardingDone),
       setupDone: Boolean(s.setupDone),

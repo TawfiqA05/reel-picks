@@ -5,7 +5,7 @@ import { get, getSettings, updateSettings, getSetting, dataDir, USER_SETTING_KEY
 import { exportState, importState } from '../lib/state.js';
 import { refreshAll } from '../lib/refresh.js';
 import * as amc from '../lib/amc.js';
-import { homeBase, addFollowed, removeFollowed, promoteToPrimary, replacePrimary, refreshDistances, sharedTheatreIds } from '../lib/theatres.js';
+import { homeBase, addFollowed, removeFollowed, promoteToPrimary, replacePrimary, refreshDistances, amcTheatre } from '../lib/theatres.js';
 import { geocode, reverseGeocode, forgetLookupsFor } from '../lib/geocode.js';
 import { localYMD } from '../lib/util.js';
 import { currentUserId } from '../lib/user.js';
@@ -163,37 +163,35 @@ function theaterProblem({ id, name, slug } = {}) {
   return null;
 }
 
-router.post('/theatre', (req, res) => {
-  const { id, name, slug } = req.body || {};
+// Following or setting a theater takes it from AMC's list (theatres.js
+// amcTheatre): the id must be there, and the name and slug stored are AMC's.
+router.post('/theatre', h(async (req, res) => {
   const bad = theaterProblem(req.body || {});
   if (bad) return res.status(400).json({ error: bad });
   try {
-    const wasShared = sharedTheatreIds().has(String(id));
-    const settings = replacePrimary({ id, name, slug });
-    afterTheatreChange(wasShared, 'theatre');
+    const settings = replacePrimary(await amcTheatre(String(req.body.id)));
+    afterTheatreChange('theatre');
     res.json(forCaller(settings));
   } catch (e) {
     if (!e.status) console.error('[theatre]', e.message);
     res.status(e.status || 500).json({ error: e.status ? e.message : 'Something went wrong on the server. Try again.' });
   }
-});
+}));
 
 // ---- followed theatres ---------------------------------------------------
 
-router.post('/theatres/follow', (req, res) => {
-  const { id, name, slug } = req.body || {};
+router.post('/theatres/follow', h(async (req, res) => {
   const bad = theaterProblem(req.body || {});
   if (bad) return res.status(400).json({ error: bad });
   try {
-    const wasShared = sharedTheatreIds().has(String(id));
-    const settings = addFollowed({ id, name, slug });
-    afterTheatreChange(wasShared, 'follow');
+    const settings = addFollowed(await amcTheatre(String(req.body.id)));
+    afterTheatreChange('follow');
     res.json(forCaller(settings));
   } catch (e) {
     if (!e.status) console.error('[theatre]', e.message);
     res.status(e.status || 500).json({ error: e.status ? e.message : 'Something went wrong on the server. Try again.' });
   }
-});
+}));
 
 router.delete('/theatres/follow/:id', (req, res) => {
   if (!isTheaterId(req.params.id)) return res.status(400).json({ error: NOT_AN_ID });
@@ -209,7 +207,7 @@ router.post('/theatres/primary', (req, res) => {
     const settings = promoteToPrimary(id);
     // Showtimes for both are already loaded; re-run so the per-theatre horizon
     // log and the primary-driven snapshot history line up with the new roles.
-    afterTheatreChange(true, 'primary'); // already followed by this user, so already pulled
+    afterTheatreChange('primary', { added: false }); // already followed by this user, so already pulled
     res.json(forCaller(settings));
   } catch (e) {
     if (!e.status) console.error('[theatre]', e.message);

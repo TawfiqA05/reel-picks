@@ -1795,7 +1795,7 @@ async function groupC() {
     await settle(e.page, 600);
     check('states: switching on shows the pair', /You and /.test(await e.page.locator('#main').textContent()));
     const others = (await api(null, 'GET', '/api/status')).json.theatres;
-    await api(empty, 'POST', '/api/theatre', { id: '999001', name: 'AMC Nowhere 1', slug: 'amc-nowhere-1' });
+    await api(empty, 'POST', '/api/theatre', { id: '9103', name: 'AMC Lakeview 16', slug: 'amc-lakeview-16' });
     for (const t of others) await api(empty, 'DELETE', `/api/theatres/follow/${t.id}`);
     await go(e.page, w, '#/together', 600);
     check('states: Together with no shared theatre says so', /don't follow any of the same theaters/.test(await e.page.locator('#main').textContent()));

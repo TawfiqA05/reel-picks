@@ -320,7 +320,10 @@ export function refreshAll(opts = {}) {
   return runSystem(() => refreshAllInner(opts));
 }
 
-async function refreshAllInner({ force = false, days = 14 } = {}) {
+// lock: false leaves this week's fours alone (a friend's theater change: a
+// new friend picks a theater before rating anything, and their four would
+// lock from no ratings at all). The daily and owner refreshes lock as always.
+async function refreshAllInner({ force = false, days = 14, lock = true } = {}) {
   // A refresh requested mid-run (e.g. following a second theatre while the
   // first is still loading) runs again as soon as this one finishes, instead
   // of being dropped — otherwise the second theatre would have no showtimes
@@ -328,7 +331,7 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
   if (state.running) {
     // Keep the strongest request: a user-initiated (force) refresh queued
     // behind the auto-refresh must still re-pull today/tomorrow.
-    state.rerun = { force: Boolean(state.rerun?.force) || force, days: Math.max(state.rerun?.days || 0, days) };
+    state.rerun = { force: Boolean(state.rerun?.force) || force, days: Math.max(state.rerun?.days || 0, days), lock: Boolean(state.rerun?.lock) || lock };
     return { skipped: 'already-running', queued: true, ...(state.lastLog || {}) };
   }
   state.running = true;
@@ -622,10 +625,10 @@ async function refreshAllInner({ force = false, days = 14 } = {}) {
     // theaters or entering their Last chance, sent now or held until 9am.
     try { scanWatchlist(); } catch (e) { console.error('[watchlist alerts]', e.message); }
     sendWatchlistLater();
-    afterRun(start, log, null);
+    afterRun(start, log, null, { lock });
     return log;
   } catch (e) {
-    afterRun(start, null, e);
+    afterRun(start, null, e, { lock });
     throw e;
   } finally {
     state.running = false;
@@ -681,14 +684,14 @@ function reportHealth(log) {
 const RETRY_EVERY_MS = 3600 * 1000;
 const RETRY_MAX = 6;
 
-function afterRun(start, log, err) {
+function afterRun(start, log, err, { lock = true } = {}) {
   try {
     const problem = err ? `The refresh stopped with an error: ${err.message}` : refreshProblems(log).refresh;
     const week = weekStartFriday(start);
     if (!problem) {
       if (getSetting('refreshRetry')) setSetting('refreshRetry', null);
       resolveLater('refresh');
-      lockEveryone(week, 'refresh', getRecommendations);
+      if (lock) lockEveryone(week, 'refresh', getRecommendations);
       return;
     }
     const day = localYMD(start);

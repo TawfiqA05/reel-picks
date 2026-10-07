@@ -427,8 +427,8 @@ Each person has their own ratings, watchlist, hidden films, watch log, movie pla
 streaming services, theaters, home base, showtime windows, weights, Letterboxd link,
 notification devices, search recents, and stats, and their own weekly four. Showtimes,
 public scores, and movie data are shared, and one refresh covers every theater anyone
-follows, up to eight in total. A friend adding a theater nobody follows queues an ordinary
-refresh. Friends can't force one.
+follows, up to five for me and three for each friend. A friend changing their theaters
+queues an ordinary refresh. Friends can't force one.
 
 Some tools stay mine: API key status, AMC title matching, the friend list, the
 full-setup import, forced refreshes, backups (Download latest backup and the off-site

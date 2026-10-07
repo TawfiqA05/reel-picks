@@ -12,11 +12,15 @@ export const h = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next))
 export const isOwnerRequest = () => Boolean(currentUser()?.isOwner);
 
 // After a theatre change: the owner's forces a refresh as always. A friend's
-// never forces; it queues an ordinary background refresh only when it brought
-// in a theatre nobody was following, so its showtimes arrive.
-export function afterTheatreChange(wasShared, tag) {
+// never forces; one that adds a theatre to their list (follow, Set primary)
+// queues the same ordinary background refresh whether or not anyone else
+// already follows it, so what happens never says who follows what. Theatres
+// already pulled come from the cache and cost no AMC calls. It locks no
+// one's weekly four (refresh.js), so a new friend's four still locks when
+// they first open Picks.
+export function afterTheatreChange(tag, { added = true } = {}) {
   if (isOwnerRequest()) refreshAll({ force: true }).catch((e) => console.error(`[${tag} refresh]`, e.message));
-  else if (!wasShared) refreshAll({ force: false, reason: 'friend followed a new theatre' }).catch((e) => console.error(`[${tag} refresh]`, e.message));
+  else if (added) refreshAll({ force: false, lock: false, reason: 'friend changed theatres' }).catch((e) => console.error(`[${tag} refresh]`, e.message));
 }
 // Per-person hourly limits on what spends the shared keys (lib/limits.js):
 // friends by account, the guest link by address (lib/guest.js clientAddress;

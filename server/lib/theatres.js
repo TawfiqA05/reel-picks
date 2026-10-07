@@ -3,18 +3,19 @@
 // from home, computed once per theatre and cached for a year. Home coordinates
 // only ever leave the app rounded to ~1 km (see outboundHome below).
 import { get, all, getSettings, updateSettings, run } from '../db.js';
-import { OWNER_ID } from './user.js';
+import { OWNER_ID, currentUserId } from './user.js';
 import * as amc from './amc.js';
 import { cachedJson, fetchJson, bustCache } from './cache.js';
 import { localYMD, addDays } from './util.js';
 
-// Primary + 4 followed. Each theatre costs ~14 AMC calls per refresh (one per
-// published day, more if a day paginates), so five keeps a refresh under ~100.
+// Primary + 4 followed for the owner, primary + 2 for a friend. Each theatre
+// costs ~14 AMC calls per refresh (one per published day, more if a day
+// paginates). There is no cap across everyone: what someone may follow
+// depends only on their own list, so no answer can tell a friend what anyone
+// else follows. The refresh pulls the union of everyone's theaters.
 export const MAX_THEATRES = 5;
-
-// Across everyone: the refresh pulls every active user's followed theatres,
-// capped so a refresh stays around ~110 AMC calls.
-const MAX_SHARED_THEATRES = 8;
+export const FRIEND_MAX_THEATRES = 3;
+export const maxTheatres = (userId = currentUserId()) => (userId === OWNER_ID ? MAX_THEATRES : FRIEND_MAX_THEATRES);
 
 // "AMC Riverside Square 12" -> "Riverside"; "AMC Northgate 8" -> "Northgate".
 // Used wherever a theatre is named inside a sentence or a chip.
@@ -81,8 +82,8 @@ export function activeUserIds() {
 
 // The theatres the refresh pulls: the union of every active user's followed
 // theatres, the owner's first (their primary stays the refresh's primary, which
-// drives the TMDB fallback and the headline horizon), deduped, capped at
-// MAX_SHARED_THEATRES. Each entry lists the users who follow it.
+// drives the TMDB fallback and the headline horizon), deduped. Each entry
+// lists the users who follow it.
 export function sharedTheatres() {
   const byId = new Map();
   for (const uid of activeUserIds()) {
@@ -92,19 +93,24 @@ export function sharedTheatres() {
       byId.get(t.id).users.push(uid);
     }
   }
-  return [...byId.values()].slice(0, MAX_SHARED_THEATRES);
+  return [...byId.values()];
 }
 
 export const sharedTheatreIds = () => new Set(sharedTheatres().map((t) => t.id));
 
-// Adding a theatre nobody follows grows the shared set; refuse it once the
-// set is full, whoever asks.
-function assertRoomFor(id) {
-  const shared = sharedTheatres();
-  if (shared.some((t) => t.id === id)) return;
-  if (shared.length >= MAX_SHARED_THEATRES) {
-    throw Object.assign(new Error(`Reel Picks follows up to ${MAX_SHARED_THEATRES} theaters across everyone, and that's full. Pick one that's already followed, or drop one first.`), { status: 400 });
+// The theater as AMC lists it (the cached list Settings searches). Only a
+// theater in that list can be followed, under AMC's own name and slug, never
+// what the caller sent.
+export async function amcTheatre(id) {
+  if (!amc.amcConfigured()) throw Object.assign(new Error('AMC_API_KEY is not set. Add it to .env to search theaters.'), { status: 400 });
+  let t;
+  try {
+    t = await amc.getTheatre(id);
+  } catch {
+    throw Object.assign(new Error('Couldn\'t reach AMC to check that theater. Try again in a bit.'), { status: 502 });
   }
+  if (!t) throw Object.assign(new Error('That isn\'t a theater in AMC\'s list. Pick one from the search.'), { status: 400 });
+  return { id: String(t.id), name: t.name || t.longName || '', slug: t.slug || '' };
 }
 
 // Drop a theatre's current schedule when it's unfollowed. Its lineup history
@@ -148,10 +154,10 @@ export function addFollowed(raw) {
   if (String(s.theatreId) === t.id) throw Object.assign(new Error(`${t.name || 'That theater'} is already your primary theater.`), { status: 400 });
   const extras = (s.extraTheatres || []).map(normalize);
   if (extras.some((x) => x.id === t.id)) return s;
-  if (extras.length + 1 >= MAX_THEATRES) {
-    throw Object.assign(new Error(`You can follow up to ${MAX_THEATRES} theaters (primary + ${MAX_THEATRES - 1}). Remove one first.`), { status: 400 });
+  const max = maxTheatres();
+  if (extras.length + 1 >= max) {
+    throw Object.assign(new Error(`You can follow up to ${max} theaters (primary + ${max - 1}). Remove one first.`), { status: 400 });
   }
-  assertRoomFor(t.id);
   return updateSettings({ extraTheatres: [...extras, t] });
 }
 
@@ -194,10 +200,10 @@ export function replacePrimary(raw) {
   const extras = (s.extraTheatres || []).map(normalize).filter((x) => x.id !== t.id);
   const old = oldId ? { id: oldId, name: s.theatreName || '', slug: s.theatreSlug || '' } : null;
   const next = old ? [old, ...extras] : extras;
-  assertRoomFor(t.id);
-  if (next.length + 1 > MAX_THEATRES) {
+  const max = maxTheatres();
+  if (next.length + 1 > max) {
     throw Object.assign(
-      new Error(`Making ${t.name || 'that theater'} primary would mean following ${next.length + 1} theaters (max ${MAX_THEATRES}). Remove one first.`),
+      new Error(`Making ${t.name || 'that theater'} primary would mean following ${next.length + 1} theaters (max ${max}). Remove one first.`),
       { status: 400 },
     );
   }
