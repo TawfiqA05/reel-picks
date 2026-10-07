@@ -6,6 +6,9 @@
 //             pressing a row anywhere but the x or a note control opens the
 //             film's page (the title link stretched over the row), where I
 //             rate under "Your rating", and the list shows it after Back
+//   remove    the x asks first in a confirm box; Cancel, Escape, the box's
+//             close button and a tap outside keep the rating and its note and
+//             put focus back on that row's x; Remove deletes both
 import { suite } from '../lib/check.mjs';
 import { openWorld } from '../lib/world.mjs';
 import { launch, open, go, toastText } from '../lib/browser.mjs';
@@ -199,6 +202,69 @@ await S.step('show: a rating made on the film\'s page shows in the list after Ba
     S.check(`back ${tag}: after Back the list shows the new rating`, shown === `${(want / 5) * 100}%` && label === `${want} stars`, `${shown} / ${label}`);
     await w.api('POST', '/api/ratings', { body: { tmdb_id: F5.id, rating: was, title: F5.title, year: F5.year } });
     S.check(`back ${tag}: no console errors`, !p.errors.length, p.errors.slice(0, 3).join(' | '));
+    await p.ctx.close();
+  }
+});
+
+await S.step('remove: the x asks first; each way out keeps the rating and its note; Remove deletes both', async () => {
+  for (const [width, theme] of [[1280, 'light'], [390, 'dark']]) {
+    const touch = width < 1024;
+    const tag = `${width} ${theme}`;
+    const p = await open(browser, w, { role: 'owner', width, theme });
+    const { page } = p;
+    await toRate(page);
+    const was = ratingOf(F1.id);
+    S.check(`remove ${tag}: setup: the film has a rating and a note`, was != null && noteOf(F1.id) === NOTE);
+    const x = page.locator(`${rowSel(F1.id)} .ri-remove`);
+    const openBox = async () => {
+      await x.scrollIntoViewIfNeeded();
+      if (touch) { const b = await x.boundingBox(); await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); } else await x.click();
+      await page.waitForSelector('.modal-overlay.show .modal-card', { timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(450);
+    };
+    await openBox();
+    S.check(`remove ${tag}: the x alone deletes nothing`, ratingOf(F1.id) === was && noteOf(F1.id) === NOTE, `${ratingOf(F1.id)} / ${noteOf(F1.id)}`);
+    const box = page.locator('.modal-overlay.show .modal-card');
+    S.check(`remove ${tag}: it opens a confirm box`, await box.count() === 1 && (await box.getAttribute('role')) === 'dialog');
+    if (!await box.count()) { await p.ctx.close(); continue; }
+    const words = await box.evaluate((c) => ({ head: c.querySelector('h3')?.textContent.trim(), lines: [...c.querySelectorAll('.modal-body p')].map((x) => x.textContent.trim()), buttons: [...c.querySelectorAll('.modal-body button')].map((b) => b.textContent.trim()) }));
+    S.check(`remove ${tag}: the box has a heading`, words.head === 'Remove rating', JSON.stringify(words));
+    S.check(`remove ${tag}: a sentence naming the film`, words.lines[0] === `Remove your rating of ${F1.title}?`, JSON.stringify(words));
+    S.check(`remove ${tag}: one more line because the rating has a note`, words.lines.length === 2 && words.lines[1] === 'Your note on it is deleted too.', JSON.stringify(words));
+    S.check(`remove ${tag}: Remove and Cancel`, JSON.stringify(words.buttons) === '["Remove","Cancel"]', JSON.stringify(words));
+    const ways = [
+      ['Cancel', async () => box.locator('.btn', { hasText: /^Cancel$/ }).click()],
+      ['Escape', async () => page.keyboard.press('Escape')],
+      ['the close button', async () => box.locator('.modal-x').click()],
+      ['a tap outside', async () => (touch ? page.touchscreen.tap(6, 6) : page.mouse.click(6, 6))],
+    ];
+    for (const [i, [name, act]] of ways.entries()) {
+      if (i) await openBox();
+      await act();
+      await page.waitForTimeout(450);
+      const st = await page.evaluate((sel) => ({ open: document.querySelectorAll('.modal-overlay').length, x: Boolean(document.activeElement?.matches(`${sel} .ri-remove`)), hash: location.hash }), rowSel(F1.id));
+      S.check(`remove ${tag}: ${name} closes the box and keeps the rating and its note`, !st.open && ratingOf(F1.id) === was && noteOf(F1.id) === NOTE && await page.locator(rowSel(F1.id)).count() === 1, JSON.stringify(st));
+      S.check(`remove ${tag}: after ${name}, focus is back on that row's x`, st.x && st.hash === '#/rate', JSON.stringify(st));
+    }
+    // A rating with no note: no note line.
+    await page.locator(`${rowSel(F2.id)} .ri-remove`).click();
+    await page.waitForSelector('.modal-overlay.show .modal-card', { timeout: 5000 }).catch(() => {});
+    const plain = await page.locator('.modal-overlay.show .modal-card').evaluate((c) => [...c.querySelectorAll('.modal-body p')].map((x) => x.textContent.trim()));
+    S.check(`remove ${tag}: with no note, just the sentence`, JSON.stringify(plain) === JSON.stringify([`Remove your rating of ${F2.title}?`]), JSON.stringify(plain));
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(450);
+    // Remove.
+    const total = (await w.api('GET', '/api/ratings')).json.ratings.length;
+    await openBox();
+    await box.locator('.btn', { hasText: /^Remove$/ }).click();
+    await toastText(page, /Removed your rating/);
+    await page.waitForTimeout(400);
+    S.check(`remove ${tag}: Remove deletes the rating and its note`, ratingOf(F1.id) == null && noteOf(F1.id) == null, `${ratingOf(F1.id)} / ${noteOf(F1.id)}`);
+    S.check(`remove ${tag}: the row goes and the total drops by one`, await page.locator(rowSel(F1.id)).count() === 0 && (await page.locator('.section-title', { has: page.locator('h2', { hasText: /^Your ratings$/ }) }).textContent()).includes(`${total - 1} total`));
+    // Put it back for the next width.
+    await w.api('POST', '/api/ratings', { body: { tmdb_id: F1.id, rating: was, title: F1.title, year: F1.year } });
+    await w.api('PUT', `/api/ratings/${F1.id}/note`, { body: { note: NOTE } });
+    S.check(`remove ${tag}: no console errors`, !p.errors.length, p.errors.slice(0, 3).join(' | '));
     await p.ctx.close();
   }
 });

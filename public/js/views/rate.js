@@ -1,7 +1,7 @@
 // Rate: TMDB search + inline rating, the guided ratings-import flow, and your
 // ratings list.
 import { api } from '../api.js';
-import { h, clear, makeStars, toast, sectionTitle, chip, icon, withStars, tmdbSized } from '../ui.js';
+import { h, clear, makeStars, toast, sectionTitle, chip, icon, withStars, tmdbSized, openModal } from '../ui.js';
 import { filterBox } from '../filter.js';
 import { noteSlot, noteLine } from '../notes.js';
 import { DEMO, offLine } from '../demo.js';
@@ -73,6 +73,7 @@ export async function render(root, params, ctx) {
     const row = rows.find((x) => x.el.contains(e.target));
     if (!row) return;
     row.fields = [row.title, e.detail?.note || ''];
+    row.r.note = e.detail?.note || null; // the remove box says whether a note goes too
     filter.set(rows);
   });
 
@@ -374,18 +375,34 @@ export async function render(root, params, ctx) {
       makeStars({ value: r.rating, size: 20 }),
       h('button', {
         class: 'icon-btn ri-remove', type: 'button', title: 'Remove rating', 'aria-label': `Remove your rating of ${title}`,
-        onClick: async () => {
+        onClick: () => confirmRemove(r, title),
+      }, icon('x', { size: 14 })),
+      slot?.el,
+    );
+  };
+
+  // The x asks first, like removing a watch entry in Stats. Removing a rating
+  // deletes its note too (server/lib/ratings.js), so the box says so when
+  // there is one. Cancel, Escape, the close button and a tap outside leave it
+  // be, and openModal puts focus back on the x.
+  function confirmRemove(r, title) {
+    const modal = openModal(h('div', { class: 'confirm' },
+      h('p', {}, `Remove your rating of ${title}?`),
+      r.note ? h('p', { class: 'muted small' }, 'Your note on it is deleted too.') : null,
+      h('div', { class: 'row-gap' },
+        h('button', { class: 'btn danger', type: 'button', onClick: async () => {
+          modal.close();
           try {
             await api.unrate(r.tmdb_id);
             toast(`Removed your rating of ${title}`);
             ctx.refreshStatus();
             loadRecent();
           } catch (e) { toast(e.message, 'error'); }
-        },
-      }, icon('x', { size: 14 })),
-      slot?.el,
-    );
-  };
+        } }, 'Remove'),
+        h('button', { class: 'btn soft', type: 'button', onClick: () => modal.close() }, 'Cancel'),
+      ),
+    ), { title: 'Remove rating' });
+  }
 
   async function loadRecent() {
     // Keyboard focus in the list (a film's link or remove button) survives the
@@ -404,7 +421,7 @@ export async function render(root, params, ctx) {
     }
     const list = h('div', { class: 'rating-list', id: 'rating-list' });
     // The filter matches your own note as well as the title.
-    rows = ratings.map((r) => ({ el: list.appendChild(ratingRow(r)), title: r.title || 'Untitled', fields: [r.title || 'Untitled', r.note || ''] }));
+    rows = ratings.map((r) => ({ r, el: list.appendChild(ratingRow(r)), title: r.title || 'Untitled', fields: [r.title || 'Untitled', r.note || ''] }));
     // Swapped in whole, so the page never drops to empty and loses its place.
     recentWrap.replaceChildren(...[head, ratings.length > 8 ? filter.el : null, list, moreBtn].filter(Boolean));
     filter.set(rows); // applies whatever is typed, then paintRows folds the rest away

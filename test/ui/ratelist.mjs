@@ -9,6 +9,7 @@
 //   stars     empty stars are outlines and filled ones solid gold, so the two
 //             differ in shape, not colour alone; as big as main's on a touch
 //             screen; stars elsewhere keep their look
+//   box       the confirm box the x opens: no layout, contrast or tap findings
 import fs from 'node:fs';
 import path from 'node:path';
 import { suite } from '../lib/check.mjs';
@@ -197,6 +198,32 @@ await S.step('stars: empty ones are outlines, filled ones solid gold; as big as 
         const stats = await page.locator('.bar-row .stars-base svg').first().evaluate((s) => getComputedStyle(s).fill);
         S.check(`stars ${tag}: the Stats stars are still solid`, stats !== 'none', stats);
       }
+      await p.ctx.close();
+    }
+  }
+});
+
+// ------------------------------------------------------------------ box
+await S.step('box: the confirm box, with and without its note line', async () => {
+  for (const width of [320, 390, 1280]) {
+    for (const theme of ['light', 'dark']) {
+      const tag = `${width} ${theme}`;
+      const p = await openList(width, theme);
+      const { page } = p;
+      for (const [which, f] of [['note', F1], ['plain', F2]]) {
+        const x = page.locator(`#rating-list [data-rating-id="${f.id}"] .ri-remove`);
+        await x.scrollIntoViewIfNeeded();
+        await x.click();
+        await page.waitForSelector('.modal-overlay.show .modal-card', { timeout: 5000 });
+        await page.waitForTimeout(450);
+        const found = await findings(page, width <= 1024, '.modal-card');
+        S.check(`box ${tag} ${which}: no layout, contrast, tap or sideways findings`, !found.length, list(found));
+        await shot(page, `ratelist-box-${which}-${width}-${theme}`);
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(450);
+      }
+      S.check(`box ${tag}: nothing removed`, w.q1('SELECT COUNT(*) n FROM ratings WHERE user_id = 1 AND tmdb_id IN (?, ?)', F1.id, F2.id).n === 2);
+      S.check(`box ${tag}: no console errors`, !p.errors.length, p.errors.slice(0, 3).join(' | '));
       await p.ctx.close();
     }
   }

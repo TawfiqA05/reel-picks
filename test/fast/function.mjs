@@ -438,7 +438,11 @@ async function groupA() {
     await page.waitForTimeout(300);
     check('rate: filter text kept after the list reloads', await page.locator('.filter-input').inputValue() === deep.title);
     check('rate: the list shows the new rating after Back', await row.locator('.stars-fill').evaluate((e) => e.style.width).catch(() => null) === '100%');
+    // The x asks first; Remove in the box does what the x did.
     await page.locator(`#rating-list [data-rating-id="${deep.tmdb_id}"] .ri-remove`).click();
+    await page.waitForTimeout(400);
+    check('rate: the x alone removes nothing', (await api(heavy, 'GET', '/api/ratings')).json.ratings.some((x) => x.tmdb_id === deep.tmdb_id));
+    await page.locator('.modal-card .btn', { hasText: /^Remove$/ }).click();
     await toastText(page, /Removed your rating/);
     await page.waitForTimeout(400);
     check('rate: remove drops the row', await page.locator(`#rating-list [data-rating-id="${deep.tmdb_id}"]`).count() === 0);
