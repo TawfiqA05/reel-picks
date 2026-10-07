@@ -36,7 +36,7 @@
 .note-line { display: block; color: var(--muted); font-size: var(--fs-xs); font-style: italic; line-height: var(--lh-snug); overflow-wrap: anywhere; }
 .sheet-film .note-slot, .more-film .note-slot { padding-left: 58px; }
 .rating-item { flex-wrap: wrap; }
-.rating-item .note-slot { padding-left: 46px; }
+.rating-item .note-slot { padding-left: 68px; }
 .rate-sheet .note-slot { text-align: left; }
 .score-groups { display: grid; gap: var(--sp-4); }
 @media (min-width: 720px) { .score-groups { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } .score-groups .group + .group { margin-top: 0; } }
@@ -106,11 +106,12 @@ a.person-link:hover { background: color-mix(in srgb, var(--chip) 82%, var(--text
 .rating-list { display: flex; flex-direction: column; gap: 6px; }
 .rating-list + .show-all { margin-top: var(--sp-3); }
 /* Hundreds of ratings: past the first 60, rows off screen skip layout and
-   paint until scrolled to. */
-.rating-item:nth-child(n+61) { content-visibility: auto; contain-intrinsic-size: auto 60px; }
+   paint until scrolled to. 100px is a row's height: the poster and its padding. */
+.rating-item:nth-child(n+61) { content-visibility: auto; contain-intrinsic-size: auto 100px; }
 .rating-item { display: flex; align-items: center; gap: 12px; padding: var(--sp-2) 0; }
 .rating-list > .rating-item + .rating-item { border-top: 1px solid var(--divider); }
-.ri-poster { width: 34px; height: 51px; object-fit: cover; border-radius: 5px; }
+/* Big enough to know the film by its poster (w154 files, drawn at 56). */
+.ri-poster { flex: none; width: 56px; height: 84px; object-fit: cover; border-radius: 6px; }
 .ri-poster.ph { background: var(--chip); }
 .ri-info { flex: 1; min-width: 0; }
 .ri-title { font-weight: 600; font-size: var(--fs-base); }
@@ -118,12 +119,18 @@ a.person-link:hover { background: color-mix(in srgb, var(--chip) 82%, var(--text
 .ri-remove:hover { color: var(--text); }
 /* Phones: the stars go under the title, so a long title keeps its width. */
 @media (max-width: 480px) {
-  .rating-item { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; column-gap: 12px; row-gap: 2px; align-items: center; }
+  .rating-item { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; column-gap: 12px; row-gap: 2px; align-items: center; }
   .rating-item > .ri-poster { grid-row: 1 / span 2; }
   .rating-item > .ri-info { grid-column: 2; }
   .rating-item > .stars { grid-column: 2; grid-row: 2; justify-self: start; }
   .rating-item > .ri-remove { grid-column: 3; grid-row: 1 / span 2; }
   .rating-item > .note-slot { grid-column: 2 / -1; padding-left: 0; }
+}
+/* 320: the title takes the x's column too and the x moves down beside the
+   stars, so a long title keeps its width next to the bigger poster. */
+@media (max-width: 359px) {
+  .rating-item > .ri-info { grid-column: 2 / -1; }
+  .rating-item > .ri-remove { grid-row: 2; }
 }
 
 /* ---- onboarding ---- */

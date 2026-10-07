@@ -360,7 +360,7 @@ export async function render(root, params, ctx) {
     const slot = fresh ? noteSlot(r, { rated: true }) : null;
     if (fresh) slot.rated(r.rating);
     return h('div', { class: 'rating-item', 'data-rating-id': String(r.tmdb_id) },
-      r.poster ? h('img', { class: 'ri-poster', loading: 'lazy', src: tmdbSized(r.poster, 'w92'), alt: '' }) : h('div', { class: 'ri-poster ph' }),
+      r.poster ? h('img', { class: 'ri-poster', loading: 'lazy', src: tmdbSized(r.poster, 'w154'), alt: '' }) : h('div', { class: 'ri-poster ph' }),
       h('div', { class: 'ri-info' },
         h('a', { class: 'ri-title', href: `#/movie/${r.tmdb_id}` }, `${title}${r.year ? ` (${r.year})` : ''}`),
         h('div', { class: 'muted small' }, SOURCES[r.source] || r.source),
