@@ -122,6 +122,16 @@ a.person-link:hover { background: color-mix(in srgb, var(--chip) 82%, var(--text
 .rating-item .stars-base { color: var(--muted); }
 .rating-item .stars-base .star-row { fill: none; }
 .ri-title { font-weight: 600; font-size: var(--fs-base); }
+/* The whole row opens the film's page: the title link's tap area covers the
+   row (features.css starts it), and a focused link rings the row. The x and
+   the note controls sit above it and keep their own jobs. */
+.rating-item { position: relative; }
+.rating-item .ri-title { position: static; }
+.rating-item .ri-title::after { inset: 0; z-index: 1; border-radius: var(--r-btn); }
+.rating-item .ri-title:hover { text-decoration: underline; text-underline-offset: 3px; }
+.rating-item .ri-title:focus-visible { outline: none; }
+.rating-item .ri-title:focus-visible::after { outline: 2px solid var(--focus); outline-offset: 2px; }
+.rating-item > .ri-remove, .rating-item > .note-slot { position: relative; z-index: 2; }
 /* The x is a small grey x with no box (no soft red here): removing asks first. */
 .icon-btn.ri-remove, .icon-btn.ri-remove:hover { background: none; }
 .ri-remove { color: var(--muted); }

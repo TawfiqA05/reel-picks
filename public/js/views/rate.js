@@ -65,7 +65,8 @@ export async function render(root, params, ctx) {
       loadRecent();
     } catch (e) { toast(e.message, 'error'); }
   }
-  // The film just rated in the list keeps its "Add a note" through the re-load.
+  // The film just rated in the search keeps "Add a note" on its row in the
+  // list through the re-load.
   let justRated = null;
   // A note saved or deleted in the list changes what the filter finds.
   page.addEventListener('note-change', (e) => {
@@ -353,9 +354,13 @@ export async function render(root, params, ctx) {
     moreBtn.setAttribute('aria-expanded', String(showAll));
   }
 
+  // A row shows a rating; it doesn't change one. The stars are a picture of
+  // it, and pressing the row anywhere but the x or a note control opens the
+  // film's page (the title link is stretched over the row in pages.css, so
+  // there's no click handler here), where it's rated under "Your rating".
   const ratingRow = (r) => {
     const title = r.title || 'Untitled';
-    // Your note as a second line; the film just rated gets "Add a note".
+    // Your note as a second line; the film just rated in the search gets "Add a note".
     const fresh = justRated === r.tmdb_id && !r.note;
     const slot = fresh ? noteSlot(r, { rated: true }) : null;
     if (fresh) slot.rated(r.rating);
@@ -366,7 +371,7 @@ export async function render(root, params, ctx) {
         h('div', { class: 'muted small' }, SOURCES[r.source] || r.source),
         noteLine(r.note),
       ),
-      makeStars({ value: r.rating, interactive: true, size: 18, allowClear: true, onChange: (v) => rateMovie(r, v), label: `Your rating of ${title}` }),
+      makeStars({ value: r.rating, size: 20 }),
       h('button', {
         class: 'icon-btn ri-remove', type: 'button', title: 'Remove rating', 'aria-label': `Remove your rating of ${title}`,
         onClick: async () => {
@@ -383,9 +388,9 @@ export async function render(root, params, ctx) {
   };
 
   async function loadRecent() {
-    // Keyboard focus in the list (a film's stars or remove button) survives the
-    // re-load: back on that film's same control, or, when it's gone (cleared),
-    // on the stars of the film now in its place (the filter box when none is).
+    // Keyboard focus in the list (a film's link or remove button) survives the
+    // re-load: back on that film's same control, or, when it's gone (removed),
+    // on the link of the film now in its place (the filter box when none is).
     const was = document.activeElement?.closest?.('#rating-list [data-rating-id]');
     const wasId = was?.dataset.ratingId;
     const wasIndex = was ? [...was.parentElement.children].indexOf(was) : -1;
@@ -406,7 +411,7 @@ export async function render(root, params, ctx) {
     if (wasId) {
       const same = list.querySelector(`[data-rating-id="${wasId}"]`);
       const row = same && !same.hidden ? same : [...list.children].slice(Math.max(0, wasIndex)).find((el) => !el.hidden);
-      const target = row?.querySelector(same && wasRemove ? '.ri-remove' : '.stars.interactive');
+      const target = row?.querySelector(same && wasRemove ? '.ri-remove' : '.ri-title');
       (target || recentWrap.querySelector('input') || moreBtn)?.focus?.();
     }
   }

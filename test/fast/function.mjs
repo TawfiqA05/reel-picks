@@ -424,11 +424,20 @@ async function groupA() {
     await page.locator('.filter-clear').click();
     const row = page.locator(`#rating-list [data-rating-id="${deep.tmdb_id}"]`);
     await page.locator('.filter-input').fill(deep.title);
-    await rateStars(page, row.locator('.stars'), 5);
+    // The list only shows a rating: its row opens the film's page, where it changes.
+    await row.locator('.ri-title').click();
+    const mine = page.locator('.rating-row .stars[role="slider"]');
+    await mine.waitFor({ timeout: 10000 });
+    await page.waitForTimeout(600);
+    await rateStars(page, mine, 5);
     await toastText(page, /Rated/);
     await page.waitForTimeout(300);
-    check('rate: list re-rate saved', (await api(heavy, 'GET', '/api/ratings')).json.ratings.find((x) => x.tmdb_id === deep.tmdb_id)?.rating === 5);
+    check('rate: a re-rate on the film\'s page saved', (await api(heavy, 'GET', '/api/ratings')).json.ratings.find((x) => x.tmdb_id === deep.tmdb_id)?.rating === 5);
+    await page.goBack();
+    await page.waitForSelector(`#rating-list [data-rating-id="${deep.tmdb_id}"]`, { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(300);
     check('rate: filter text kept after the list reloads', await page.locator('.filter-input').inputValue() === deep.title);
+    check('rate: the list shows the new rating after Back', await row.locator('.stars-fill').evaluate((e) => e.style.width).catch(() => null) === '100%');
     await page.locator(`#rating-list [data-rating-id="${deep.tmdb_id}"] .ri-remove`).click();
     await toastText(page, /Removed your rating/);
     await page.waitForTimeout(400);

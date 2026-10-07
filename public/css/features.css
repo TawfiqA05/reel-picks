@@ -186,6 +186,8 @@ body.has-save .toast-host { bottom: calc(var(--chrome-bottom) + var(--savebar-h)
   .log summary { padding: 11px 0; }
   .stars.interactive { font-size: calc(var(--fs-lg) + 4px) !important; padding: 9px 0; }
   .stars.interactive .stars-fill { top: 9px; }
+  /* My ratings list only shows its stars, at the size they had as a control. */
+  .rating-item > .stars { font-size: calc(var(--fs-lg) + 4px) !important; }
 }
 
 /* Title links: the text stays where it is and the tap area grows to at least

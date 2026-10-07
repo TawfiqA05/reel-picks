@@ -197,11 +197,19 @@ await S.step('Rate: a note after rating in search and in the list; the filter fi
   S.check('rate: the filter finds a film by a word in its note', JSON.stringify(shown) === JSON.stringify([F5.id]), JSON.stringify(shown));
   await shot(p, 'note-rate-filter-owner-390-light');
   await filter.fill('');
-  // Rate a film in the list again: "Add a note" on that row.
-  const item = p.page.locator(`#rating-list [data-rating-id="${F4.id}"]`);
-  await tapStars(p.page, item.locator('.stars[role="slider"]'), 0.5);
+  // Rate a film again from the search results (the list only shows ratings):
+  // "Add a note" on its row in the list too, and a tap there opens the field.
+  await p.page.locator('.page > input.input.big').fill(F4.title);
+  const again = p.page.locator('.search-row', { has: p.page.locator('.search-title', { hasText: F4.title }) }).first();
+  await again.waitFor({ timeout: 8000 });
+  await tapStars(p.page, again.locator('.stars[role="slider"]'), 0.5);
   await p.page.waitForSelector(`#rating-list [data-rating-id="${F4.id}"] .note-add`, { timeout: 8000 }).catch(() => {});
-  S.check('rate: re-rating a film in the list offers "Add a note" on it', await p.page.locator(`#rating-list [data-rating-id="${F4.id}"] .note-add`).count() === 1);
+  const item = p.page.locator(`#rating-list [data-rating-id="${F4.id}"]`);
+  S.check('rate: re-rating a film from the search offers "Add a note" on its row in the list', await item.locator('.note-add').count() === 1);
+  await item.locator('.note-add').tap();
+  await p.page.waitForTimeout(300);
+  S.check('rate: a tap on that row\'s "Add a note" opens the field', await item.locator('.note-input').isVisible() && await p.page.evaluate(() => location.hash) === '#/rate');
+  await p.page.keyboard.press('Escape');
   S.check('rate: no console errors', !p.errors.length, p.errors.join(' | '));
   await p.ctx.close();
 });
