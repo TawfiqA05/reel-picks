@@ -20,7 +20,7 @@ import { weeklyList } from '../lib/home.js';
 import { getRecommendations } from '../lib/recommend.js';
 import { backfillState } from '../lib/backfill.js';
 import { initLockWeek } from '../lib/lock.js';
-import { weekStartFriday, localYMD } from '../lib/util.js';
+import { weekStartFriday, localYMD, addDays } from '../lib/util.js';
 import * as tmdb from '../lib/tmdb.js';
 import * as W from './world.js';
 
@@ -143,7 +143,11 @@ export async function buildSample({ now = Date.now(), log = () => {} } = {}) {
   if (!result?.finishedAt) throw new Error(`the demo refresh did not finish: ${JSON.stringify(result).slice(0, 300)}`);
 
   // Watchlists: films playing, two coming soon, two classics nobody rated.
-  const coming = all('SELECT tmdb_id FROM movies WHERE upcoming = 1 AND playing = 0 ORDER BY release_date LIMIT 6').map((r) => r.tmdb_id);
+  // Coming soon as the refresh used to flag it for everyone: TMDB's list or
+  // an advance showing after this week, and not playing.
+  const weekEnd = localYMD(addDays(new Date(result.startedAt), 6));
+  const coming = all(`SELECT tmdb_id FROM movies WHERE playing = 0 AND (upcoming = 1
+    OR tmdb_id IN (SELECT tmdb_id FROM showtimes WHERE tmdb_id IS NOT NULL AND date > ?)) ORDER BY release_date LIMIT 6`, weekEnd).map((r) => r.tmdb_id);
   const unrated = F.classics.filter((id) => !get('SELECT 1 FROM ratings WHERE user_id = ? AND tmdb_id = ?', OWNER_ID, id));
   const samList = [playingIds[2], playingIds[6], playingIds[9], coming[0], coming[2], ...unrated.slice(0, 2)].filter(Boolean);
   await ensureFilms(samList, { scores: false });
