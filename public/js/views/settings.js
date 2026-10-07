@@ -755,6 +755,10 @@ export async function render(root, params, ctx) {
       toast(`Setup imported: ${c.ratings || 0} ratings, ${c.watchlist || 0} watchlist, ${c.watched || 0} watched, ${c.matches || 0} match decisions, ${c.hidden || 0} hidden, ${c.notes || 0} notes, ${c.settings || 0} settings. Refreshing showtimes…`, 'success');
       ctx.triggerRefresh?.();
       ctx.refreshStatus();
+      // The fields and the saved copy still hold what was here before, so a
+      // later Save would write it back over the import. Draw the page again
+      // from what the server holds now (unsaved edits go, as when leaving).
+      if (page.isConnected) ctx.rerender();
     } catch (e) {
       toast(e instanceof SyntaxError ? 'That file isn\'t valid JSON. Use the file from "Export full setup".' : e.message, 'error');
     }

@@ -20,6 +20,14 @@
 //             ringed element on screen and clear of the bar; with nothing
 //             found or a failed look-up it stays in the box to retype; a tap
 //             on Look up leaves the focus where the tap put it
+//   import    after Import full setup the page shows what the server holds,
+//             so a later Save can't write the old values back over it; a
+//             file that is refused leaves the page and unsaved edits alone
+//
+// The import step holds the answer to the app's own showtime refresh (POST
+// /api/refresh) until it is done: when that refresh ends the app draws the
+// page again, which in the test world can land 1.5 s after the import and
+// would hide the fault or wipe the step's own edit.
 //
 // Two things would hide the fault in the test world. The sample home base is
 // the place the stand-in gives for every one-match and reverse look-up
@@ -27,6 +35,7 @@
 // (OTHER) and a position away from it. And an answer that lands before the
 // page's next animation frame shows the bar by luck, so look-ups, Clear and
 // the position are held back about 300 ms.
+import fs from 'node:fs';
 import { suite } from '../lib/check.mjs';
 import { openWorld, sleep } from '../lib/world.mjs';
 import { launch, open, go, toastText } from '../lib/browser.mjs';
@@ -140,8 +149,8 @@ async function pressSave(page) {
 }
 
 const ERR_OK = [/ 502 GET \/api\/geocode/, /status of 502/];
-const noErrors = (label, p) => {
-  const extra = p.errors.filter((e) => !ERR_OK.some((re) => re.test(e)));
+const noErrors = (label, p, ok = []) => {
+  const extra = p.errors.filter((e) => ![...ERR_OK, ...ok].some((re) => re.test(e)));
   S.check(`${label}: no console errors, page errors or unexpected 4xx/5xx`, !extra.length, extra.slice(0, 4).join(' || '));
 };
 
@@ -385,6 +394,91 @@ await S.step('enter: a real Enter in the look-up box', async () => {
     S.check('tap: the Save bar is showing', await barUp(p.page));
     noErrors('tap', p);
   } finally { await p.ctx.close(); }
+});
+
+// ------------------------------------------------------------------ import
+const dataCard = (page) => card(page, 'Data');
+const value = (page, label) => field(page, label).inputValue();
+// The Settings page on screen now gets a mark; a redraw makes a new one.
+const markPage = (page) => page.evaluate(() => { document.querySelector('.page.settings').dataset.old = '1'; });
+const samePage = (page) => page.evaluate(() => Boolean(document.querySelector('.page.settings[data-old]')));
+const redrawn = (page, timeout) => page.waitForFunction(() => Boolean(document.querySelector('.page.settings:not([data-old])')), null, { timeout }).then(() => true, () => false);
+async function exportSetup(page) {
+  const [dl] = await Promise.all([page.waitForEvent('download'), dataCard(page).locator('a', { hasText: 'Export full setup' }).click()]);
+  return fs.readFileSync(await dl.path());
+}
+const importFile = (page, buffer) => dataCard(page).locator('input[type=file]').setInputFiles({ name: 'setup.json', mimeType: 'application/json', buffer });
+const REFUSED = [/ 400 POST \/api\/state/, /status of 400/];
+
+await S.step('import: refused files leave the page as it was', async () => {
+  const p = await settings();
+  try {
+    const before = await value(p.page, 'Fits window');
+    const edit = String(Number(before) + 3);
+    await field(p.page, 'Fits window').fill(edit);
+    await calm(p.page);
+    await markPage(p.page);
+    await importFile(p.page, Buffer.from('{not json'));
+    const t1 = await toastText(p.page, /valid JSON|imported/);
+    await calm(p.page);
+    S.check('import: a file that isn\'t JSON leaves the page and my unsaved edit', /isn't valid JSON/.test(t1) && await samePage(p.page) && await value(p.page, 'Fits window') === edit && await barUp(p.page), t1);
+    await importFile(p.page, Buffer.from('{"hello":1}'));
+    const t2 = await toastText(p.page, /full-setup|imported/);
+    await calm(p.page);
+    S.check('import: a JSON file that isn\'t a setup file leaves the page and my unsaved edit', /Not a Reel Picks full-setup file/.test(t2) && await samePage(p.page) && await value(p.page, 'Fits window') === edit && await barUp(p.page), t2);
+    S.check('import: nothing reached the server', (await getSettings()).windowFitBoost === Number(before));
+    noErrors('import: refused', p, REFUSED);
+  } finally { await p.ctx.close(); }
+});
+
+await S.step('import: Import full setup, then another field changed and saved', async () => {
+  const p = await settings();
+  let release;
+  const held = new Promise((r) => { release = r; });
+  await p.page.route((u) => u.pathname === '/api/refresh', async (r) => { await held; await r.continue().catch(() => {}); });
+  try {
+    const was = (await getSettings()).avgTicketPrice;
+    const doc = await exportSetup(p.page);
+    S.check('import: the exported setup holds the saved ticket price', JSON.parse(doc).profile?.settings?.avgTicketPrice === was, `${was}`);
+    const changed = was + 7.25;
+    await field(p.page, 'Avg ticket').fill(String(changed));
+    await calm(p.page);
+    const r1 = await pressSave(p.page);
+    S.check('import: the changed ticket price is saved before the import', r1.clicked && r1.status === 200 && (await getSettings()).avgTicketPrice === changed, r1.why || r1.status);
+    await calm(p.page);
+    // An edit not saved when the file is chosen.
+    const wl = await value(p.page, 'Watchlist +');
+    await field(p.page, 'Watchlist +').fill(String(Number(wl) + 5));
+    await calm(p.page);
+
+    await dataCard(p.page).scrollIntoViewIfNeeded();
+    await markPage(p.page);
+    await importFile(p.page, doc);
+    const t = await toastText(p.page, /Setup imported|valid|full-setup|error/);
+    S.check('import: the file is imported', /^Setup imported/.test(t), t);
+    const redraw = await redrawn(p.page, 1500);
+    await p.page.waitForTimeout(300);
+    const toastUp = await p.page.evaluate(() => [...document.querySelectorAll('.toast.show')].some((x) => /^Setup imported/.test(x.textContent.trim())));
+    S.check('import: the Setup imported toast still shows', toastUp);
+    const onScreen = await dataCard(p.page).evaluate((el) => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; });
+    S.check('import: the Data card is on screen', onScreen);
+    S.check('import: the page shows the imported ticket price', await value(p.page, 'Avg ticket') === String(was), `redrawn ${redraw}, field ${await value(p.page, 'Avg ticket')}`);
+    S.check('import: an edit not saved when I chose the file is dropped', await value(p.page, 'Watchlist +') === wl);
+    S.check('import: the bar is down after the import', !(await barUp(p.page)));
+
+    const prev = Number(await value(p.page, 'Preview length'));
+    await field(p.page, 'Preview length').fill(String(prev + 5));
+    await calm(p.page);
+    S.check('import: the bar is up for the new edit', await barUp(p.page));
+    const r2 = await pressSave(p.page);
+    const s = await getSettings();
+    S.check('import: Save after the import keeps the imported ticket price', r2.clicked && r2.status === 200 && s.avgTicketPrice === was, `${r2.why || r2.status} ticket ${s.avgTicketPrice}, imported ${was}, changed ${changed}`);
+    S.check('import: Save after the import stores the new edit and nothing old', s.previewsMinutes === prev + 5 && s.watchlistBoost === Number(wl), `previews ${s.previewsMinutes} watchlist ${s.watchlistBoost}`);
+    noErrors('import', p);
+  } finally {
+    release();
+    await p.ctx.close();
+  }
 });
 
 await browser.close();
