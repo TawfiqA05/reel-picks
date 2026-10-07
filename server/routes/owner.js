@@ -4,7 +4,7 @@ import { Router } from 'express';
 import { get, run, getSettings, dataDir } from '../db.js';
 import { ingestOne } from '../lib/refresh.js';
 import { setManualMatch, ignoreMatch, unignoreMatch, unmatchedTitles, reviewTitles, keepMatch } from '../lib/match.js';
-import { followedTheatres } from '../lib/theatres.js';
+import { followedTheatres, purgeUnfollowed } from '../lib/theatres.js';
 import { localYMD, addDays } from '../lib/util.js';
 import { currentUserId } from '../lib/user.js';
 import { listFriends, createFriend, revokeFriend, reissueFriend, MAX_USERS } from '../lib/accounts.js';
@@ -83,7 +83,12 @@ router.post('/friends', ownerOnly, (req, res) => {
 
 router.post('/friends/:id/revoke', ownerOnly, (req, res) => {
   try {
-    res.json({ friend: revokeFriend(req.params.id) });
+    const friend = revokeFriend(req.params.id);
+    // Their theaters leave the refresh now. A theater nobody else follows
+    // has its showtimes and playing flags cleared at once, so it doesn't sit
+    // in everyone's lists until the next refresh.
+    purgeUnfollowed(followedTheatres(getSettings({ userId: friend.id })).map((t) => t.id));
+    res.json({ friend });
   } catch (e) {
     if (!e.status) console.error('[friends]', e.message);
     res.status(e.status || 500).json({ error: e.status ? e.message : 'Something went wrong on the server. Try again.' });

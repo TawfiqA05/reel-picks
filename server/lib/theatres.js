@@ -105,6 +105,17 @@ function purgeTheatreData(theatreId) {
   );
 }
 
+// After a revoke: drop the schedule of every theater nobody active follows
+// now (the revoked friend's, and any other showtimes left behind), the way an
+// unfollow does. `ids` are theaters known to have just lost a follower.
+export function purgeUnfollowed(ids = []) {
+  const followed = sharedTheatreIds();
+  const left = all('SELECT DISTINCT theatre_id FROM showtimes').map((r) => String(r.theatre_id));
+  const gone = [...new Set([...ids.map(String), ...left])].filter((id) => id && !followed.has(id));
+  for (const id of gone) purgeTheatreData(id);
+  return gone.length;
+}
+
 export function addFollowed(raw) {
   const t = normalize(raw);
   if (!t.id) throw Object.assign(new Error('A theater id is required.'), { status: 400 });
