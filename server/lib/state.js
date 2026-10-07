@@ -104,11 +104,16 @@ function applyState(p) {
     if (typeof def === 'boolean') return typeof v === 'boolean' || v === 0 || v === 1;
     return typeof v === typeof def;
   };
+  // A theater id is a short run of digits (an empty primary is "none yet"),
+  // as everywhere else a theater id comes in.
+  const theaterId = (v) => /^\d{1,10}$/.test(String(v ?? ''));
+  const theatersOk = (k, v) => (k === 'theatreId' ? v === '' || theaterId(v)
+    : k === 'extraTheatres' ? v.every((t) => t && typeof t === 'object' && theaterId(t.id)) : true);
   const patch = {};
   out.settingsSkipped = [];
   for (const k of settingKeys()) {
     if (!p.settings || !(k in p.settings)) continue;
-    if (shapeOk(DEFAULT_SETTINGS[k], p.settings[k])) { patch[k] = p.settings[k]; out.settings++; }
+    if (shapeOk(DEFAULT_SETTINGS[k], p.settings[k]) && theatersOk(k, p.settings[k])) { patch[k] = p.settings[k]; out.settings++; }
     else out.settingsSkipped.push(k);
   }
   updateSettings(patch);

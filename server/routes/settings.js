@@ -149,11 +149,16 @@ router.get('/theatres', h(async (req, res) => {
   res.json({ theatres: await amc.searchTheatres(q) });
 }));
 
+// An AMC theater id is a short run of digits. Every id a caller sends is
+// checked against this before it reaches a query or the cache.
+const isTheaterId = (id) => typeof id === 'string' ? /^\d{1,10}$/.test(id) : Number.isInteger(id) && id >= 0 && id < 1e10;
+const NOT_AN_ID = 'That isn\'t an AMC theater id.';
+
 // Make a theatre the primary. The old primary stays followed (demoted), so no
 // schedule or history is lost; rejected if that would exceed the cap.
 // An AMC theater as the Settings search returns it: a numeric id and short text.
 function theaterProblem({ id, name, slug } = {}) {
-  if (!/^\d{1,10}$/.test(String(id ?? ''))) return 'That isn\'t an AMC theater id.';
+  if (!isTheaterId(id)) return NOT_AN_ID;
   if ((name != null && (typeof name !== 'string' || name.length > 200)) || (slug != null && (typeof slug !== 'string' || slug.length > 200))) return 'That theater name is too long.';
   return null;
 }
@@ -191,6 +196,7 @@ router.post('/theatres/follow', (req, res) => {
 });
 
 router.delete('/theatres/follow/:id', (req, res) => {
+  if (!isTheaterId(req.params.id)) return res.status(400).json({ error: NOT_AN_ID });
   res.json(forCaller(removeFollowed(req.params.id)));
 });
 
@@ -198,6 +204,7 @@ router.delete('/theatres/follow/:id', (req, res) => {
 router.post('/theatres/primary', (req, res) => {
   const { id } = req.body || {};
   if (!id) return res.status(400).json({ error: 'Theater id is required.' });
+  if (!isTheaterId(id)) return res.status(400).json({ error: NOT_AN_ID });
   try {
     const settings = promoteToPrimary(id);
     // Showtimes for both are already loaded; re-run so the per-theatre horizon

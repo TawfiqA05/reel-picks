@@ -86,6 +86,9 @@ export async function cachedJson(key, ttlSeconds, fetcher, { force = false, meta
   }
 }
 
+// Drops every entry whose key starts with `prefix`, compared as plain text: a
+// % or _ in it matches only itself.
 export function bustCache(prefix) {
-  run("DELETE FROM cache WHERE key LIKE ?", `${prefix}%`);
+  const p = String(prefix);
+  run('DELETE FROM cache WHERE substr(key, 1, ?) = ?', p.length, p);
 }
